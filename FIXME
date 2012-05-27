@@ -1,0 +1,539 @@
+Trons list:
+(DOUBLE): casts placed wrong
+ACTIVE: never tested
+ANITILE_REVERSE_LOOPING: never set
+ARMY_COMPOSITION, PATROL_GROUP, GARRISON_GROUP: pointless padding
+AddCharacterToDeadList(): one caller
+BeginMapUIMessage(): move from tactical to strategic
+BlitMineText(): code duplication
+BtnHelpScreenDontShowHelpAgainCallback(): empty
+CalculateOverrideStatus(): szFilename yuck
+CaptureTimerCallback(): complicated
+CenterX(): use %
+CheckForAndHandleSoldierDeath(): interface complicated, return *pfMadeCorpse?
+ConfirmActionCancel(): overkill
+ContractBoxGlow(): empty
+ContractListRegionBoxGlow: giContractHighLine == -1 test unnecessary
+CorpseHit(): empty
+Create16BPPPaletteShaded(): callers
+CreateEnemyGlow16BPPPalette(), CreateEnemyGreyGlow16BPPPalette(): ?
+DONT_DISPLAY_TEXT: what is this good for?
+DeathTimerCallback(): complicated
+DecideActionBlack(): bCanAttack != TRUE && bCanAttack != FALSE strange
+DecideActionRed(): bInDeepWater is not just deep water (Water())
+DisplayAllDealersCash(): MARK_DIRTY necessary?
+DisplayEmploymentinformation(): code duplication
+DisplayEmploymentinformation(): pointless loop
+DisplayOrderGrid(): call IsMercDead() more early
+DisplayPurchasedItems(): iSubTotal undefined value
+DoneFadeInActionLeaveBasement(): empty
+DoneFadeInWarp(): empty
+DoneFadeInWarp(): pointless?
+DoorToggleLockedCallback(): pointless?
+DrawBreathUIBar(): overdraw
+DropSmell(): ubOldSmell == ubSmell case has no effect
+ET_ENDENEMYS_TURN: unused
+EVENT_SoldierGotHit(): arguments for parameter ubHitLocation inconsistent
+EnoughTimeOnAssignment(): complicated
+EnvBeginRainStorm(), EnvEndRainStorm(): TODO
+EvaluateWorld(): complicated
+ExecuteGameEvent(): code duplication
+Filler, Padding, Unused, filler: remove, partially bogus
+FindCacheStructDataIndex(): should return pointer instead of index
+FindValidInsertionCode(): MARK_DIRTY necessary?
+GetCostOfPassageForHelicopter(): callers
+GetDialogueDataFilename(): checking for MANNY does nothing
+GetLoadedSectorString(): gbWorldSectorZ <-> !gbWorldSectorZ
+GetNumberOfPastMercsOnPlayersTeam(): callers
+GetSectorIDString(): complicated
+GetTimeRemainingOnSoldiersContract(): callers
+GetTimeRemainingOnSoldiersInsuranceContract(): callers
+GetZLevelOfItemPoolGivenStructure(): third parameter only tested for != NULL
+Handle.*TextEvent(): code duplication
+HandleCompatibleAmmoUI(): if (gbCompatibleAmmo[cnt]) gbCompatibleAmmo[cnt] = FALSE;
+HandleDefiniteUnloadingOfWorld(): use enum
+HandleFaceHilights(): overdraw?
+HandleHighLightedText(): MARK_DIRTY necessary?
+HandleLeftClickCursor(): if ()s without decision
+HandleMinuteUpdate(): empty
+HandleMinuteUpdate(): remove?
+HandleMoraleEventForSoldier(): callers
+HandleOpinionOfTownsAboutSoldier(): empty
+HandleSummaryInput(): fallthrough SDLK_ESCAPE -> SDLK_RETURN?
+HeliCharacterDialogue(): callers
+HourlyMoraleUpdate(): strategic_morale_update_counter not loaded/saved
+IMPVideoObjects.h: many needlessly called functions?
+I_CHANGELEVEL: unused
+InitializeLibrary(): invalid use of strlen()
+InitializeStrategicMapSectorTownNames(): complicated?
+IsDoorPerceivedOpen(): sGridNo is INT16, but used as %s
+IsItRaining(): complicated
+IsMapScreenWorldItemVisibleInMapInventory(): complicated
+IsTownUnderCompleteControlByEnemy(): complicated
+KeyRingSlotInvClickCallback: one caller
+LackOfProgressTolerance(): callers
+LightIlluminateWall(): empty
+LoadCivQuoteFile(): string copy necessary?
+LoadEnemySoldiersFromTempFile(): ubStrategicCreatures > ubNumCreatures
+LoadSaveScreenHandle(): Investigate if the duplication can be removed
+LoadSavedGameHeader(): invalid use of strlen()
+LoadSavedGameWarningMessageBoxCallBack(): users
+LoadShadeTablesFromTextFile(): *scanf()
+LoadSummary(): filename yuck
+LocationOfNearestRefuelPoint(): callers
+MAPInvClickCamoCallback(): empty
+MAPInvMoveCamoCallback(): empty
+MERCPROFILESTRUCT: gets saved/loaded, but contains wchar_t
+MERC_POPUP_PREPARE_FLAGS_TRANS_BACK: complicated
+MaxDistanceVisible(): inline
+MercDepartEquipmentBoxCallBack(): users
+MergeMessageBoxCallBack(): users
+MinAPsToThrow(): usInHand is INT16, but used as %s
+MoveBullet(): RemoveBullet() before BulletMissed() (twice) and CorpseHit() seems wrong
+MoveGroupFromSectorToSectorButAvoidLastSector(): caller
+MovementNoise(): DeepWater() after Water() is pointless, 20% stealth penalty for deep water does not work
+NPC.h: RUSSIAN quirk
+NPCQuoteInfo: weird preprocessor magic
+NewOKDestination(): boolean parameter with three (four?) values
+OBJECT_ARMED_BOMB: never gets tested
+OBJECT_MODIFIED: unused
+PayMilitiaTrainingYesNoBoxCallback(): users
+PlayerGroupInMotion(): overkill
+ProcessUpdateStats(): pbSoldierStatPtr write-only
+ReadRLEColMapImage(), ReadRLERGBImage(): empty
+RemoveAllOnRoofsOfTypeRange(): O(n^2)
+RemoveAllShadows(): O(n^2)
+RemoveAllShadowsOfTypeRange(): O(n^2)
+RemoveAllTopmostsOfTypeRange(): O(n^2)
+RemoveAmmoGUI(), RemoveEquipGUI(), RemoveKeysGUI(), RemoveMoneyGUI(): empty, remove?
+RemoveItemGUI(): callers
+RenderFaceOverlay(): users
+RenderShopKeeperInterface(): MARK_DIRTY necessary?
+RenderTiles(): SetFontDestBuffer() + mprintf_buffer() strange
+SAIMOVECODE: use enum
+SAVED_GAME_HEADER: gets saved/loaded, but contains wchar_t
+SF_HAS_ENTERED_TACTICAL: never tested
+SHOW_AP_LEFT: never set
+SLOW_ANIMATION: never set or cleared
+SOLDIERCREATE_STRUCT: gets saved/loaded, but contains wchar_t
+SOLDIER_QUOTE_SAID_DROWNING: never set
+STRUCTURE_MULTI: never set?
+STRUCTURE_TREE: never set
+STR_AR_MERC_RETREATING: string too long in German
+SaveLightEffectsToMapTempFile(): FileDelete() + FileOpen() == complicated
+SaveSmokeEffectsToMapTempFile(): FileDelete() + FileOpen() == complicated
+SaveWorld(), LoadWorld(), EvaluateWorld(): uiSoldierSize gets saved, but loaded and discarded
+SectorExitBackgroundCallback(): empty
+SelectPlayersOfferSlotsRegionCallBack(): [...].uiItemPrice = [...].bMoneyStatus seems wrong
+SetClockResolutionPerSecond(): complicated
+SetExclusive24HourTimeValue(): complicated, use swprintf()
+SetInputFieldStringWithNumericStrictValue(): complicated
+SetSelection(): callers
+SetTilesetOneTerrainValues(): set callback to avoid explicit test
+SoldierCanSeeCatchComing(): empty
+SoldierCarriesTwoHandedWeapon(): complicated
+StrategicMap[]: definition not used in file
+StrategicPythSpacesAway(): avoid sqrt()
+TacticalScreenMsg(): no need for format string
+TrashMapTile(), MapOptimize(): investigate if useful
+TurnBasedHandleNPCAI(): lots of commented out stuff
+TurnSoldierIntoCorpse(): one caller
+TwoHandedItem(): complicated
+UseGun(): code duplication
+VIDEO_NO_CURSOR: MSYS_NO_CURSOR? strange
+ValidateSkillsList(), RemoveSkillFromSkillsList(): complicated
+VehicleHasFuel(): inline
+WaitForSelectionWindowResponse(): fallthrough SDLK_ESCAPE -> SDLK_RETURN?
+WillShopKeeperRejectObjectsFromPlayer(): complicated
+WrapString(): Make 1st parameter read-only
+WriteSectorSummaryUpdate(): puiFilename yuck
+bBuddy[5], bHated[5]: indices 3 and 4 unused
+fButtonsPresent: once TRUE it never changes anymore
+fPotentialForDebug: ?
+fResetContractGlow: probably always TRUE
+fUseDisabledAutoShade: some tests seems to be inverted
+gMercPlacement: memory leak?
+gOpenDoorList[], gClosedDoorList[]: users, code duplication
+gSaveBufferBasicPlacement, gSaveBufferDetailedPlacement: necessarily global?
+gTacticalStatus.ubEngagedInConvFromActionMercID, ENGAGED_IN_CONV: redundant?
+gTacticalStatus.ubSpottersCalledForBy: once != NOBODY never gets NOBODY again
+gTileTypeLogicalHeight[]: always 1 (memset)?
+gTileTypeLogicalHeight[]: definition not used in file
+gWhoThrewRock: useful?
+gbSAMGraphicList[]: definition not used in file
+gbSkillTraitBonus[]: definition not used in file
+gfDrawPathPoints: always FALSE, debug
+gfItemDescHelpTextOffset: once TRUE never gets FALSE again
+gfProgBarActive: once TRUE it never changes anymore
+gsRadarY: always RADAR_WINDOW_TM_Y?
+gszCivGroupNames[]: move declaration
+gszFilename: wchar_t[] -> char[]?
+gubAnimSurfaceCorpseID: static if possible
+gubCurrentNpcInSector[giHaveSelectedNPC]: complicated
+gubWorldRoomHidden: static?
+guiMemTotal: remove
+gzFilename: wchar_t[] -> char[]?
+pMapErrorString[24]: probably never shown (function is only called when militia is in sector, which means it is a SAM site or town)
+pMapErrorString[4], pMapErrorString[17]: unused
+pMapInventoryErrorString[0]: probably unused
+pSoldier = pSoldier: strange
+pSoldier->pShades[16 ... 31]: unused?
+struct ETRLEData: reorder attributes
+swprintf([^,]*,[^,]*,[^,"]*[,)]: non-fixed format string
+typedef float real: remove
+ubMineType: unused?
+ubTravelRating: write-only
+wcscat(): check for overkill
+{Head,Pants,Skin,Vest}Pal: buffer necessary? pointer instead?
+{Lock,Unlock}{Back,Frame,Mouse}Buffer(): SDL_LockSurface()?
+
+
+STRUCTS: unused attributes
+
+BULLET
+ubTilesPerUpdate: always 1
+
+EV_S_WEAPONHIT
+usWeaponIndex: determine from ubAttackerID
+sBreathLoss: read-only (0)
+usDirection: determine from ubAttackerID and usSoldierID
+sXPos: determine from usSoldierID
+sYPos: determine from usSoldierID
+sZPos: always 20
+sRange: always 1
+ubSpecial: always FIRE_WEAPON_NO_SPECIAL
+ubLocation: read-only (AIM_SHOT_RANDOM)
+
+FACETYPE
+uiMouthDelay: always 120
+
+GROUP // TODO not finished
+ubOriginalSector: write-only, read to write-only
+ubCreatedSectorID: write-only
+
+MERCPROFILESTRUCT
+ubFaceIndex: overwritten after load from data file
+bArmourAttractiveness: overwritten after load from data file
+bMainGunAttractiveness: overwritten after load from data file
+fUseProfileInsertionInfo: overwritten after load from data file
+sGridNo: overwritten after load from data file
+bRace
+bNationality
+bAppearance
+bAppearanceCareLevel
+bRefinement
+bRefinementCareLevel
+bHatedNationality
+bHatedNationalityCareLevel
+bRacist
+sMedicalDepositAmount: overwritten after load from data file
+usOptionalGearCost: overwritten after load from data file
+
+OBJECTTYPE
+ubGunUnused
+bMoneyStatus: only one use, which most probably is wrong
+ubMoneyUnused
+bKeyStatus
+ubKeyUnused
+ubOwnershipUnused
+ubWeight: only one reader
+fUsed
+
+REAL_OBJECT
+OneOverMass: always 1/60.f
+
+SOLDIERCREATESTRUCT
+fStatic: strange
+fCopyProfileItemsOver: strange
+fUseGivenVehicle: strange
+fHasKeys: strange
+
+SOLDIERTYPE
+fReloading: always FALSE
+sHeightAdjustment: seems to be always 0
+sDesiredHeight: strange
+sTempNewGridNo: strange
+fPausedMove: strange
+fUIdeadMerc: strange
+fUICloseMerc: strange
+ReloadCounter: never gets reset, probably unnecessary, see fReloading
+sReloadDelay: seems to be always 0, probably unnecessary, see fReloading
+fTurnInProgress: only gets printed for debug
+bViewRange: always NORMAL_VIEW_RANGE
+bNewOppCnt: strange
+bTargetCubeLevel: always 0? Only place setting it (UIHandleMercAttack()) seems to be unreachable
+fShowLocator: maybe unnecessary
+pThrowParams: load/save?
+pLevelNode: load/save?
+sDestXPos: see sDestination
+sDestYPos: see sDestination
+sDestination: sDestination == sDestYPos / 10 * 160 + sDestXPos / 10 seems to hold
+sBlackList: strange
+bHasKeys: strange
+fForceShade: pForceShade != NULL?
+fDoingExternalDeath: always TRUE?
+ubLastDamageReason: necessary?
+
+
+BUGS
+KillPreBattleInterface(): EnableDisAbleMapScreenOptionsButton(TRUE) maybe tries to enable non-existent buttons
+
+
+animations:
+animations in real time can be interrupted to avoid alarm while shooting, law hourglass must start before noise
+V deactivate strafing and going backward because of gun display 
+exception when npc stands at tileset, where the heli is spawned at refuling site - to insert central
+pending action (move) is continued when changing assignment to heli with sector loaded
+fast animations and wrong placement when leaving from heli into squad - sAniDelay
+- fast animations increase with every entering, leaving of heli
+- fast animations are load persistent
+- with every load the speed decays
+slow animations after battle
+animation freeze if waiting for merc to let pass in water
+V prone stance impossible in some maps for certain orientations
+
+editor:
+- howard does not confess - ConverseFull?
+V g41 in grumm with 5.45 ammo, m-14 in alma with 5.56 ammo
+- throwing knifes fly on roof-top level at drassen mine
+
+ai:
+interrupt at standing up for throwing and LAW or forbid action not standing
+ai must figure in crouch/duck on roofs and open/close behind doors
+AI uses mortar under roof
+pointless battle after annoying joey and going back to surface
+V ai tries to reach panic buttons even if attacking a sector
+panic buttons do not make sense
+conrad and slay desert (hostile + flee) if superior
+
+engine:
+"
+If you right click an item when leaving buy/sell screen (while merchant speaks his "goodbye" phrase), the shopkeeper transaction and done buttons will stay on screen (tactial/strategical) forever until you talk to another shopkeeper.
+
+To reproduce - open buy/sell screen, press done, immediately right click any item in your inventory, wait until speech is finished or click the box with shopkeeper text, done.bank account menu in tactics screen not displayed properly
+"
+clearing mines with full hands moves it to another mercs inventory
+V stealing takes too many AP
+V gas effect on roof-top level transfers to the basic level
+exception when changing sector in tactical - merc placement error - no ctd
+error while loading map, press esc randomly, not reproducible, civ/militia placement?
+endless hourglass at realtime switch after isolated enemy without visual contact throws a gas-grenade in the last turn 
+leaving a battle sector with truck breaks the squad table (truck remains bound to wrong squad number) - OKForSectorExit - bugreports100930/2 - forbid?
+no bleeding when changing sector in tactical screen
+shopkeeper faces do not talk properly while dragging an item - vanilla
+X tony out of office at first opening - hans does never open the shop
+sal says the wrong lines when forgetting about shipments instead of stealing
+
+reproduction pending:
+X multiple air-raids without point
+reinforcement underground for air raid on top placed wrong
+merc gives a sniper rifle to a dual pistol merc with full inventory - burst stays
+V persistent muzzle flash after fighting in towns - which case?!
+V- TurnOffTeamsMuzzleFlashes( gbPlayerNum );
+shipment never arrives and is not displayed when selected (day 13, 4 items)
+V skyrider npc placed odd in airport sector
+X enemy caught at off-map tile when fleeing
+ctd at bloodcat spawn in enemy controlled sector
+meduna remote used twice - ctd
+AI lock when Bloodcat steps on mine
+AI lock in enemy turn (toss grenade move)
+
+WORKLIST
+V second robot does not appear - npc-script problem
+X robot only after creature quest
+X every corpse only yields one glass of blood esp. the queen
+V every corpse only yields blood for two minutes
+V interrupt at every attack - boxing, fire-fight
+X stack mergibles (tnt) and merge only in hand 1
+V giHospitalRefund is not a multiple of 10
+V rubber band - attach two large magazines
+V bonus on far enemies interruption
+V impact reduction by distance
+X BulletHitMerc warning
+
+
+IDEALIST
+pick-up button instead of drag drop
+optimization of moved merc by AI
+report cannot drop here, if the tile to drop has too many items (ctd)
+path ai considering lower energy cost for equal length paths
+consistent energy cost in rt and tb
+
+ai uses cth for movement
+ai remembers last guns calibre fired upon it
+ai guesses the basic cth of each merc by its hit statistic
+
+X enemy attack groups hidden (unhide groups with civ quotes)
+X items are stolen everywhere exponential with the stack height
+X moving items is a game of chance
+X use what you find
+X the inventory consists of a list of big slots
+X the limit remains but the stacks are resolved
+X in case is it with hit processing every other move?
+V no interrupt for fleeing enemies at the edge of the map
+V interrupt chance for every attack
+V robot2 has robot1's weapon
+V robot1 has public stats when dead
+V robot2 does not show up, when sector is loaded
+X tony does not show up, when absent initially
+tony does not change appearence when sector is loaded
+
+V iterrupt under fire
+X enemy moves soldiers with minimal number of sightings first
+
+
+V doctors do not realize sufficient supplies returned after stealing
+V- stacks are not handled properly, a stack counts as one item
+X interrupt after pass - ai never passes, so player would benefit
+X max. 10 militia per sector
+X guns jam below 100% instead of below 85%
+X aiming begins with max invested points
+X realistic: mine depletes after half the output
+V regen booster are scifi
+V detector only counts in handpos and lower stance
+V blinking of idle patients by the 85 cap
+V hospital heals over the cap
+V doctoring cap must be relative to the lifemax
+V- healhospital
+V- heal field
+V- hospital fee
+X attachments only merge to handpos items
+X tnt stacks, rods, etc. like in vanillas early versions
+X stacks of attachments?
+V militia can be dismissed unassigned
+V stop time compression at sector enemy controlled
+V kingpin civ group does not exchange places -> no exploits
+V san mona movement cost
+X grumm movement cost
+V fix boxing: wrong entry and departure
+V- pc outside boxer side of ring -> boxer exits the ring and bug
+V- pc wins at boxer side of ring -> darren does not give money
+V- pc enters at boxer side of ring -> match does not end
+V- wrong civilians were boxing
+V tear gas damage twice
+X breaklights on roofs always fail
+V gas damage takes z into account
+V- no effect from bottom to top
+V- propagation from top to bottom, why?
+V assigment button callback for dead mercs
+V tactical suicide ctd
+V grenades cannot fly one tile on rooftop level
+V- tumbling of grenades removed against the toy feeling
+V commented code
+V- first battle welcome wagon empty
+V-- patrol does not arrive
+X- army that took back a town is in red alert for 24h
+V prone soldiers behind formerly impossible cover cannot be hit with bullets
+X- MoveBullet
+V- change in structure surface did the trick
+X- time compression while airstrike
+X-- no combat mode - see ref!
+X-- everything must be turned off on its own
+X- loading
+X- freeze bei dive in rt und incombat
+X- air raid is not stopped when loading game
+X- air raid from 1.13
+X- repair sam
+X-- air raid beeing stopped
+X- air raids start before the army arrives to penalize hands on defense
+X- shedule airstrike
+X-- air raids are in the intro... but are they logic against
+X-- air raids are conventonal warfare. this does not fit the game.
+X-- conv. warfare is possible in limits, but penalized.
+X enemies must use explosives and mines - this must be according to the maps
+X- we have got the rooms... 
+V make colt .45 a normal guns weapon
+V impact of rocket rifle * 1.5
+V replace barracuda by special
+V replace deagle by colt
+V- coolness!
+V- do not allow sam site repair!
+V-- bombs take out for long time
+V-- conquests take out with control bonus and running cost
+X develop movement cost for traversing sectors
+X- penalize running and force open by random punch damage and stumble at < 85 breath
+X- hide enemy groups away from cities
+X- allow for ambushes by hidden enemies
+X- traversal cost is 1 : 2^(1/2) for rotational invariance
+V rest assignement marginal strategy - only whole hours count
+X- sleep assignement only in rooms
+V Iras guide talking right after insertion
+V- require start of max of assignmentstart and arrival to be before min-minutes-to-count
+V false alarm of billy at the brothel
+V enemies use deagle
+V air raids deluxe
+V- enable air raid cheat
+V- air raid ambience is loading persistent
+V- quote battle won after loading an air raid
+V- disable initial air raid drama, it is in the intro
+V- never start air raid with enemies in sector
+V- air raid bullets ineffective
+V-- display of team as "this door has no trap"
+V- fade in and out faster
+V- air raid turnbased deadlock and delay at dive
+X-- 1.13 code?
+V- check for end of battle nach air raid
+X- sam site repair - no point, only 0 or 100%
+X-- sam sites have damaged radar graphics which is not used, nescessary for repair
+V- handle sam-site control and functionality
+X- attacking weapon for gun sound at dive
+V- schedule air raids between 4 and 9 minutes before an attack group arrives in a town
+V-- only non-mine sectors for dodging into the mine within no time
+	//HB: call in air support to scare off defending mercs
+	if ( pGroup->pEnemyGroup->ubNumTroops > 0 || pGroup->pEnemyGroup->ubNumElites > 0 )
+	{
+		AIR_RAID_DEFINITION	AirRaidDef;
+		i = pGroup->ubNextWaypointID;
+		wp = pGroup->pWaypoints;
+		while( i-- )
+		{ //Traverse through the waypoint list to the next waypoint ID
+			Assert( wp );
+			wp = wp->next;
+		}
+		Assert( wp );
+
+		AirRaidDef.sSectorX		= wp->x;
+		AirRaidDef.sSectorY		= wp->y;
+		AirRaidDef.sSectorZ		= 0;
+		AirRaidDef.bIntensity 	= 2;
+		AirRaidDef.uiFlags		= AIR_RAID_CAN_RANDOMIZE_TEASE_DIVES;
+		AirRaidDef.ubNumMinsFromCurrentTime	= pGroup->uiArrivalTime - WorldGetTime() - 9 + Random(5);
+
+		ScheduleAirRaid( &AirRaidDef );
+	}
+V- schedule multiple or remove the ineffective ones
+V- look at strategic movement for the right spot to call in air strikes in strategic
+V- try a cheat for strategic insertion of air raids
+X- allow air raid ambushes against vehicles at sector i.e. leave another side
+X oldlife is taken note of
+X- life-decrement at turns end
+V more ammo for 6 bullets magazines
+X assignment distances old feature
+V block stategic input at air raids
+V- contract
+V- assignment
+V- sleep
+V- time compression
+V- movement orders
+V- militia
+V- inventory
+V- autobandage
+X- fDisableMapInterfaceDueToBattle
+V enemy groups disappear at retreat randomly, why?
+V- disable retreat from defense!
+V tactical retreat in notime -> invasion vanishes
+V- no new waypoint for walked off the map
+V vanishing invasion
+V- retreat from air strike
+X> retreat from invasion in autoresolve
+X ambushes after retreat
+V never warp time! - only for sex?
+V airraid bound to enemy control of meduna sam and meduna airport
+V air raid only at daylight
+V positve moment of alcohol - same as for water
+
+V air raids do not work
+V how many air raids are flewn before going in?
+V how many bullets are left?
+
+V Hospital Cost CalcMedicalCost()
