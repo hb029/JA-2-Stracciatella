@@ -30,6 +30,7 @@ enum ArmsDealerID
 	ARMS_DEALER_ARNIE,
 	ARMS_DEALER_FREDO,
 	ARMS_DEALER_PERKO,
+	ARMS_DEALER_TINA,
 
 	// added only in GameVersion 54
 	ARMS_DEALER_ELGIN,

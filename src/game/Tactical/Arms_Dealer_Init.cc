@@ -66,6 +66,7 @@ const ARMS_DEALER_INFO ArmsDealerInfo[NUM_ARMS_DEALERS] =
 	/* Arnie Brunzwell */ {{{0.1f,  0.8f }}, ARNIE,    ARMS_DEALER_REPAIRS,     1500, ARMS_DEALER_HAS_NO_INVENTORY | ARMS_DEALER_GIVES_CHANGE},
 	/* Fredo           */ {{{0.6f,  0.6f }}, FREDO,    ARMS_DEALER_REPAIRS,     1000, ARMS_DEALER_HAS_NO_INVENTORY | ARMS_DEALER_GIVES_CHANGE},
 	/* Perko           */ {{{1.0f,  0.4f }}, PERKO,    ARMS_DEALER_REPAIRS,     1000, ARMS_DEALER_HAS_NO_INVENTORY | ARMS_DEALER_GIVES_CHANGE},
+	/* Tina            */ {{{1.0f,  0.4f }}, TINA,     ARMS_DEALER_REPAIRS,     1000, ARMS_DEALER_HAS_NO_INVENTORY | ARMS_DEALER_GIVES_CHANGE},
 
 	/* Elgin           */ {{{1.0f,  1.0f }}, DRUGGIST, ARMS_DEALER_SELLS_ONLY,   500, ARMS_DEALER_ACCEPTS_GIFTS                              },
 	/* Manny           */ {{{1.0f,  1.0f }}, MANNY,    ARMS_DEALER_SELLS_ONLY,   500, ARMS_DEALER_ACCEPTS_GIFTS                              }
@@ -1028,9 +1029,16 @@ BOOLEAN CanDealerRepairItem(ArmsDealerID const ubArmsDealer, UINT16 const usItem
 	switch ( ubArmsDealer )
 	{
 		case ARMS_DEALER_ARNIE:
+			// repairs ONLY metalware
+			if ((uiFlags & ITEM_METAL) &&
+				!(uiFlags & ITEM_ELECTRONIC))
+			{
+				return(TRUE);
+			}
+
 		case ARMS_DEALER_PERKO:
-			// repairs ANYTHING non-electronic
-			if ( !( uiFlags & ITEM_ELECTRONIC ) )
+			// repairs anything non-electronic
+			if (!(uiFlags & ITEM_ELECTRONIC))
 			{
 				return(TRUE);
 			}
@@ -1038,12 +1046,20 @@ BOOLEAN CanDealerRepairItem(ArmsDealerID const ubArmsDealer, UINT16 const usItem
 
 		case ARMS_DEALER_FREDO:
 			// repairs ONLY electronics
-			if ( uiFlags & ITEM_ELECTRONIC )
+			if (uiFlags & ITEM_ELECTRONIC)
 			{
 				return(TRUE);
 			}
 			break;
 
+		case ARMS_DEALER_TINA:
+			// repairs anything reparable non-metal and non electronics
+			if (!(uiFlags & ITEM_METAL) &&
+				!(uiFlags & ITEM_ELECTRONIC))
+			{
+				return(TRUE);
+			}
+			break;
 		default:
 			AssertMsg(FALSE, String("CanDealerRepairItem(), Arms Dealer %d is not a recognized repairman!.  AM 1.", ubArmsDealer));
 	}

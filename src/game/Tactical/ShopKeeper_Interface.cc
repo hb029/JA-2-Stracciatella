@@ -3932,7 +3932,7 @@ static void HandleShopKeeperDialog(UINT8 ubInit)
 		// if repairs were delayed
 		if ( gfStartWithRepairsDelayedQuote )
 		{
-			bSpeech = FREDO_PERKO_SORRY_REPAIR_DELAYED;
+			bSpeech = FREDO_PERKO_TINA_SORRY_REPAIR_DELAYED;
 			gfStartWithRepairsDelayedQuote = FALSE;
 
 			// treat this as having done business - the player WAS here for a good reason, and it's the dealers fault...
@@ -5944,7 +5944,7 @@ static void HandlePossibleRepairDelays(void)
 	// assume there won't be a delay
 	gfStartWithRepairsDelayedQuote = FALSE;
 
-	if (gbSelectedArmsDealerID != ARMS_DEALER_FREDO && gbSelectedArmsDealerID != ARMS_DEALER_PERKO) return;
+	if (gbSelectedArmsDealerID != ARMS_DEALER_FREDO && gbSelectedArmsDealerID != ARMS_DEALER_PERKO && gbSelectedArmsDealerID != ARMS_DEALER_TINA) return;
 
 	ARMS_DEALER_STATUS& status = gArmsDealerStatus[gbSelectedArmsDealerID];
 	// because the quotes are so specific, we'll only use them once per game per repairman
@@ -6174,7 +6174,7 @@ static UINT32 EvaluateInvSlot(INVENTORY_IN_SLOT* pInvSlot)
 	if( gbSelectedArmsDealerID == ARMS_DEALER_MICKY )
 	{
 		const SOLDIERTYPE* const s = FindSoldierByProfileIDOnPlayerTeam(ArmsDealerInfo[gbSelectedArmsDealerID].ubShopKeeperID);
-		if (s != NULL && GetDrunkLevel(s) == DRUNK)
+		if (gMercProfiles[MICKY].bNPCData >= 5)
 		{
 			//Micky is DRUNK, pays more!
 			dPriceModifier = ArmsDealerInfo[gbSelectedArmsDealerID].u.price.sell;
