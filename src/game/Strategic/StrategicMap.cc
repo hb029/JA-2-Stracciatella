@@ -879,14 +879,12 @@ void HandleQuestCodeOnSectorEntry( INT16 sNewSectorX, INT16 sNewSectorY, INT8 bN
 		DecideOnAssassin();
 	}
 
-/*
 	if (sector == SEC_C5)
 	{
 		// reset Madame Layla counters
 		gMercProfiles[ MADAME ].bNPCData = 0;
 		gMercProfiles[ MADAME ].bNPCData2 = 0;
 	}
-	*/
 
 	if (sector == SEC_C6 && gubQuest[QUEST_RESCUE_MARIA] == QUESTDONE)
 	{
@@ -1010,6 +1008,7 @@ static void EnterSector(INT16 const x, INT16 const y, INT8 const z)
 	{
 		SetPendingNewScreen(GAME_SCREEN);
 		InitTacticalPlacementGUI();
+		TurnOffTeamsMuzzleFlashes(OUR_TEAM);
 	}
 	else
 	{
@@ -1442,7 +1441,7 @@ static void SetInsertionDataFromAdjacentMoveDirection(SOLDIERTYPE& s, UINT8 cons
 
 		default: // Wrong direction given
 			SLOGD(DEBUG_TAG_SMAP, "Improper insertion direction %d given to SetInsertionDataFromAdjacentMoveDirection", tactical_direction);
-			s.ubStrategicInsertionCode = INSERTION_CODE_WEST;
+			s.ubStrategicInsertionCode = INSERTION_CODE_CENTER;
 			break;
 	}
 }
@@ -1995,6 +1994,8 @@ void AllMercsHaveWalkedOffSector( )
 			SetMusicMode( MUSIC_TACTICAL_NOTHING );
 		}
 	}
+
+	gfBlitBattleSectorLocator = FALSE;
 }
 
 
