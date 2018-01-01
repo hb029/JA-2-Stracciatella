@@ -43,7 +43,8 @@
 #include "MemMan.h"
 #include "JAScreens.h"
 #include "UILayout.h"
-
+#include "WorldMan.h"
+#include "Animation_Data.h"
 
 struct MERCPLACEMENT
 {
@@ -554,7 +555,18 @@ static void ChooseRandomEdgepoints(void)
 		MERCPLACEMENT& m = *i;
 		if (!(m.pSoldier->uiStatusFlags & SOLDIER_VEHICLE))
 		{
-			m.pSoldier->usStrategicInsertionData = ChooseMapEdgepoint(m.ubStrategicInsertionCode);
+			UINT8 non_water_retry = 0;
+			do
+			{
+				m.pSoldier->usStrategicInsertionData = ChooseMapEdgepoint(m.ubStrategicInsertionCode);
+				non_water_retry++;
+			} 
+			while (m.pSoldier->ubBodyType != REGMALE &&
+				m.pSoldier->ubBodyType != BIGMALE &&
+				m.pSoldier->ubBodyType != REGFEMALE &&
+				Water(m.pSoldier->usStrategicInsertionData) &&
+				non_water_retry < 128);
+
 			if (m.pSoldier->usStrategicInsertionData != NOWHERE)
 			{
 				m.pSoldier->ubStrategicInsertionCode = INSERTION_CODE_GRIDNO;
@@ -782,6 +794,14 @@ void HandleTacticalPlacementClicksInOverheadMap(INT32 reason)
 									fInvalidArea = TRUE;
 									break;
 								}
+								if (m.pSoldier->ubBodyType != REGMALE && 
+									m.pSoldier->ubBodyType != BIGMALE && 
+									m.pSoldier->ubBodyType != REGFEMALE &&
+									Water(m.pSoldier->usStrategicInsertionData))
+								{
+									fInvalidArea = TRUE;
+									break;
+								}
 							}
 						}
 						if( !fInvalidArea )
@@ -802,7 +822,14 @@ void HandleTacticalPlacementClicksInOverheadMap(INT32 reason)
 					{ //This is a single merc placement.  If valid, then place him, else report error.
 						MERCPLACEMENT& m = gMercPlacement[gbSelectedMercID];
 						m.pSoldier->usStrategicInsertionData = SearchForClosestPrimaryMapEdgepoint(sGridNo, m.ubStrategicInsertionCode);
-						if (m.pSoldier->usStrategicInsertionData != NOWHERE)
+						if (m.pSoldier->ubBodyType != REGMALE &&
+							m.pSoldier->ubBodyType != BIGMALE &&
+							m.pSoldier->ubBodyType != REGFEMALE &&
+							Water(sGridNo))
+						{
+							fInvalidArea = TRUE;
+						}
+						else if (m.pSoldier->usStrategicInsertionData != NOWHERE)
 						{
 							m.pSoldier->ubStrategicInsertionCode = INSERTION_CODE_GRIDNO;
 							PutDownMercPiece(m);
