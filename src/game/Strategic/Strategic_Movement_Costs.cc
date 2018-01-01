@@ -34,7 +34,7 @@ static const UINT8 g_traverse_we[][17] =
 	/* A */ { E, P, P, E, E, E, P, H, P, X, P, D, D, P, P, E, E },
 	/* B */ { E, P, P, S, P, P, P, P, P, R, R, R, R, P, P, P, E },
 	/* C */ { E, P, R, P, P, X, R, R, R, P, D, D, P, P, G, P, E },
-	/* D */ { E, G, P, P, X, P, R, P, S, P, P, D, P, P, D, P, E },
+	/* D */ { E, G, P, G, G, P, R, P, S, P, P, D, P, P, D, P, E },
 	/* E */ { E, G, P, P, H, P, P, S, P, W, P, P, R, P, P, E, E },
 	/* F */ { E, G, N, P, H, H, P, P, X, P, P, P, P, P, P, E, E },
 	/* G */ { E, X, P, R, R, R, R, R, X, R, R, R, P, P, P, P, E },
