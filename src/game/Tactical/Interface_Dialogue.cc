@@ -3340,7 +3340,7 @@ action_punch_pc:
 						SOLDIERTYPE& s = *i;
 						// Are we in this sector, On the current squad?
 						if (s.bInSector &&
-							0 < s.bLife && s.bLife < s.bLifeMax &&
+							(0 < s.bLife && s.bLife < s.bLifeMax || s.bBleeding > 0) &&
 							s.bAssignment != ASSIGNMENT_HOSPITAL &&
 							PythSpacesAway(s.sGridNo, pSoldier2->sGridNo) < HOSPITAL_PATIENT_DISTANCE)
 						{
@@ -4107,6 +4107,8 @@ UINT32 CalcPatientMedicalCost(const SOLDIERTYPE* const pSoldier)
 		}
 	}
 
+	uiCost = __max((uiCost / 10) * 10, 10);
+
 	return( uiCost );
 }
 
@@ -4198,7 +4200,7 @@ static void StartDialogueMessageBox(UINT8 ubProfileID, UINT16 usMessageBoxType)
 			break;
 		case NPC_ACTION_MEDICAL_REQUESTOR:
 			iTemp = (INT32) CalcMedicalCost( ubProfileID );
-			if ( giHospitalRefund > iTemp )
+			if ( giHospitalRefund > iTemp - 10 )
 			{
 				iTemp = 10;
 			}
