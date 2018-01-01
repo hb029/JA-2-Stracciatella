@@ -1313,6 +1313,9 @@ static void SelectDealersInventoryRegionCallBack(MOUSE_REGION* pRegion, INT32 iR
 					//if the item was added to the Dealer Offer Area correctly
 					if( ubLocation != -1 )
 					{
+						UINT8 ubPerPocket = GCM->getItem(gpTempDealersInventory[ubSelectedInvSlot].ItemObject.usItem)->getPerPocket();
+						if (ubPerPocket == 0) ubPerPocket = 1;
+
 						//Set the flag indicating the item has been selected
 						gpTempDealersInventory[ ubSelectedInvSlot ].uiFlags |= ARMS_INV_ITEM_SELECTED;
 
@@ -1323,9 +1326,9 @@ static void SelectDealersInventoryRegionCallBack(MOUSE_REGION* pRegion, INT32 iR
 						//if the shift key is being pressed, remove them all
 						if (_KeyDown(SHIFT))
 						{
-							if (gpTempDealersInventory[ubSelectedInvSlot].ItemObject.ubNumberOfObjects > GCM->getItem(gpTempDealersInventory[ubSelectedInvSlot].ItemObject.usItem)->getPerPocket())
+							if (gpTempDealersInventory[ubSelectedInvSlot].ItemObject.ubNumberOfObjects > ubPerPocket)
 							{
-								gpTempDealersInventory[ubSelectedInvSlot].ItemObject.ubNumberOfObjects -= GCM->getItem(gpTempDealersInventory[ubSelectedInvSlot].ItemObject.usItem)->getPerPocket();
+								gpTempDealersInventory[ubSelectedInvSlot].ItemObject.ubNumberOfObjects -= ubPerPocket;
 							}
 							else
 							{
@@ -1334,7 +1337,7 @@ static void SelectDealersInventoryRegionCallBack(MOUSE_REGION* pRegion, INT32 iR
 						}
 						else
 						{
-							gpTempDealersInventory[ ubSelectedInvSlot ].ItemObject.ubNumberOfObjects --;
+							gpTempDealersInventory[ubSelectedInvSlot].ItemObject.ubNumberOfObjects--;
 						}
 
 						gubSkiDirtyLevel = SKI_DIRTY_LEVEL2;
@@ -1344,20 +1347,24 @@ static void SelectDealersInventoryRegionCallBack(MOUSE_REGION* pRegion, INT32 iR
 			else // some of this item are already in dealer's offer area
 			{
 				UINT8 ubNumToMove;
+				UINT8 ubSourceNum = gpTempDealersInventory[ubSelectedInvSlot].ItemObject.ubNumberOfObjects;
+				UINT8 ubSinkNum = ArmsDealerOfferArea[gpTempDealersInventory[ubSelectedInvSlot].bSlotIdInOtherLocation].ItemObject.ubNumberOfObjects;
+				UINT8 ubPerPocket = GCM->getItem(gpTempDealersInventory[ubSelectedInvSlot].ItemObject.usItem)->getPerPocket();
+				if (ubPerPocket == 0) ubPerPocket = 1;
 
 				//if the shift key is being pressed, remove them all
 				if (_KeyDown(SHIFT))
 				{
-					ubNumToMove = gpTempDealersInventory[ ubSelectedInvSlot ].ItemObject.ubNumberOfObjects;
+					ubNumToMove = ubSourceNum;
 				}
 				else
 				{
 					ubNumToMove = 1;
 				}
 
-				if (ArmsDealerOfferArea[gpTempDealersInventory[ubSelectedInvSlot].bSlotIdInOtherLocation].ItemObject.ubNumberOfObjects + ubNumToMove > GCM->getItem(ArmsDealerOfferArea[gpTempDealersInventory[ubSelectedInvSlot].bSlotIdInOtherLocation].ItemObject.usItem)->getPerPocket())
+				if (ubSinkNum + ubNumToMove > ubPerPocket)
 				{
-					ubNumToMove = GCM->getItem(ArmsDealerOfferArea[gpTempDealersInventory[ubSelectedInvSlot].bSlotIdInOtherLocation].ItemObject.usItem)->getPerPocket() - ArmsDealerOfferArea[gpTempDealersInventory[ubSelectedInvSlot].bSlotIdInOtherLocation].ItemObject.ubNumberOfObjects;
+					ubNumToMove = ubPerPocket - ubSinkNum;
 				}
 
 				//Reduce the number in dealer's inventory
@@ -2720,9 +2727,12 @@ static INT8 AddItemToArmsDealerOfferArea(const INVENTORY_IN_SLOT* pInvSlot, INT8
 			//if the shift key is being pressed, add them all
 			if (_KeyDown(SHIFT))
 			{
-				if (a->ItemObject.ubNumberOfObjects > GCM->getItem(a->ItemObject.usItem)->getPerPocket())
+				UINT8 ubPerPocket = GCM->getItem(a->ItemObject.usItem)->getPerPocket();
+				if (ubPerPocket == 0) ubPerPocket = 1;
+
+				if (a->ItemObject.ubNumberOfObjects > ubPerPocket)
 				{
-					a->ItemObject.ubNumberOfObjects = GCM->getItem(a->ItemObject.usItem)->getPerPocket();
+					a->ItemObject.ubNumberOfObjects = ubPerPocket;
 				}
 				else
 				{
@@ -6204,11 +6214,22 @@ static UINT32 EvaluateInvSlot(INVENTORY_IN_SLOT* pInvSlot)
 			dPriceModifier = ArmsDealerInfo[gbSelectedArmsDealerID].u.price.buy;
 		}
 	}
+	else if (gbSelectedArmsDealerID == ARMS_DEALER_SAM)
+	{
+		dPriceModifier = ArmsDealerInfo[gbSelectedArmsDealerID].u.price.sell;
+		for (INT8 i = 0; i < pInvSlot->ItemObject.ubNumberOfObjects; ++i)
+		{
+			if (pInvSlot->ItemObject.bStatus[i] < 100)
+			{
+				dPriceModifier = ArmsDealerInfo[gbSelectedArmsDealerID].u.price.buy;
+				uiEvalResult = EVAL_RESULT_OK_BUT_REALLY_DAMAGED;
+			}
+		}
+	}
 	else
 	{
 		dPriceModifier = ArmsDealerInfo[gbSelectedArmsDealerID].u.price.buy;
 	}
-
 
 	// Calculate dealer's buying price for the item
 	uiBuyingPrice = CalcShopKeeperItemPrice( DEALER_BUYING, FALSE, pInvSlot->sItemIndex, dPriceModifier, &( pInvSlot->ItemObject ) );

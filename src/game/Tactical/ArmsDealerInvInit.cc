@@ -133,6 +133,7 @@ static UINT8 GetCurrentSuitabilityForItem(ArmsDealerID const bArmsDealer, UINT16
 		case ARMS_DEALER_TONY:
 		case ARMS_DEALER_DEVIN:
 		case ARMS_DEALER_FRANZ:
+		case ARMS_DEALER_SAM:
 			break;
 
 		default:

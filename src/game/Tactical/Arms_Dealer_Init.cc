@@ -49,9 +49,9 @@ const ARMS_DEALER_INFO ArmsDealerInfo[NUM_ARMS_DEALERS] =
 	/* Jake Cameron    */ {{{0.8f,  1.1f }}, JAKE,     ARMS_DEALER_BUYS_SELLS,  2500, ARMS_DEALER_ONLY_USED_ITEMS | ARMS_DEALER_GIVES_CHANGE },
 	/* Gabby Mulnick   */ {{{1.0f,  1.0f }}, GABBY,    ARMS_DEALER_BUYS_SELLS,  3000, ARMS_DEALER_GIVES_CHANGE                               },
 
-	/* Devin Connell   */ {{{0.75f, 1.25f}}, DEVIN,    ARMS_DEALER_SELLS_ONLY,  5000, ARMS_DEALER_GIVES_CHANGE                               },
-	/* Howard Filmore  */ {{{1.0f,  1.0f }}, HOWARD,   ARMS_DEALER_SELLS_ONLY,  3000, ARMS_DEALER_GIVES_CHANGE                               },
-	/* Sam Rozen       */ {{{1.0f,  1.0f }}, SAM,      ARMS_DEALER_SELLS_ONLY,  3000, ARMS_DEALER_GIVES_CHANGE                               },
+	/* Devin Connell   */ {{{1.0f, 1.25f}}, DEVIN,    ARMS_DEALER_SELLS_ONLY,  5000, ARMS_DEALER_GIVES_CHANGE                               },
+	/* Howard Filmore  */ {{{1.0f,  1.0f }}, HOWARD,   ARMS_DEALER_BUYS_SELLS,  3000, ARMS_DEALER_GIVES_CHANGE                               },
+	/* Sam Rozen       */ {{{0.75f, 1.0f }}, SAM,      ARMS_DEALER_BUYS_SELLS,  3000, ARMS_DEALER_GIVES_CHANGE                               },
 	/* Frank           */ {{{1.0f,  1.0f }}, FRANK,    ARMS_DEALER_SELLS_ONLY,   500, ARMS_DEALER_ACCEPTS_GIFTS                              },
 
 	/* Bar Bro 1       */ {{{1.0f,  1.0f }}, HERVE,    ARMS_DEALER_SELLS_ONLY,   250, ARMS_DEALER_ACCEPTS_GIFTS                              },
@@ -986,6 +986,8 @@ BOOLEAN CanDealerTransactItem(ArmsDealerID const ubArmsDealer, UINT16 const usIt
 				case ARMS_DEALER_JAKE:
 				case ARMS_DEALER_KEITH:
 				case ARMS_DEALER_FRANZ:
+				case ARMS_DEALER_HOWARD:
+				case ARMS_DEALER_SAM:
 					if ( fPurchaseFromPlayer )
 					{
 						// these guys will buy nearly anything from the player, regardless of what they carry for sale!
