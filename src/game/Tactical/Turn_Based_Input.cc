@@ -694,8 +694,8 @@ static void QueryTBRightButton(UIEventKind* const puiNewEvent)
 
 										// Give event to cycle movement
 										*puiNewEvent = M_CYCLE_MOVEMENT;
-										break;
 									}
+									break;
 								default:
 									break;
 							}
