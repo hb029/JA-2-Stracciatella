@@ -33,6 +33,7 @@
 #include "MemMan.h"
 #include "Debug.h"
 #include "ScreenIDs.h"
+#include "Soldier_Macros.h"
 
 //GAME BALANCING DEFINITIONS FOR CREATURE SPREADING
 //Hopefully, adjusting these following definitions will ease the balancing of the
@@ -1317,7 +1318,8 @@ BOOLEAN PlayerGroupIsInACreatureInfestedMine()
 					pSoldier->sSectorX == sSectorX &&
 					pSoldier->sSectorY == sSectorY &&
 					pSoldier->bSectorZ == bSectorZ &&
-					!pSoldier->fBetweenSectors )
+					!pSoldier->fBetweenSectors &&
+					!AM_A_ROBOT(pSoldier))
 			{
 				return TRUE;
 			}
@@ -1361,7 +1363,7 @@ bool GetWarpOutOfMineCodes(INT16* const sector_x, INT16* const sector_y, INT8* c
 			}
 			break;
 
-		case 3: // Cambria
+		case 2: // Cambria
 			if ((x == 8 && y == 9 && z == 3) ||
 					(x == 8 && y == 8 && z == 3) ||
 					(x == 8 && y == 8 && z == 2) ||
@@ -1377,7 +1379,7 @@ bool GetWarpOutOfMineCodes(INT16* const sector_x, INT16* const sector_y, INT8* c
 			}
 			break;
 
-		case 2: // Alma
+		case 3: // Alma
 			if ((x == 13 && y == 11 && z == 3) ||
 					(x == 13 && y == 10 && z == 3) ||
 					(x == 13 && y == 10 && z == 2) ||
