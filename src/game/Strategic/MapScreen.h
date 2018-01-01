@@ -6,7 +6,8 @@
 #include "JA2Types.h"
 #include "MessageBoxScreen.h"
 #include "ScreenIDs.h"
-
+#include "Isometric_Utils.h"
+#include "Strategic.h"
 
 // Sector name identifiers
 enum Towns
