@@ -933,11 +933,6 @@ void UpdateAssignments()
 	// clear out the update list
 	ClearSectorListForCompletedTrainingOfMilitia( );
 
-
-	// rest resting mercs, fatigue active mercs,
-	// check for mercs tired enough go to sleep, and wake up well-rested mercs
-	HandleRestFatigueAndSleepStatus( );
-
 	// run through sectors and handle each type in sector
 	for(sX = 0 ; sX < MAP_WORLD_X; sX++ )
 	{
@@ -977,6 +972,10 @@ void UpdateAssignments()
 
 	// check if anyone is on an assignment where they have nothing to do
 	ReEvaluateEveryonesNothingToDo();
+
+	// rest resting mercs, fatigue active mercs,
+	// check for mercs tired enough go to sleep, and wake up well-rested mercs
+	HandleRestFatigueAndSleepStatus();
 
 	// update mapscreen
 	fCharacterInfoPanelDirty = TRUE;
@@ -2649,7 +2648,10 @@ void MakeSoldiersTacticalAnimationReflectAssignment(SOLDIERTYPE* const s)
 		default:
 			if (s->usAnimState != WKAEUP_FROM_SLEEP)
 			{
-				ChangeSoldierState(s, STANDING, 1, TRUE);
+				if (NumEnemiesInAnySector(s->sSectorX, s->sSectorY, s->bSectorZ) == 0)
+				{
+					ChangeSoldierState(s, STANDING, 1, TRUE);
+				}
 			}
 			break;
 	}
@@ -3669,7 +3671,7 @@ void DetermineWhichAssignmentMenusCanBeShown(void)
 	}
 
 	// determine which assign menu needs to be shown
-	if (!fShowAssignmentMenu || fCharacterNoLongerValid)
+	if (!fShowAssignmentMenu)
 	{
 		// reset show assignment menus
 		fShowAssignmentMenu = FALSE;
@@ -3697,7 +3699,7 @@ void DetermineWhichAssignmentMenusCanBeShown(void)
 		HideBoxIfShown(ghVehicleBox);
 
 		// do we really want ot hide this box?
-		if (!fShowContractMenu) HideBoxIfShown(ghRemoveMercAssignBox);
+		//if (!fShowContractMenu) HideBoxIfShown(ghRemoveMercAssignBox);
 		//HideBox( ghSquadBox );
 
 
@@ -4194,7 +4196,8 @@ static void AssignmentMenuMvtCallBack(MOUSE_REGION* pRegion, INT32 iReason)
 	iValue = MSYS_GetRegionUserData( pRegion, 0 );
 
 
-	pSoldier = GetSelectedAssignSoldier( FALSE );
+	//pSoldier = GetSelectedAssignSoldier( FALSE );
+	pSoldier = GetSelectedInfoChar(); // HACK ctd
 
 	if (HandleAssignmentExpansionAndHighLightForAssignMenu(pSoldier))
 	{
@@ -6431,6 +6434,8 @@ BOOLEAN PutMercInAwakeState( SOLDIERTYPE *pSoldier )
 {
 	if ( pSoldier->fMercAsleep )
 	{
+		StopTimeCompression();
+		
 		if ( ( gfWorldLoaded ) && ( pSoldier->bInSector ) )
 		{
 			const UINT16 state = (guiCurrentScreen == GAME_SCREEN ? WKAEUP_FROM_SLEEP : STANDING);
@@ -6737,8 +6742,7 @@ void ReEvaluateEveryonesNothingToDo()
 				break;
 
 			case TRAIN_BY_OTHER:
-				fNothingToDo = !CanCharacterTrainStat(pSoldier, pSoldier->bTrainStat, TRUE, FALSE) ||
-					!ValidTrainingPartnerInSameSectorOnAssignmentFound(pSoldier, TRAIN_TEAMMATE, pSoldier->bTrainStat);
+				fNothingToDo = !CanCharacterTrainStat(pSoldier, pSoldier->bTrainStat, TRUE, FALSE);
 				break;
 
 			case VEHICLE:
@@ -6831,7 +6835,7 @@ void SetAssignmentForList(INT8 const bAssignment, INT8 const bParam)
 						sel->fFixingSAMSite              ? CanSoldierRepairSAM(&s, SAM_SITE_REPAIR_DIVISOR)                     :
 #endif
 						sel->bVehicleUnderRepairID != -1 ? CanCharacterRepairVehicle(s, GetVehicle(sel->bVehicleUnderRepairID)) :
-						s.fFixingRobot                   ? CanCharacterRepairRobot(&s)                                          : // XXX s in condition seems wrong, should probably be sel
+						sel->fFixingRobot                ? CanCharacterRepairRobot(&s)                                          :
 						TRUE;
 					if (fCanFixSpecificTarget)
 					{
@@ -7076,6 +7080,8 @@ void UnEscortEPC(SOLDIERTYPE* const s)
 
 static bool CharacterIsTakingItEasy(SOLDIERTYPE const& s)
 {
+	if (GetWorldTotalMin() - s.uiLastAssignmentChangeMin < MINUTES_FOR_ASSIGNMENT_TO_COUNT) return false;
+
 	if (s.fMercAsleep) return true;
 
 	if (!CanCharacterSleep(s, false)) return false;
@@ -7089,8 +7095,8 @@ static bool CharacterIsTakingItEasy(SOLDIERTYPE const& s)
 	if (s.bAssignment == PATIENT)             return true;
 	if (s.bAssignment == ASSIGNMENT_HOSPITAL) return true;
 
-	// On a real assignment, but done with it?
-	if (s.fDoneAssignmentAndNothingToDoFlag) return true;
+	//// On a real assignment, but done with it?
+	//if (s.fDoneAssignmentAndNothingToDoFlag) return true;
 
 	// On assignment
 	return false;
