@@ -134,6 +134,7 @@ void StartPlayerTeamTurn( BOOLEAN fDoBattleSnd, BOOLEAN fEnteringCombatMode )
 		fInterfacePanelDirty = DIRTYLEVEL2;
 
 		// Adjust time now!
+		WarpGameTime(15, WARPTIME_PROCESS_EVENTS_NORMALLY);
 		UpdateClock( );
 
 		if ( !fEnteringCombatMode )
@@ -968,12 +969,12 @@ BOOLEAN StandardInterruptConditionsMet(const SOLDIERTYPE* const pSoldier, const 
 		return(FALSE);
 	}
 
-	// a soldier already engaged in a life & death battle is too busy doing his
-	// best to survive to worry about "getting the jump" on additional threats
-	if (pSoldier->bUnderFire)
-	{
-		return(FALSE);
-	}
+	//// a soldier already engaged in a life & death battle is too busy doing his
+	//// best to survive to worry about "getting the jump" on additional threats
+	//if (pSoldier->bUnderFire)
+	//{
+	//	return(FALSE);
+	//}
 
 	if (pSoldier->bCollapsed)
 	{
@@ -1122,7 +1123,15 @@ INT8 CalcInterruptDuelPts(const SOLDIERTYPE* const pSoldier, const SOLDIERTYPE* 
 	INT8 bLightLevel;
 
 	// extra check to make sure neutral folks never get interrupts
-	if (pSoldier->bNeutral)
+	if (pSoldier->bNeutral
+		|| pSoldier->bLastAction == AI_ACTION_RUN_AWAY
+		|| pSoldier->bAction == AI_ACTION_RUN_AWAY
+		|| pSoldier->bActionInProgress == AI_ACTION_RUN_AWAY
+		|| pSoldier->bNextAction == AI_ACTION_RUN_AWAY
+		|| opponent->bLastAction == AI_ACTION_RUN_AWAY
+		|| opponent->bAction == AI_ACTION_RUN_AWAY
+		|| opponent->bActionInProgress == AI_ACTION_RUN_AWAY
+		|| opponent->bNextAction == AI_ACTION_RUN_AWAY)
 	{
 		return( NO_INTERRUPT );
 	}
