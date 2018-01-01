@@ -2254,7 +2254,7 @@ no_cry:
 					SOLDIERTYPE* const pRobot = WhoIsThere2(pSoldier->sPendingActionData2, pSoldier->bLevel);
 					if (pRobot != NULL && pRobot->uiStatusFlags & SOLDIER_ROBOT)
 					{
-						ReloadGun( pRobot, &(pRobot->inv[ HANDPOS ] ), pSoldier->pTempObject );
+						ReloadGun( pSoldier, &(pRobot->inv[ HANDPOS ] ), pSoldier->pTempObject );
 
 						// OK, check what was returned and place in inventory if it's non-zero
 						if ( pSoldier->pTempObject->usItem != NOTHING )
