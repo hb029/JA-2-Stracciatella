@@ -71,7 +71,7 @@ const UICursor gUICursors[NUM_UI_CURSORS] =
 	{ACTION_TARGETAIM6_UICURSOR,         UICURSOR_FREEFLOWING,                                                                                 CURSOR_TARGETON6,          0               },
 	{ACTION_TARGETAIM7_UICURSOR,         UICURSOR_FREEFLOWING,                                                                                 CURSOR_TARGETON7,          0               },
 	{ACTION_TARGETAIM8_UICURSOR,         UICURSOR_FREEFLOWING,                                                                                 CURSOR_TARGETON8,          0               },
-	{ACTION_TARGETAIM8_UICURSOR,         UICURSOR_FREEFLOWING,                                                                                 CURSOR_TARGETON9,          0               },
+	{ACTION_TARGETAIM9_UICURSOR,         UICURSOR_FREEFLOWING,                                                                                 CURSOR_TARGETON9,          0               },
 	{ACTION_TARGETAIMCANT1_UICURSOR,     UICURSOR_FREEFLOWING,                                                                                 CURSOR_TARGETW1,           0               },
 	{ACTION_TARGETAIMCANT2_UICURSOR,     UICURSOR_FREEFLOWING,                                                                                 CURSOR_TARGETW2,           0               },
 	{ACTION_TARGETAIMCANT3_UICURSOR,     UICURSOR_FREEFLOWING,                                                                                 CURSOR_TARGETW3,           0               },
