@@ -45,7 +45,7 @@
 // implementation.  It must come before gtest-internal-inl.h is
 // included, or there will be a compiler error.  This trick is to
 // prevent a user from accidentally including gtest-internal-inl.h in
-// his code.
+// their code.
 #define GTEST_IMPLEMENTATION_ 1
 #include "src/gtest-internal-inl.h"
 #undef GTEST_IMPLEMENTATION_
@@ -512,24 +512,6 @@ class DirectoryCreationTest : public Test {
     remove(unique_file0_.c_str());
     remove(unique_file1_.c_str());
     posix::RmDir(testdata_path_.c_str());
-  }
-
-  std::string TempDir() const {
-#if GTEST_OS_WINDOWS_MOBILE
-    return "\\temp\\";
-#elif GTEST_OS_WINDOWS
-    const char* temp_dir = posix::GetEnv("TEMP");
-    if (temp_dir == NULL || temp_dir[0] == '\0')
-      return "\\temp\\";
-    else if (temp_dir[strlen(temp_dir) - 1] == '\\')
-      return temp_dir;
-    else
-      return std::string(temp_dir) + "\\";
-#elif GTEST_OS_LINUX_ANDROID
-    return "/sdcard/";
-#else
-    return "/tmp/";
-#endif  // GTEST_OS_WINDOWS_MOBILE
   }
 
   void CreateTextFile(const char* filename) {
