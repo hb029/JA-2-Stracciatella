@@ -1071,6 +1071,7 @@ void HandleSoldierThrowItem( SOLDIERTYPE *pSoldier, INT16 sGridNo )
 
 				ChangeSoldierState( pSoldier, THROW_ITEM, 0 , FALSE );
 			}
+			break;
 	}
 
 }
