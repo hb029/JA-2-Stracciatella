@@ -715,6 +715,7 @@ BOOLEAN CanExchangePlaces( SOLDIERTYPE *pSoldier1, SOLDIERTYPE *pSoldier2, BOOLE
 			// must NOT be hostile, must NOT have stationary orders OR militia team, must be >= OKLIFE
 			if ( pSoldier2->bNeutral && pSoldier2->bLife >= OKLIFE &&
 				pSoldier2->ubCivilianGroup != HICKS_CIV_GROUP &&
+				pSoldier2->ubCivilianGroup != KINGPIN_CIV_GROUP &&
 				( ( pSoldier2->bOrders != STATIONARY ||
 				pSoldier2->bTeam == MILITIA_TEAM ) ||
 				( pSoldier2->sAbsoluteFinalDestination != NOWHERE &&
