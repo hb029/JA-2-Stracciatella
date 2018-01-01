@@ -1103,6 +1103,7 @@ void HandleLoyaltyChangeForNPCAction( UINT8 ubNPCProfileId )
 		case DOREEN:
 			// having freed the child labourers... she is releasing them herself!
 			IncrementTownLoyalty( DRASSEN, LOYALTY_BONUS_CHILDREN_FREED_DOREEN_SPARED );
+			SetFactTrue(FACT_DOREEN_HAD_CHANGE_OF_HEART);
 			break;
 
 		case MARTHA:
