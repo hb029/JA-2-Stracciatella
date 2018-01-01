@@ -456,11 +456,10 @@ static void CompileQuestionsInStatsAndWhatNot(void)
 
 	switch (iQuizAnswerList[4])
 	{
-		// XXX TODO0006 the effects seems odd. answer 3 is even more aggressive than answer 2
 		case 0: AddAnAttitudeToAttitudeList(ATT_COWARD);     break;
 		case 1: break; // none
 		case 2: AddAnAttitudeToAttitudeList(ATT_AGGRESSIVE); break;
-		case 3: break; // none
+		case 3: AddAPersonalityToPersonalityList(PSYCHO); break;
 	}
 
 	switch (iQuizAnswerList[5])
@@ -491,7 +490,7 @@ static void CompileQuestionsInStatsAndWhatNot(void)
 	switch (iQuizAnswerList[8])
 	{
 		case 0: AddAPersonalityToPersonalityList(FORGETFUL); break;
-		case 1: // none // XXX TODO0006 fallthrough? code and comment disagree
+		case 1: break;
 		case 2: AddAnAttitudeToAttitudeList(ATT_PESSIMIST);  break;
 		case 3: AddAPersonalityToPersonalityList(NERVOUS);   break;
 	}
@@ -521,7 +520,7 @@ static void CompileQuestionsInStatsAndWhatNot(void)
 		case 3: AddSkillToSkillList(AUTO_WEAPS);                                break;
 		case 4: AddSkillToSkillList(HANDTOHAND);                                break;
 		case 5: AddSkillToSkillList(ELECTRONICS);                               break;
-		case 6: break; // asshole // XXX TODO0006 code and commend disagree
+		case 6: AddAnAttitudeToAttitudeList(ATT_ASSHOLE);						break;
 		case 7: break; // none
 	}
 
@@ -779,77 +778,74 @@ static void HandleIMPQuizKeyBoard(void)
 	while (DequeueEvent(&InputEvent))
 	{
 		if (!fSkipFrame)
-	{
-		// HOOK INTO MOUSE HOOKS
-
-
-		/*
-		if( (InputEvent.usEvent == KEY_DOWN ) && ( InputEvent.usParam >= '1' ) && ( InputEvent.usParam <= '9') )
 		{
-			if( ( UINT16 )( iNumberOfPersonaButtons ) >= InputEvent.usParam - '0' )
+			// HOOK INTO MOUSE HOOKS
+			if ((InputEvent.usEvent == KEY_DOWN) && (InputEvent.usParam >= '1') && (InputEvent.usParam <= '9'))
 			{
-				// reset buttons
-				ResetQuizAnswerButtons( );
+				if ((UINT16)(iNumberOfPersonaButtons) >= InputEvent.usParam - '0')
+				{
+					// reset buttons
+					ResetQuizAnswerButtons();
 
-				// ok, check to see if button was disabled, if so, re enable
-				CheckStateOfTheConfirmButton( );
+					// ok, check to see if button was disabled, if so, re enable
+					CheckStateOfTheConfirmButton();
 
-				// toggle this button on
-				giIMPPersonalityQuizAnswerButton[InputEvent.usParam - '1']->uiFlags |= BUTTON_CLICKED_ON;
+					// toggle this button on
+					giIMPPersonalityQuizAnswerButton[InputEvent.usParam - '1']->uiFlags |= BUTTON_CLICKED_ON;
 
-				iCurrentAnswer = InputEvent.usParam - '1';
+					iCurrentAnswer = InputEvent.usParam - '1';
 
-				PrintImpText( );
+					PrintImpText();
 
-				// the current and last question numbers
-				PrintQuizQuestionNumber( );
+					// the current and last question numbers
+					PrintQuizQuestionNumber();
 
-				fReDrawCharProfile = TRUE;
+					fReDrawCharProfile = TRUE;
+					fSkipFrame = TRUE;
+				}
+			}
+			else if (iCurrentAnswer != -1 && InputEvent.usEvent == KEY_DOWN && InputEvent.usParam == SDLK_RETURN)
+			{
+				// reset all the buttons
+				ResetQuizAnswerButtons();
+
+				// copy the answer into the list
+				iQuizAnswerList[giCurrentPersonalityQuizQuestion] = iCurrentAnswer;
+
+				// reset answer for next question
+				iCurrentAnswer = -1;
+
+				// next question, JOHNNY!
+				giCurrentPersonalityQuizQuestion++;
+				giMaxPersonalityQuizQuestion++;
+
+
+				// OPPS!, done..time to finish up
+				if (giCurrentPersonalityQuizQuestion > 15)
+				{
+					iCurrentImpPage = IMP_PERSONALITY_FINISH;
+					// process
+					CompileQuestionsInStatsAndWhatNot();
+				}
+
 				fSkipFrame = TRUE;
 			}
-		}
-		else if (iCurrentAnswer != -1 && InputEvent.usEvent == KEY_DOWN && InputEvent.usParam == SDLK_RETURN)
-		{
-			// reset all the buttons
-			ResetQuizAnswerButtons( );
-
-			// copy the answer into the list
-			iQuizAnswerList[ giCurrentPersonalityQuizQuestion ] = iCurrentAnswer;
-
-			// reset answer for next question
-			iCurrentAnswer = -1;
-
-			// next question, JOHNNY!
-			giCurrentPersonalityQuizQuestion++;
-			giMaxPersonalityQuizQuestion++;
-
-
-			// OPPS!, done..time to finish up
-			if( giCurrentPersonalityQuizQuestion > 15)
+			else if ((InputEvent.usEvent == KEY_DOWN) && (InputEvent.usParam == '='))
 			{
-				iCurrentImpPage = IMP_PERSONALITY_FINISH;
-				// process
-				CompileQuestionsInStatsAndWhatNot( );
+				MoveAheadAQuestion();
+				fSkipFrame = TRUE;
 			}
-
-			fSkipFrame = TRUE;
+			else if ((InputEvent.usEvent == KEY_DOWN) && (InputEvent.usParam == '-'))
+			{
+				MoveBackAQuestion();
+				fSkipFrame = TRUE;
+			}
+			else
+			{
+				MouseSystemHook(InputEvent.usEvent, MousePos.iX, MousePos.iY);
+				HandleKeyBoardShortCutsForLapTop(InputEvent.usEvent, InputEvent.usParam, InputEvent.usKeyState);
+			}
 		}
-		else if( ( InputEvent.usEvent == KEY_DOWN ) && ( InputEvent.usParam == '=' ) )
-		{
-			MoveAheadAQuestion( );
-			fSkipFrame = TRUE;
-		}
-		else if( ( InputEvent.usEvent == KEY_DOWN ) && ( InputEvent.usParam == '-' ) )
-		{
-			MoveBackAQuestion( );
-			fSkipFrame = TRUE;
-		}
-		else*/
-		{
-			MouseSystemHook(InputEvent.usEvent, MousePos.iX, MousePos.iY);
-			HandleKeyBoardShortCutsForLapTop(InputEvent.usEvent, InputEvent.usParam, InputEvent.usKeyState);
-		}
-	}
 	}
 }
 

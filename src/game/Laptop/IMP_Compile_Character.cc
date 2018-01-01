@@ -64,6 +64,39 @@ void CreateACharacterFromPlayerEnteredStats(void)
 	SelectMercFace();
 }
 
+BOOLEAN DoesCharacterHaveAnAttitude(void)
+{
+	// simply checks if caracter has an attitude other than normal
+	switch (iAttitude)
+	{
+	case ATT_LONER:
+	case ATT_PESSIMIST:
+	case ATT_ARROGANT:
+	case ATT_BIG_SHOT:
+	case ATT_ASSHOLE:
+	case ATT_COWARD:
+		return TRUE;
+		break;
+	default:
+		return FALSE;
+	}
+}
+
+BOOLEAN DoesCharacterHaveAPersoanlity(void)
+{
+	// simply checks if caracter has a personality other than normal
+	if (iPersonality != NO_PERSONALITYTRAIT)
+	{
+		// yep
+		return (TRUE);
+	}
+	else
+	{
+		// nope
+		return (FALSE);
+	}
+}
+
 static void CreatePlayerAttitude(void)
 {
 	// this function will 'roll a die' and decide if any attitude does exists
@@ -112,7 +145,7 @@ static void CreatePlayerAttitude(void)
 			if (iCounter2 == iDiceValue)
 			{
 				// this is it!
-				iAttitude = iCounter2;
+				iAttitude = i;
 				break;
 			}
 			else
@@ -214,12 +247,6 @@ static void CreatePlayerSkills(void)
 
 void AddAPersonalityToPersonalityList(INT8 bPersonality)
 {
-	// CJC, Oct 26 98: prevent personality list from being generated
-	// because no dialogue was written to support PC personality quotes
-
-	// BUT we can manage this for PSYCHO okay
-	if (bPersonality != PSYCHO) return;
-
 	// will add a persoanlity to persoanlity list
 	if (iLastElementInPersonalityList < ATTITUDE_LIST_SIZE)
 	{
@@ -230,18 +257,6 @@ void AddAPersonalityToPersonalityList(INT8 bPersonality)
 
 static void CreatePlayerPersonality(void)
 {
-	// only psycho is available since we have no quotes
-	// SO if the array is not empty, give them psycho!
-	if (iLastElementInPersonalityList == 0)
-	{
-		iPersonality = NO_PERSONALITYTRAIT;
-	}
-	else
-	{
-		iPersonality = PSYCHO;
-	}
-
-	/*
 	// this function will 'roll a die' and decide if any Personality does exists
 	INT32 iDiceValue = 0;
 	INT32 iCounter = 0;
@@ -253,7 +268,7 @@ static void CreatePlayerPersonality(void)
 	iPersonality = NO_PERSONALITYTRAIT;
 	if( PersonalityList[ iDiceValue ] !=  NO_PERSONALITYTRAIT )
 	{
-		for( iCounter = 0; iCounter < iLastElementInPersonalityList; iCounter++ )
+		for( iCounter = 0; iCounter <= iLastElementInPersonalityList; iCounter++ )
 		{
 			if( iCounter != iDiceValue )
 			{
@@ -271,11 +286,10 @@ static void CreatePlayerPersonality(void)
 					{
 						iPersonality = PersonalityList[ iDiceValue ];
 					}
-
 				}
 			}
 		}
-	}*/
+	}
 }
 
 

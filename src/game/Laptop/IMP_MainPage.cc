@@ -28,6 +28,8 @@
 static BUTTON_PICS* giIMPMainPageButtonImage[6];
 GUIButtonRef giIMPMainPageButton[6];
 
+extern	INT32 giMaxPersonalityQuizQuestion;
+extern	BOOLEAN fStartOverFlag;
 extern INT32 iCurrentVoices;
 
 // mouse regions for not entablable warning
@@ -224,6 +226,8 @@ static void BtnIMPMainPageBackCallback(GUI_BUTTON *btn, INT32 reason)
 		iCurrentProfileMode = 0;
 		fFinishedCharGeneration = FALSE;
 		ResetCharacterStats();
+		giMaxPersonalityQuizQuestion = 0;
+		fStartOverFlag = TRUE;
 	}
 }
 

@@ -124,9 +124,8 @@ void EnterIMPAttributeSelection(void)
 		giCurrentlySelectedStat = -1;
 
 		// does character have PROBLEMS?
-		/*
 		if (DoesCharacterHaveAnAttitude())   iCurrentBonusPoints += 10;
-		if (DoesCharacterHaveAPersoanlity()) iCurrentBonusPoints += 10;*/
+		if (DoesCharacterHaveAPersoanlity()) iCurrentBonusPoints += 10;
 	}
 	fReturnStatus = TRUE;
 	fFirstIMPAttribTime = FALSE;

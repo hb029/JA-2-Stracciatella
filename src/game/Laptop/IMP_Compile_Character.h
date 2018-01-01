@@ -13,5 +13,7 @@ void AddAPersonalityToPersonalityList( INT8 bPersonlity );
 void AddSkillToSkillList( INT8 bSkill );
 void ResetSkillsAttributesAndPersonality( void );
 void HandleMercStatsForChangesInFace( void );
+BOOLEAN DoesCharacterHaveAnAttitude(void);
+BOOLEAN DoesCharacterHaveAPersoanlity(void);
 
 #endif
