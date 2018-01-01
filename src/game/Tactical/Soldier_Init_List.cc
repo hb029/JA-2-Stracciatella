@@ -630,7 +630,7 @@ void AddSoldierInitListTeamToWorld(INT8 const team)
 			// allowable soldiers of team. All teams can have a max of 32 individuals,
 			// except for the player which is 20. Players aren't processed in this
 			// list anyway.
-			break;
+			continue;
 		}
 	}
 }
