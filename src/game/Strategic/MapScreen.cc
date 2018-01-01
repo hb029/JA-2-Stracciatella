@@ -3929,16 +3929,65 @@ static void MAPInvClickCallback(MOUSE_REGION* pRegion, INT32 iReason)
 			// remember what it was
 			usOldItemIndex = pSoldier->inv[ uiHandPos ].usItem;
 
-			// pick it up
-			MAPBeginItemPointer( pSoldier, (UINT8)uiHandPos );
+			// Feature - move item with one click
+			if (_KeyDown(ALT))
+			{
+				if ((pSoldier) &&
+					!(AM_A_ROBOT(pSoldier)) && 
+					pSoldier->bAssignment < ASSIGNMENT_DEAD &&
+					pSoldier->bAssignment != IN_TRANSIT &&
+					!pSoldier->fBetweenSectors)
+				{
 
-			// remember which gridno the object came from
-			sObjectSourceGridNo = pSoldier->sGridNo;
+					// Just drop the stuff in the current sector
+					GridNo gridno;
+					bool const here = pSoldier->sSectorX == gWorldSectorX && pSoldier->sSectorY == gWorldSectorY && pSoldier->bSectorZ == gbWorldSectorZ;
+					if (here)
+					{
+						// ATE: Mercs can have a gridno of NOWHERE
+						gridno = pSoldier->sGridNo;
+						if (gridno == NOWHERE)
+						{
+							if (pSoldier->usStrategicInsertionData != NOWHERE)
+							{
+								gridno = pSoldier->usStrategicInsertionData;
+							}
+							else
+							{
+								gridno = RandomGridNo();
+							}
 
-			HandleTacticalEffectsOfEquipmentChange( pSoldier, uiHandPos, usOldItemIndex, NOTHING );
+							GridNo tmp_gridno = FindNearestAvailableGridNoForItem(gridno, 5);
+							if (tmp_gridno == NOWHERE) tmp_gridno = FindNearestAvailableGridNoForItem(gridno, 15);
+							if (tmp_gridno != NOWHERE) gridno = tmp_gridno;
+						}
 
-			fInterfacePanelDirty = DIRTYLEVEL2;
-			fCharacterInfoPanelDirty = TRUE;
+						// Remove all from soldier's slot
+						RemoveObjectFromSlot(pSoldier, uiHandPos, &gItemPointer);
+
+						CancelSectorInventoryDisplayIfOn(false);
+
+						AddItemToPool(gridno, &gItemPointer, VISIBLE, pSoldier->bLevel, WORLD_ITEM_REACHABLE, 0);
+						
+						fTeamPanelDirty = TRUE;
+						fMapPanelDirty = TRUE;
+						fInterfacePanelDirty = DIRTYLEVEL2;
+					}
+				}
+			}
+			else
+			{
+				// pick it up
+				MAPBeginItemPointer(pSoldier, (UINT8)uiHandPos);
+
+				// remember which gridno the object came from
+				sObjectSourceGridNo = pSoldier->sGridNo;
+
+				HandleTacticalEffectsOfEquipmentChange(pSoldier, uiHandPos, usOldItemIndex, NOTHING);
+
+				fInterfacePanelDirty = DIRTYLEVEL2;
+				fCharacterInfoPanelDirty = TRUE;
+			}
 		}
 		else	// item in cursor
 		{
