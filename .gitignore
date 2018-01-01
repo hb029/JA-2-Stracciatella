@@ -1,0 +1,8 @@
+_bin
+.DS_Store
+.vagrant
+releases
+TAGS
+.cproject
+.project
+.idea
