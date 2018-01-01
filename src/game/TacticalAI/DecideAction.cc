@@ -525,7 +525,7 @@ static INT8 DecideActionBoxerEnteringRing(SOLDIERTYPE* pSoldier)
 	if (room == BOXING_RING)
 	{
 		// look towards nearest player
-		sDesiredMercLoc = ClosestPC( pSoldier, NULL );
+		sDesiredMercLoc = ClosestBoxer( pSoldier, NULL );
 		if ( sDesiredMercLoc != NOWHERE )
 		{
 			// see if we are facing this person
@@ -683,7 +683,7 @@ static INT8 DecideActionGreen(SOLDIERTYPE* pSoldier)
 					pSoldier->usActionData = FindClosestBoxingRingSpot( pSoldier, FALSE );
 					return( AI_ACTION_GET_CLOSER );
 				}
-				else if (room != NO_ROOM)
+				else
 				{
 					// done!
 					pSoldier->uiStatusFlags &= ~(SOLDIER_BOXER);
@@ -2124,7 +2124,14 @@ INT8 DecideActionRed(SOLDIERTYPE *pSoldier, UINT8 ubUnconsciousOK)
 				// if HIDING is possible and at least as desirable as seeking or helping
 				if ((bHidePts > -90) && (bHidePts >= bSeekPts) && (bHidePts >= bHelpPts) && (bHidePts >= bWatchPts ))
 				{
-					sClosestOpponent = ClosestKnownOpponent( pSoldier, NULL, NULL );
+					if (pSoldier->uiStatusFlags & SOLDIER_BOXER)
+					{
+						sClosestOpponent = ClosestBoxer(pSoldier, NULL);
+					}
+					else
+					{
+						sClosestOpponent = ClosestKnownOpponent(pSoldier, NULL, NULL);
+					}
 					// if an opponent is known (not necessarily reachable or conscious)
 					if (!SkipCoverCheck && sClosestOpponent != NOWHERE )
 					{
@@ -2229,7 +2236,14 @@ INT8 DecideActionRed(SOLDIERTYPE *pSoldier, UINT8 ubUnconsciousOK)
 	{
 		// determine the location of the known closest opponent
 		// (don't care if he's conscious, don't care if he's reachable at all)
-		sClosestOpponent = ClosestKnownOpponent(pSoldier, NULL, NULL);
+		if (pSoldier->uiStatusFlags & SOLDIER_BOXER)
+		{
+			sClosestOpponent = ClosestBoxer(pSoldier, NULL);
+		}
+		else
+		{
+			sClosestOpponent = ClosestKnownOpponent(pSoldier, NULL, NULL);
+		}
 
 		if (sClosestOpponent != NOWHERE)
 		{
@@ -2383,7 +2397,14 @@ INT8 DecideActionRed(SOLDIERTYPE *pSoldier, UINT8 ubUnconsciousOK)
 	// if not in water and not already crouched, try to crouch down first
 	if (!fCivilian && !bInWater && (gAnimControl[ pSoldier->usAnimState ].ubHeight == ANIM_STAND) && IsValidStance( pSoldier, ANIM_CROUCH ) )
 	{
-		sClosestOpponent = ClosestKnownOpponent(pSoldier, NULL, NULL);
+		if (pSoldier->uiStatusFlags & SOLDIER_BOXER)
+		{
+			sClosestOpponent = ClosestBoxer(pSoldier, NULL);
+		}
+		else
+		{
+			sClosestOpponent = ClosestKnownOpponent(pSoldier, NULL, NULL);
+		}
 
 		if ( (sClosestOpponent != NOWHERE && PythSpacesAway( pSoldier->sGridNo, sClosestOpponent ) < (MaxDistanceVisible() * 3) / 2 ) || PreRandom( 4 ) == 0 )
 		{
@@ -3354,7 +3375,15 @@ static INT8 DecideActionBlack(SOLDIERTYPE* pSoldier)
 	{
 		if ( ubCanMove )
 		{
-			sClosestOpponent = ClosestSeenOpponent(pSoldier, NULL, NULL);
+			if (pSoldier->uiStatusFlags & SOLDIER_BOXER)
+			{
+				sClosestOpponent = ClosestBoxer(pSoldier, NULL);
+			}
+			else
+			{
+				sClosestOpponent = ClosestSeenOpponent(pSoldier, NULL, NULL);
+			}
+
 			if ( sClosestOpponent != NOWHERE )
 			{
 				// temporarily make boxer have orders of CLOSEPATROL rather than STATIONARY
@@ -3454,8 +3483,15 @@ static INT8 DecideActionBlack(SOLDIERTYPE* pSoldier)
 					{
 						// determine the location of the known closest opponent
 						// (don't care if he's conscious, don't care if he's reachable at all)
+						if (pSoldier->uiStatusFlags & SOLDIER_BOXER)
+						{
+							sClosestOpponent = ClosestBoxer(pSoldier, NULL);
+						}
+						else
+						{
+							sClosestOpponent = ClosestSeenOpponent(pSoldier, NULL, NULL);
+						}
 
-						sClosestOpponent = ClosestSeenOpponent(pSoldier, NULL, NULL);
 						// if we have a closest seen opponent
 						if (sClosestOpponent != NOWHERE)
 						{
@@ -3506,9 +3542,15 @@ static INT8 DecideActionBlack(SOLDIERTYPE* pSoldier)
 		{
 			// determine the location of the known closest opponent
 			// (don't care if he's conscious, don't care if he's reachable at all)
+			if (pSoldier->uiStatusFlags & SOLDIER_BOXER)
+			{
+				sClosestOpponent = ClosestBoxer(pSoldier, NULL);
+			}
+			else
+			{
+				sClosestOpponent = ClosestSeenOpponent(pSoldier, NULL, NULL);
+			}
 
-
-			sClosestOpponent = ClosestSeenOpponent(pSoldier, NULL, NULL);
 			// if we have a closest reachable opponent
 			if (sClosestOpponent != NOWHERE)
 			{

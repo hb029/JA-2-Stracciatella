@@ -18,6 +18,7 @@
 #include "Environment.h"
 #include "Lighting.h"
 #include "Soldier_Create.h"
+#include "Boxing.h"
 
 #include "ContentManager.h"
 #include "GameInstance.h"
@@ -1179,6 +1180,62 @@ INT16 ClosestPC(const SOLDIERTYPE* pSoldier, INT16* psDistance)
 	return( sGridNo );
 }
 
+INT16 ClosestBoxer(const SOLDIERTYPE* pSoldier, INT16* psDistance)
+{
+	// used by NPCs... find the closest Boxer
+
+	// NOTE: skips EPCs!
+
+	INT16					sMinDist = (INT16)WORLD_MAX;
+	INT16					sDist;
+	INT16					sGridNo = NOWHERE;
+
+	CFOR_EACH_IN_TEAM(pTargetSoldier, OUR_TEAM)
+	{
+		if (!pTargetSoldier->bInSector)
+		{
+			continue;
+		}
+
+		// if dead, skip him
+		if (pTargetSoldier->bLife == 0)
+		{
+			continue;
+		}
+
+		if (AM_AN_EPC(pTargetSoldier))
+		{
+			continue;
+		}
+
+		if (!(pTargetSoldier->uiStatusFlags & SOLDIER_BOXER))
+		{
+			continue;
+		}
+
+		sDist = PythSpacesAway(pSoldier->sGridNo, pTargetSoldier->sGridNo);
+
+		// if this PC is not visible to the soldier, then add a penalty to the distance
+		// so that we weight in favour of visible mercs
+		if (pTargetSoldier->bTeam != pSoldier->bTeam && pSoldier->bOppList[pTargetSoldier->ubID] != SEEN_CURRENTLY)
+		{
+			sDist += 10;
+		}
+
+		if (sDist < sMinDist && GetRoom(pTargetSoldier->sGridNo) == BOXING_RING)
+		{
+			sMinDist = sDist;
+			sGridNo = pTargetSoldier->sGridNo;
+		}
+	}
+
+	if (psDistance)
+	{
+		*psDistance = sMinDist;
+	}
+
+	return(sGridNo);
+}
 
 static INT16 FindClosestClimbPointAvailableToAI(SOLDIERTYPE* pSoldier, INT16 sStartGridNo, INT16 sDesiredGridNo, BOOLEAN fClimbUp)
 {

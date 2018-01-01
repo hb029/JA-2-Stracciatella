@@ -143,6 +143,7 @@ INT8 ClosestPanicTrigger( SOLDIERTYPE * pSoldier );
 
 INT16 ClosestKnownOpponent(SOLDIERTYPE *pSoldier, INT16 * psGridNo, INT8 * pbLevel);
 INT16 ClosestPC(const SOLDIERTYPE* pSoldier, INT16* psDistance);
+INT16 ClosestBoxer(const SOLDIERTYPE* pSoldier, INT16* psDistance);
 BOOLEAN CanAutoBandage( BOOLEAN fDoFullCheck );
 
 INT8	DecideAction(SOLDIERTYPE *pSoldier);

@@ -1048,6 +1048,9 @@ void CalcBestStab(SOLDIERTYPE *pSoldier, ATTACKTYPE *pBestStab, BOOLEAN fBladeAt
 		if (pSoldier->bAttitude == ATTACKSLAYONLY && pOpponent->ubProfile != SLAY)
 			continue;  // next opponent
 
+		if ((pSoldier->uiStatusFlags & SOLDIER_BOXER) && (!(pOpponent->uiStatusFlags & SOLDIER_BOXER)))
+			continue;
+
 		// calculate minimum action points required to stab at this opponent
 		ubMinAPCost = CalcTotalAPsToAttack( pSoldier,pOpponent->sGridNo,ADDTURNCOST, 0 );
 
