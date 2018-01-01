@@ -407,6 +407,10 @@ void HandleAllReachAbleItemsInTheSector(INT16 const x, INT16 const y, INT8 const
 		{
 			reachable = false;
 		}
+		else if (GCM->getItem(wi->o.usItem)->getItemClass() == IC_KEY)
+		{
+			reachable = false;
+		}
 		else if (gpWorldLevelData[wi->sGridNo].uiFlags & MAPELEMENT_REACHABLE)
 		{
 			// The gridno itself is reachable, so the item is reachable
