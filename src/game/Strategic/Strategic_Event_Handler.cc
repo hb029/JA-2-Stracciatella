@@ -381,8 +381,8 @@ static void HandleDelayedItemsArrival(UINT32 uiReason)
 					break;
 				case 1:
 				case 2:
-					// 2 in 10 chance of a battered Desert Eagle
-					CreateItem( DESERTEAGLE, (INT8) (40 + Random( 10 )), &Object );
+					// 2 in 10 chance of a battered M1911
+					CreateItem( __ITEM_8, (INT8) (40 + Random( 10 )), &Object );
 					break;
 				case 3:
 				case 4:
@@ -394,8 +394,8 @@ static void HandleDelayedItemsArrival(UINT32 uiReason)
 				case 7:
 				case 8:
 				case 9:
-					// 4 in 10 chance of two 38s!
-					CreateItems( SW38, (INT8) (90 + Random( 10 )), 2, &Object );
+					// 4 in 10 chance of one 38s!
+					CreateItem( SW38, (INT8) (90 + Random( 10 )), &Object );
 					break;
 			}
 			if ( ( gWorldSectorX == BOBBYR_SHIPPING_DEST_SECTOR_X ) && ( gWorldSectorY == BOBBYR_SHIPPING_DEST_SECTOR_Y ) && ( gbWorldSectorZ == BOBBYR_SHIPPING_DEST_SECTOR_Z ) )
@@ -654,6 +654,33 @@ void HandleNPCSystemEvent( UINT32 uiEvent )
 						// resurrect robot
 						gMercProfiles[ ROBOT ].bLife = gMercProfiles[ ROBOT ].bLifeMax;
 						gMercProfiles[ ROBOT ].bMercStatus = MERC_OK;
+
+						//Reset the values set for robot 1 and handle madlabs inventory
+						gMercProfiles[ROBOT].ubStrategicInsertionCode = INSERTION_CODE_GRIDNO;
+						gMercProfiles[ROBOT].ubMiscFlags = 0;
+						gMercProfiles[ROBOT].usStrategicInsertionData = gMercProfiles[MADLAB].usStrategicInsertionData + 1;
+
+						UINT16 usItem;
+						for (int i = 1; i < NUM_INV_SLOTS; i++)
+						{
+							usItem = gMercProfiles[MADLAB].inv[i];
+							if (GCM->getItem(usItem)->getItemClass() == IC_GUN)
+							{
+								gMercProfiles[MADLAB].inv[i] = NOTHING;
+								gMercProfiles[MADLAB].bInvStatus[i] = 0;
+								gMercProfiles[MADLAB].bInvNumber[i] = 0;
+
+								gMercProfiles[ROBOT].inv[HANDPOS] = usItem;
+								gMercProfiles[ROBOT].bInvStatus[HANDPOS] = 100;
+								gMercProfiles[ROBOT].bInvNumber[HANDPOS] = 1;
+							}
+							else if (usItem == VIDEO_CAMERA)
+							{
+								gMercProfiles[MADLAB].inv[i] = NOTHING;
+								gMercProfiles[MADLAB].bInvStatus[i] = 0;
+								gMercProfiles[MADLAB].bInvNumber[i] = 0;
+							}
+						}
 					}
 					else
 					{
@@ -725,6 +752,7 @@ void HandleEarlyMorningEvents( void )
 	}
 	// reset Father Walker's drunkenness level!
 	gMercProfiles[ FATHER ].bNPCData = (INT8) Random( 4 );
+	gMercProfiles[ MICKY ].bNPCData = 0;
 	// set Walker's location
 	if ( Random( 2 ) )
 	{
@@ -938,7 +966,8 @@ void HandleEarlyMorningEvents( void )
 		SetFactFalse( FACT_DAVE_HAS_GAS );
 	}
 
-	if ( gWorldSectorX == HOSPITAL_SECTOR_X && gWorldSectorY == HOSPITAL_SECTOR_Y && gbWorldSectorZ == HOSPITAL_SECTOR_Z )
+	// If the hospital is not loaded, check the supplies
+	if ( gWorldSectorX != HOSPITAL_SECTOR_X || gWorldSectorY != HOSPITAL_SECTOR_Y || gbWorldSectorZ != HOSPITAL_SECTOR_Z )
 	{
 		CheckForMissingHospitalSupplies();
 	}
@@ -969,18 +998,21 @@ void CheckForMissingHospitalSupplies( void )
 
 	CFOR_EACH_WORLD_ITEM(wi)
 	{
-		// loop through all items, look for ownership
+		// loop through all items, look for ownership, handle stacks
 		if (wi->o.usItem != OWNERSHIP || wi->o.ubOwnerCivGroup != DOCTORS_CIV_GROUP) continue;
 
 		const ITEM_POOL* pItemPool = GetItemPool(wi->sGridNo, 0);
 		while( pItemPool )
 		{
 			OBJECTTYPE const& o = GetWorldItem(pItemPool->iItemIndex).o;
-			if (o.bStatus[0] > 60)
+			for (UINT32 i = 0; i < MAX_OBJECTS_PER_SLOT; i++)
 			{
-				if (o.usItem == FIRSTAIDKIT || o.usItem == MEDICKIT || o.usItem == REGEN_BOOSTER || o.usItem == ADRENALINE_BOOSTER)
+				if (o.bStatus[i] > 60)
 				{
-					ubMedicalObjects++;
+					if (o.usItem == FIRSTAIDKIT || o.usItem == MEDICKIT || o.usItem == REGEN_BOOSTER || o.usItem == ADRENALINE_BOOSTER)
+					{
+						ubMedicalObjects++;
+					}
 				}
 			}
 
