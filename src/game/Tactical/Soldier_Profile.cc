@@ -225,9 +225,9 @@ void LoadMercProfiles()
 static void DecideActiveTerrorists()
 {
 	// Using this stochastic process(!), the chances for terrorists are:
-	// EASY:    3,  9%    4, 42%    5, 49%
-	// MEDIUM:  3, 25%    4, 50%    5, 25%
-	// HARD:    3, 49%    4, 42%    5,  9%
+	// EASY:    2,  9%    3, 21%    4, 21%    5, 49%
+	// MEDIUM:  2, 25%    3, 25%    4, 25%    5, 25%
+	// HARD:    2, 49%    3, 21%    4, 21%    5,  9%
 	UINT32 chance;
 	switch (gGameOptions.ubDifficultyLevel)
 	{
@@ -241,36 +241,29 @@ static void DecideActiveTerrorists()
 		if (Chance(chance)) ++n_additional_terrorists;
 	}
 
-	UINT8 terrorist_placement[MAX_ADDITIONAL_TERRORISTS];
-	for (UINT8 n_terrorists_added = 0; n_terrorists_added != n_additional_terrorists;)
+	for (UINT8 n_terrorists_added = 0; n_terrorists_added < n_additional_terrorists; n_terrorists_added++)
 	{
-		FOR_EACH(TerroristInfo const, i, g_terrorist_infos)
+		UINT8 n_add_terrorist = Random(lengthof(g_terrorist_infos) - n_terrorists_added - 1);
+		
+		for (UINT8 i = 0; i < lengthof(g_terrorist_infos); i++)
 		{
-			if (n_terrorists_added == n_additional_terrorists) break;
+			MERCPROFILESTRUCT& p = GetProfile(g_terrorist_infos[i].profile);
 
-			TerroristInfo const& t = *i;
-			MERCPROFILESTRUCT&   p = GetProfile(t.profile);
-			// Random 40% chance of adding this terrorist if not yet placed.
+			// Already added this one
 			if (p.sSectorX != 0)   continue;
-			if (Random(100) >= 40) continue;
 
-			// Since there are 5 spots per terrorist and a maximum of 5 terrorists, we
-			// are guaranteed to be able to find a spot for each terrorist since there
-			// aren't enough other terrorists to use up all the spots for any one
-			// terrorist
-pick_sector:
-			// Pick a random spot, see if it's already been used by another terrorist.
-			UINT8 const sector = t.sectors[Random(lengthof(t.sectors))];
-			for (UINT8 k = 0; k != n_terrorists_added; ++k)
+			// Found the remaining terrorist to add
+			if (n_add_terrorist == 0)
 			{
-				if (terrorist_placement[k] == sector) goto pick_sector;
+				UINT8 const sector = g_terrorist_infos[i].sectors[Random(lengthof(g_terrorist_infos[i].sectors))];
+				p.sSectorX = SECTORX(sector);
+				p.sSectorY = SECTORY(sector);
+				p.bSectorZ = 0;
+				break;
 			}
-
-			// Place terrorist.
-			p.sSectorX = SECTORX(sector);
-			p.sSectorY = SECTORY(sector);
-			p.bSectorZ = 0;
-			terrorist_placement[n_terrorists_added++] = sector;
+			
+			// Count down until the terrorist is chosen from the remaining
+			n_add_terrorist--;
 		}
 	}
 
