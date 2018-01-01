@@ -228,7 +228,7 @@ void EnterTacticalScreen(void)
 	DirtyTopMessage( );
 
 	// Set compression to normal!
-	//SetGameTimeCompressionLevel( TIME_COMPRESS_X1 );
+	SetGameTimeCompressionLevel( TIME_COMPRESS_X1 );
 
 	// Select current guy...
 	//gfGameScreenLocateToSoldier = TRUE;
