@@ -859,7 +859,7 @@ static BOOLEAN CheckConditionsForBattle(GROUP* pGroup)
 		{ //Because this is a battle case, clear all the group flags
 			FOR_EACH_GROUP(curr)
 			{
-				if (gubNumGroupsArrivedSimultaneously == 0) break;
+				if (gubNumGroupsArrivedSimultaneously <= 0) break;
 				if( curr->uiFlags & GROUPFLAG_GROUP_ARRIVED_SIMULTANEOUSLY )
 				{
 					curr->uiFlags &= ~GROUPFLAG_GROUP_ARRIVED_SIMULTANEOUSLY;
@@ -1279,7 +1279,7 @@ void GroupArrivedAtSector(GROUP& g, BOOLEAN const check_for_battle, BOOLEAN cons
 
 				// don't override if a tactical traversal
 				if (s.ubStrategicInsertionCode != INSERTION_CODE_PRIMARY_EDGEINDEX &&
-						s.ubStrategicInsertionCode != INSERTION_CODE_SECONDARY_EDGEINDEX)
+					s.ubStrategicInsertionCode != INSERTION_CODE_SECONDARY_EDGEINDEX)
 				{
 					s.ubStrategicInsertionCode = strategic_insertion_code;
 				}
@@ -1323,6 +1323,8 @@ void GroupArrivedAtSector(GROUP& g, BOOLEAN const check_for_battle, BOOLEAN cons
 
 				// If this sector is currently loaded, add vehicle to the tactical engine
 				if (here) UpdateMercInSector(vs, x, y, z);
+
+				SetTimeOfAssignmentChangeForMerc(&vs);
 
 				// Set directions of insertion
 				CFOR_EACH_PLAYER_IN_GROUP(i, &g)
@@ -1387,11 +1389,11 @@ void GroupArrivedAtSector(GROUP& g, BOOLEAN const check_for_battle, BOOLEAN cons
 		 * delayed, then we will keep the group in memory including all waypoints,
 		 * until after the battle is resolved.  At that point, we will continue the
 		 * processing. */
-		if (check_for_battle && !CheckConditionsForBattle(&g) && !gfWaitingForInput)
+		if (!CheckConditionsForBattle(&g) && !gfWaitingForInput)
 		{
 			HandleNonCombatGroupArrival(g, true, never_left);
 
-			if (gubNumGroupsArrivedSimultaneously != 0)
+			if (gubNumGroupsArrivedSimultaneously > 0)
 			{
 				FOR_EACH_GROUP_SAFE(i)
 				{
@@ -1399,7 +1401,7 @@ void GroupArrivedAtSector(GROUP& g, BOOLEAN const check_for_battle, BOOLEAN cons
 					if (!(g.uiFlags & GROUPFLAG_GROUP_ARRIVED_SIMULTANEOUSLY)) continue;
 					--gubNumGroupsArrivedSimultaneously;
 					HandleNonCombatGroupArrival(g, false, false);
-					if (gubNumGroupsArrivedSimultaneously == 0) break;
+					if (gubNumGroupsArrivedSimultaneously <= 0) break;
 				}
 			}
 		}
