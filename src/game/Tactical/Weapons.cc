@@ -1796,6 +1796,7 @@ void StructureHit(BULLET* const pBullet, const INT16 sXPos, const INT16 sYPos, c
 				SLOGD(DEBUG_TAG_WEAPONS, "Freeing up attacker - knife attack hit structure");
 				FreeUpAttacker(attacker);
 			}
+			break;
 	}
 
 	if ( fDoMissForGun )
@@ -2295,7 +2296,7 @@ UINT32 CalcChanceToHitGun(SOLDIERTYPE *pSoldier, UINT16 sGridNo, UINT8 ubAimTime
 
 				// since barrel extenders are not removable we cannot call RemoveAttachment here
 				// and must create the item by hand
-				CreateItem( GUN_BARREL_EXTENDER, pInHand->bAttachStatus[ bAttachPos ], &Temp );
+				CreateItem( STEEL_ROD, pInHand->bAttachStatus[ bAttachPos ], &Temp );
 				pInHand->usAttachItem[ bAttachPos ] = NOTHING;
 				pInHand->bAttachStatus[ bAttachPos ] = 0;
 
@@ -3650,6 +3651,13 @@ INT32 CalcMaxTossRange(const SOLDIERTYPE* pSoldier, UINT16 usItem, BOOLEAN fArme
 
 		// better max range due to expertise
 		iRange = iRange * (100 + gbSkillTraitBonus[THROWING] * NUM_SKILL_TRAITS(pSoldier, THROWING)) / 100;
+
+		if ((pSoldier->inv[HANDPOS].usItem == ROCK)
+			&& (pSoldier->inv[SECONDHANDPOS].usItem == __ITEM_323))
+		{
+			iRange *= 5;
+			iRange /= 3;
+		}
 	}
 
 	if (iRange < 1)
