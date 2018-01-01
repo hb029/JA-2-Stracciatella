@@ -451,6 +451,7 @@ static BOOLEAN MercFilesHireMerc(UINT8 ubMercID)
 	//Specify where the merc is to appear
 	HireMercStruct.sSectorX                  = SECTORX(g_merc_arrive_sector);
 	HireMercStruct.sSectorY                  = SECTORY(g_merc_arrive_sector);
+	HireMercStruct.fCopyProfileItemsOver	 = !(p.ubMiscFlags & PROFILE_MISC_FLAG_ALREADY_USED_ITEMS);
 	HireMercStruct.fUseLandingZoneForArrival = TRUE;
 
 	HireMercStruct.uiTimeTillMercArrives = GetMercArrivalTimeOfDay( );// + ubMercID
@@ -476,6 +477,7 @@ static BOOLEAN MercFilesHireMerc(UINT8 ubMercID)
 	else
 	{
 		//if we succesfully hired the merc
+		p.ubMiscFlags |= PROFILE_MISC_FLAG_ALREADY_USED_ITEMS;
 		return(TRUE);
 	}
 }
