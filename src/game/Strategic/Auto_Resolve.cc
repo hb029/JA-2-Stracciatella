@@ -2047,6 +2047,7 @@ static void DoneButtonCallback(GUI_BUTTON* btn, INT32 reason)
 {
 	if( reason & MSYS_CALLBACK_REASON_LBUTTON_UP )
 	{
+		AutoBandageMercs();
 		gpAR->fExitAutoResolve = TRUE;
 	}
 }
