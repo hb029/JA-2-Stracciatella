@@ -4457,6 +4457,18 @@ static void ItemPickupScrollUp(GUI_BUTTON* btn, INT32 reason);
 static void SetupPickupPage(INT8 bPage);
 
 
+static void ScrollRegionCallback(MOUSE_REGION* const, INT32 const reason)
+{
+	if (reason & MSYS_CALLBACK_REASON_WHEEL_UP)
+	{
+		SetupPickupPage((UINT8)(gItemPickupMenu.bScrollPage - 1));
+	}
+	else if (reason & MSYS_CALLBACK_REASON_WHEEL_DOWN)
+	{
+		SetupPickupPage((UINT8)(gItemPickupMenu.bScrollPage + 1));
+	}
+}
+
 void InitializeItemPickupMenu(SOLDIERTYPE* const pSoldier, INT16 const sGridNo, ITEM_POOL* const pItemPool, INT8 const bZLevel)
 {
 	EraseInterfaceMenus(TRUE);
@@ -4544,10 +4556,10 @@ void InitializeItemPickupMenu(SOLDIERTYPE* const pSoldier, INT16 const sGridNo, 
 	menu.iOKButtonImages     = UseLoadedButtonImage(pics, 4,  9);
 
 	// Build a mouse region here that is over any others.....
-	MSYS_DefineRegion(&menu.BackRegion, 532, 367, SCREEN_WIDTH, SCREEN_HEIGHT, MSYS_PRIORITY_HIGHEST, CURSOR_NORMAL, MSYS_NO_CALLBACK, MSYS_NO_CALLBACK);
+	MSYS_DefineRegion(&menu.BackRegion, 532, 367, SCREEN_WIDTH, SCREEN_HEIGHT, MSYS_PRIORITY_HIGHEST, CURSOR_NORMAL, MSYS_NO_CALLBACK, ScrollRegionCallback);
 
 	// Build a mouse region here that is over any others.....
-	MSYS_DefineRegion(&menu.BackRegions, sX, sY, menu.sX + menu.sWidth, sY + menu.sHeight, MSYS_PRIORITY_HIGHEST, CURSOR_NORMAL, MSYS_NO_CALLBACK, MSYS_NO_CALLBACK);
+	MSYS_DefineRegion(&menu.BackRegions, sX, sY, menu.sX + menu.sWidth, sY + menu.sHeight, MSYS_PRIORITY_HIGHEST, CURSOR_NORMAL, MSYS_NO_CALLBACK, ScrollRegionCallback);
 
 	INT16 const by = sY + menu.sButtomPanelStartY;
 
