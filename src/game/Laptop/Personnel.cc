@@ -1892,16 +1892,31 @@ static void DisplayDepartedCharStats(MERCPROFILESTRUCT const& p, INT32 const iSt
 	FindFontRightCoordinates(pers_stat_x, 0, TEXT_BOX_WIDTH - 20, 0, sString, PERS_FONT, &sX, &sY);
 	MPrint(sX, STD_SCREEN_Y + pers_stat_y[0], sString);
 
-	PrintStat(p.bAgility,     STD_SCREEN_Y + pers_stat_y[ 1], str_stat_agility);
-	PrintStat(p.bDexterity,   STD_SCREEN_Y + pers_stat_y[ 2], str_stat_dexterity);
-	PrintStat(p.bStrength,    STD_SCREEN_Y + pers_stat_y[ 3], str_stat_strength);
-	PrintStat(p.bLeadership,  STD_SCREEN_Y + pers_stat_y[ 4], str_stat_leadership);
-	PrintStat(p.bWisdom,      STD_SCREEN_Y + pers_stat_y[ 5], str_stat_wisdom);
-	PrintStat(p.bExpLevel,    STD_SCREEN_Y + pers_stat_y[ 6], str_stat_exp_level);
-	PrintStat(p.bMarksmanship,STD_SCREEN_Y + pers_stat_y[ 7], str_stat_marksmanship);
-	PrintStat(p.bMechanical,  STD_SCREEN_Y + pers_stat_y[ 8], str_stat_mechanical);
-	PrintStat(p.bExplosive,   STD_SCREEN_Y + pers_stat_y[ 9], str_stat_explosive);
-	PrintStat(p.bMedical,     STD_SCREEN_Y + pers_stat_y[10], str_stat_medical);
+	if (p.ubBodyType == ROBOTNOWEAPON)
+	{
+		for (INT32 i = 1; i < 11; ++i)
+		{
+			const INT32 y = pers_stat_y[i];
+			mprintf(pers_stat_x, y, L"%ls:", str_stat_list[i]);
+			const wchar_t* const na = gpStrategicString[STR_PB_NOTAPPLICABLE_ABBREVIATION];
+			FindFontRightCoordinates(pers_stat_x, 0, TEXT_BOX_WIDTH - 20, 0, na, PERS_FONT, &sX, &sY);
+			MPrint(sX, y, na);
+		}
+	}
+	else
+	{
+		PrintStat(p.bAgility, pers_stat_y[1], str_stat_agility);
+		PrintStat(p.bDexterity, pers_stat_y[2], str_stat_dexterity);
+		PrintStat(p.bStrength, pers_stat_y[3], str_stat_strength);
+		PrintStat(p.bLeadership, pers_stat_y[4], str_stat_leadership);
+		PrintStat(p.bWisdom, pers_stat_y[5], str_stat_wisdom);
+		PrintStat(p.bExpLevel, pers_stat_y[6], str_stat_exp_level);
+		PrintStat(p.bMarksmanship, pers_stat_y[7], str_stat_marksmanship);
+		PrintStat(p.bMechanical, pers_stat_y[8], str_stat_mechanical);
+		PrintStat(p.bExplosive, pers_stat_y[9], str_stat_explosive);
+		PrintStat(p.bMedical, pers_stat_y[10], str_stat_medical);
+	}
+
 	PrintStat(p.usKills,      STD_SCREEN_Y + pers_stat_y[21], pPersonnelScreenStrings[PRSNL_TXT_KILLS]);
 	PrintStat(p.usAssists,    STD_SCREEN_Y + pers_stat_y[22], pPersonnelScreenStrings[PRSNL_TXT_ASSISTS]);
 
