@@ -1589,7 +1589,7 @@ static const wchar_t *s_ger_pMapErrorString[pMapErrorString_SIZE] =
 	L"%ls kann nicht zu %ls wechseln, weil der sich bewegt",
 	L"%ls kann so nicht einsteigen",
 	L"%ls kann sich nicht %ls anschließen",
-	L"Sie können den Zeitraffer erst mit neuen Söldner benutzen!",
+	L"Sie können den Zeitraffer erst mit neuen Söldnern benutzen!",
 	L"Dieses Fahrzeug kann nur auf Straßen fahren!",
 //41-45
 	L"Reisenden Söldnern können Sie keine Aufträge erteilen.",
