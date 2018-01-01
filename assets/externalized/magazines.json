@@ -236,8 +236,10 @@
         "ubPerPocket": 8,
         "usPrice": 10,
         "ubCoolness": 1,
+        "standardReplacement": "CLIP38_6",
         "bMetal": true,
-        "bSinks": true
+        "bSinks": true,
+        "bBigGunList": true
     },
     {
         "itemIndex": 87,
@@ -251,8 +253,10 @@
         "ubPerPocket": 8,
         "usPrice": 15,
         "ubCoolness": 1,
+        "standardReplacement": "CLIP45_7",
         "bMetal": true,
-        "bSinks": true
+        "bSinks": true,
+        "bBigGunList": true
     },
     {
         "itemIndex": 88,
@@ -266,8 +270,10 @@
         "ubPerPocket": 8,
         "usPrice": 30,
         "ubCoolness": 3,
+        "standardReplacement": "CLIP38_6_AP",
         "bMetal": true,
-        "bSinks": true
+        "bSinks": true,
+        "bBigGunList": true
     },
     {
         "itemIndex": 89,
@@ -281,8 +287,10 @@
         "ubPerPocket": 8,
         "usPrice": 45,
         "ubCoolness": 3,
+        "standardReplacement": "CLIP45_7_AP",
         "bMetal": true,
-        "bSinks": true
+        "bSinks": true,
+        "bBigGunList": true
     },
     {
         "itemIndex": 90,
@@ -296,8 +304,10 @@
         "ubPerPocket": 8,
         "usPrice": 20,
         "ubCoolness": 2,
+        "standardReplacement": "CLIP38_6_HP",
         "bMetal": true,
-        "bSinks": true
+        "bSinks": true,
+        "bBigGunList": true
     },
     {
         "itemIndex": 91,
@@ -311,8 +321,10 @@
         "ubPerPocket": 8,
         "usPrice": 30,
         "ubCoolness": 2,
+        "standardReplacement": "CLIP45_7_HP",
         "bMetal": true,
-        "bSinks": true
+        "bSinks": true,
+        "bBigGunList": true
     },
     {
         "itemIndex": 92,
