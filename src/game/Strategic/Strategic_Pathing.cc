@@ -1128,6 +1128,8 @@ void ClearMercPathsAndWaypointsForAllInGroup(GROUP& g)
 
 		if ( pSoldier != NULL )
 		{
+			// Wake up and go
+			SetMercAwake(pSoldier, FALSE, TRUE);
 			ClearPathForSoldier( pSoldier );
 		}
 	}
