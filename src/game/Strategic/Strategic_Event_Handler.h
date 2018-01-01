@@ -11,6 +11,10 @@
 #define HOSPITAL_SECTOR_Y	MAP_ROW_F
 #define HOSPITAL_SECTOR_Z	0
 
+#define BROTHEL_SECTOR_X	5
+#define BROTHEL_SECTOR_Y	MAP_ROW_C
+#define BROTHEL_SECTOR_Z	0
+
 extern UINT8 gubCambriaMedicalObjects;
 
 void CheckForKingpinsMoneyMissing( BOOLEAN fFirstCheck );
