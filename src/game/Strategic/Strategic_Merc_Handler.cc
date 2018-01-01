@@ -95,6 +95,10 @@ void StrategicHandlePlayerTeamMercDeath(SOLDIERTYPE& s)
 			{ // Killed within an hour of being insured
 				p.ubSuspiciousDeath = VERY_SUSPICIOUS_DEATH;
 			}
+			else if (s.attacker == NULL)
+			{ // Suicide is suspicious
+				p.ubSuspiciousDeath = SUSPICIOUS_DEATH;
+			}
 			else if (s.attacker->bTeam == OUR_TEAM || !gTacticalStatus.fEnemyInSector)
 			{ /* Killed by someone on our team or while there weren't any opponents
 				 * around, cause insurance company to suspect fraud and investigate this
@@ -305,7 +309,7 @@ void MercDailyUpdate()
 		// if merc is currently unavailable
 		if (p.uiDayBecomesAvailable > 0)
 		{
-			if (--p.uiDayBecomesAvailable == 0 &&    // Check to see if the merc has become available
+			if (p.uiDayBecomesAvailable-- == 0 &&    // Check to see if the merc has become available
 					p.bMercStatus != MERC_FIRED_AS_A_POW) // if the merc CAN become ready
 			{
 				p.bMercStatus = MERC_OK;
