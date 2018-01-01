@@ -67,6 +67,7 @@ void ExitBoxing(void)
 			if (s->bLife > 0 && (s->bLife < OKLIFE || s->bBreath < OKBREATH))
 			{
 				s->bLife = __max(OKLIFE * 2, s->bLife);
+				s->bBleeding = 0;
 				if (s->bBreath < 100)
 				{
 					// deduct -ve BPs to grant some BPs back (properly)
@@ -262,7 +263,8 @@ bool CheckOnBoxers()
 		for (UINT32 i = 0; i != NUM_BOXERS; ++i)
 		{
 			SOLDIERTYPE* const s = WhoIsThere2(gsBoxerGridNo[i], 0);
-			if (!s || FindObjClass(s, IC_WEAPON) != NO_SLOT) continue;
+			if (s->bOrders != STATIONARY) continue;
+			// Stationary at boxer gridno <-> boxer
 			// No weapon so this guy is a boxer
 			gBoxer[i] = s;
 		}
@@ -276,7 +278,9 @@ bool BoxerExists()
 {
 	FOR_EACH(GridNo const, i, gsBoxerGridNo)
 	{
-		if (WhoIsThere2(*i, 0)) return true;
+		SOLDIERTYPE* const s = WhoIsThere2(*i, 0);
+		// Stationary at boxer gridno <-> boxer
+		if (s->bOrders == STATIONARY) return true;
 	}
 	return false;
 }
