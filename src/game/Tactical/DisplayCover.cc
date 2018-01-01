@@ -301,6 +301,11 @@ static INT8 CalcCoverForGridNoBasedOnTeamKnownEnemies(SOLDIERTYPE const* const p
 		{
 			continue;
 		}
+		else
+		{
+			// Feature - Display sight cover
+			return 0;
+		}
 
 		INT32  const iGetThrough = SoldierToLocationChanceToGetThrough(pOpponent, sTargetGridNo,
 										pSoldier->bLevel, bStance, NULL);
@@ -336,7 +341,7 @@ static void AddCoverObjectToWorld(INT16 const sGridNo, UINT16 const usGraphic, B
 {
 	LEVELNODE* const n = fRoof ?
 		AddOnRoofToHead(sGridNo, usGraphic) :
-		AddObjectToHead(sGridNo, usGraphic);
+		AddTopmostToHead(sGridNo, usGraphic);
 
 	n->uiFlags |= LEVELNODE_REVEAL;
 
@@ -356,7 +361,7 @@ static void RemoveCoverObjectFromWorld(INT16 sGridNo, UINT16 usGraphic, BOOLEAN 
 	}
 	else
 	{
-		RemoveObject( sGridNo, usGraphic );
+		RemoveTopmost(sGridNo, usGraphic);
 	}
 }
 
