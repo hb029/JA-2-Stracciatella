@@ -29,6 +29,13 @@ void MakeClosestEnemyChosenOne()
 		return;
 	}
 
+	UINT8 const sector = SECTOR(gWorldSectorX, gWorldSectorY);
+	if (SectorInfo[sector].fSurfaceWasEverPlayerControlled)
+	{
+		// no defense situation anymore
+		return;
+	}
+
 	// consider every enemy, looking for the closest capable, unbusy one
 	SOLDIERTYPE* closest_enemy = NULL;
 	FOR_EACH_MERC(i)
