@@ -47,6 +47,7 @@ void AddSmokeEffectToTile(SMOKEEFFECT const*, SmokeEffectKind, INT16 sGridNo, IN
 void RemoveSmokeEffectFromTile( INT16 sGridNo, INT8 bLevel );
 
 void NewSmokeEffect(INT16 sGridNo, UINT16 usItem, INT8 bLevel, SOLDIERTYPE* owner);
+void NewSmokeStack(INT16 sGridNo, UINT16 usItem, INT8 bLevel, SOLDIERTYPE* owner, UINT8 ubRadius);
 
 
 void LoadSmokeEffectsFromLoadGameFile(HWFILE, UINT32 savegame_version);

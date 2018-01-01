@@ -137,6 +137,8 @@ void InternalIgniteExplosion(SOLDIERTYPE* const owner, const INT16 sX, const INT
 		// to check sight at end of attack
 
 		gTacticalStatus.uiFlags |= (DISALLOW_SIGHT | CHECK_SIGHT_AT_END_OF_ATTACK);
+		// Pause to stop RT movements
+		PauseGame();
 	}
 
 
@@ -262,6 +264,19 @@ static void GenerateExplosionFromExplosionPointer(EXPLOSIONTYPE* pExplosion)
 		{
 			uiSoundID = EXPLOSION_ALT_BLAST_1;
 		}
+	}
+
+	if (pExplosion->ubTypeID == BLAST_1)
+	{
+		NewSmokeStack(pExplosion->sGridNo, GL_SMOKE_GRENADE, pExplosion->bLevel, pExplosion->owner, 0);
+	}
+	else if (pExplosion->ubTypeID == BLAST_2)
+	{
+		NewSmokeStack(pExplosion->sGridNo, GL_SMOKE_GRENADE, pExplosion->bLevel, pExplosion->owner, 2);
+	}
+	else if (pExplosion->ubTypeID == BLAST_3)
+	{
+		NewSmokeStack(pExplosion->sGridNo, GL_SMOKE_GRENADE, pExplosion->bLevel, pExplosion->owner, 1);
 	}
 
 	PlayLocationJA2Sample(sGridNo, uiSoundID, HIGHVOLUME, 1);
@@ -837,7 +852,7 @@ BOOLEAN DishOutGasDamage(SOLDIERTYPE* const pSoldier, EXPLOSIVETYPE const* const
 			}
 
 			// ignore whether subsequent or not if hit this turn
-			if ( pSoldier->fHitByGasFlags & HIT_BY_TEARGAS )
+			if (sSubsequent && pSoldier->fHitByGasFlags & HIT_BY_TEARGAS )
 			{
 				// already affected by creature gas this turn
 				return( fRecompileMovementCosts );

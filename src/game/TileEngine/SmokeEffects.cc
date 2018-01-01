@@ -116,6 +116,26 @@ static UINT8 FromSmokeTypeToWorldFlags(SmokeEffectKind const bType)
 	}
 }
 
+void NewSmokeStack(const INT16 sGridNo, UINT16 usItem, const INT8 bLevel, SOLDIERTYPE* const owner, UINT8 const ubRadius)
+{
+	SMOKEEFFECT* const pSmoke = GetFreeSmokeEffect();
+	if (pSmoke == NULL) return;
+
+	memset(pSmoke, 0, sizeof(*pSmoke));
+
+	pSmoke->sGridNo = sGridNo;
+	pSmoke->usItem = usItem;
+	pSmoke->uiTimeOfLastUpdate = GetWorldTotalSeconds();
+
+	pSmoke->ubDuration = 2;
+	pSmoke->ubRadius = ubRadius;
+	pSmoke->bAge = 0;
+	pSmoke->fAllocated = TRUE;
+	pSmoke->bType = NORMAL_SMOKE_EFFECT;
+	pSmoke->owner = owner;
+
+	SpreadEffectSmoke(pSmoke, FALSE, bLevel);
+}
 
 void NewSmokeEffect(const INT16 sGridNo, const UINT16 usItem, const INT8 bLevel, SOLDIERTYPE* const owner)
 {
