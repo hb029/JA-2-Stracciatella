@@ -1977,6 +1977,9 @@ static BOOLEAN HandleAtNewGridNo(SOLDIERTYPE* pSoldier, BOOLEAN* pfKeepMoving)
 							SetFactTrue(FACT_SKYRIDER_CLOSE_TO_CHOPPER);
 							TriggerNPCRecord(SKYRIDER, 15);
 							SetUpHelicopterForPlayer(13, MAP_ROW_B);
+
+							gMercProfiles[SKYRIDER].ubStrategicInsertionCode = INSERTION_CODE_GRIDNO;
+							gMercProfiles[SKYRIDER].usStrategicInsertionData = 13987; // HACK
 						}
 						break;
 
@@ -3944,6 +3947,7 @@ void CommonEnterCombatModeCode( )
 
 			// ATE: Refresh APs
 			CalcNewActionPoints( pSoldier );
+			pSoldier->bActionPoints /= 2;
 
 			if ( pSoldier->ubProfile != NO_PROFILE )
 			{
@@ -5774,6 +5778,7 @@ static SOLDIERTYPE* InternalReduceAttackBusyCount(SOLDIERTYPE* const pSoldier, c
 			}
 		}
 		gTacticalStatus.uiFlags &= ~CHECK_SIGHT_AT_END_OF_ATTACK;
+		UnPauseGame();
 	}
 
 	DequeueAllDemandGameEvents();
@@ -5968,6 +5973,7 @@ static void EndBattleWithUnconsciousGuysCallback(MessageBoxReturnValue const bEx
 {
 	// Enter mapscreen.....
 	CheckAndHandleUnloadingOfCurrentWorld();
+	FinishAnySkullPanelAnimations();
 }
 
 
