@@ -1323,7 +1323,14 @@ static void SelectDealersInventoryRegionCallBack(MOUSE_REGION* pRegion, INT32 iR
 						//if the shift key is being pressed, remove them all
 						if (_KeyDown(SHIFT))
 						{
-							gpTempDealersInventory[ ubSelectedInvSlot ].ItemObject.ubNumberOfObjects = 0;
+							if (gpTempDealersInventory[ubSelectedInvSlot].ItemObject.ubNumberOfObjects > GCM->getItem(gpTempDealersInventory[ubSelectedInvSlot].ItemObject.usItem)->getPerPocket())
+							{
+								gpTempDealersInventory[ubSelectedInvSlot].ItemObject.ubNumberOfObjects -= GCM->getItem(gpTempDealersInventory[ubSelectedInvSlot].ItemObject.usItem)->getPerPocket();
+							}
+							else
+							{
+								gpTempDealersInventory[ubSelectedInvSlot].ItemObject.ubNumberOfObjects = 0;
+							}
 						}
 						else
 						{
@@ -1346,6 +1353,11 @@ static void SelectDealersInventoryRegionCallBack(MOUSE_REGION* pRegion, INT32 iR
 				else
 				{
 					ubNumToMove = 1;
+				}
+
+				if (ArmsDealerOfferArea[gpTempDealersInventory[ubSelectedInvSlot].bSlotIdInOtherLocation].ItemObject.ubNumberOfObjects + ubNumToMove > GCM->getItem(ArmsDealerOfferArea[gpTempDealersInventory[ubSelectedInvSlot].bSlotIdInOtherLocation].ItemObject.usItem)->getPerPocket())
+				{
+					ubNumToMove = GCM->getItem(ArmsDealerOfferArea[gpTempDealersInventory[ubSelectedInvSlot].bSlotIdInOtherLocation].ItemObject.usItem)->getPerPocket() - ArmsDealerOfferArea[gpTempDealersInventory[ubSelectedInvSlot].bSlotIdInOtherLocation].ItemObject.ubNumberOfObjects;
 				}
 
 				//Reduce the number in dealer's inventory
@@ -2708,7 +2720,14 @@ static INT8 AddItemToArmsDealerOfferArea(const INVENTORY_IN_SLOT* pInvSlot, INT8
 			//if the shift key is being pressed, add them all
 			if (_KeyDown(SHIFT))
 			{
-				a->ItemObject.ubNumberOfObjects = pInvSlot->ItemObject.ubNumberOfObjects;
+				if (a->ItemObject.ubNumberOfObjects > GCM->getItem(a->ItemObject.usItem)->getPerPocket())
+				{
+					a->ItemObject.ubNumberOfObjects = GCM->getItem(a->ItemObject.usItem)->getPerPocket();
+				}
+				else
+				{
+					a->ItemObject.ubNumberOfObjects = pInvSlot->ItemObject.ubNumberOfObjects;
+				}
 			}
 			else if( pInvSlot->ItemObject.ubNumberOfObjects > 1 )
 			{
