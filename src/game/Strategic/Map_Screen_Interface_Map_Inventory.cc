@@ -567,7 +567,7 @@ static void MapInvenPoolSlots(MOUSE_REGION* const pRegion, const INT32 iReason)
 		}
 
 		// Valid character?
-		const SOLDIERTYPE* const s = GetSelectedInfoChar();
+		SOLDIERTYPE* const s = GetSelectedInfoChar();
 		if (s == NULL)
 		{
 			DoMapMessageBox(MSG_BOX_BASIC_STYLE, pMapInventoryErrorString[0], MAP_SCREEN, MSG_BOX_FLAG_OK, NULL);
@@ -598,8 +598,34 @@ static void MapInvenPoolSlots(MOUSE_REGION* const pRegion, const INT32 iReason)
 		// If we do not have an item in hand, start moving it
 		if (gpItemPointer == NULL)
 		{
-			sObjectSourceGridNo = slot->sGridNo;
-			BeginInventoryPoolPtr(&slot->o);
+			// Feature - move item with one click
+			if (_KeyDown(ALT))
+			{
+				if (!MapCharacterHasAccessibleInventory(*s))
+				{
+					return;
+				}
+
+				if ((s->sSectorX != sSelMapX) ||
+					(s->sSectorY != sSelMapY) ||
+					(s->bSectorZ != iCurrentMapSectorZ) ||
+					s->fBetweenSectors)
+				{
+					return;
+				}
+
+				if (!AutoPlaceObject(s, &slot->o, TRUE))
+				{
+					//failed to add item, put error message to screen
+				}
+
+				fTeamPanelDirty = TRUE;
+			}
+			else
+			{
+				sObjectSourceGridNo = slot->sGridNo;
+				BeginInventoryPoolPtr(&slot->o);
+			}
 		}
 		else
 		{
