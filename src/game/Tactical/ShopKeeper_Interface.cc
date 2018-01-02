@@ -3371,7 +3371,7 @@ static void PerformTransaction(UINT32 uiMoneyFromPlayersAccount)
 
 			//if the arms dealer is Howard( 125), set fact 222
 			if( gbSelectedArmsDealerID == ARMS_DEALER_HOWARD )
-				SetFactTrue(FACT_222);
+				SetFactTrue(FACT_PURCHASED_FROM_HOWARD);
 		}
 
 
