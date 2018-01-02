@@ -459,7 +459,7 @@ static void EnterLaptop(void)
 		giRainDelayInternetSite = -1;
 
 		//lower the volume
-		guiRainLoop = PlayJA2Ambient(RAIN_1, LOWVOLUME, 0);
+		SoundSetVolume(guiRainLoop, LOWVOLUME);
 	}
 
 	//pause the game because we dont want time to advance in the laptop
@@ -582,7 +582,7 @@ void ExitLaptop(void)
 	if (IsItRaining())
 	{
 		//Raise the volume to where it was
-		guiRainLoop = PlayJA2Ambient(RAIN_1, MIDVOLUME, 0);
+		SoundSetVolume(guiRainLoop, MIDVOLUME);
 	}
 
 	// release cursor

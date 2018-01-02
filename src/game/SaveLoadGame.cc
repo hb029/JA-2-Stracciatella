@@ -1121,6 +1121,8 @@ void LoadSavedGame(UINT8 const save_slot_id)
 	// 2. the ai may ignoring the CallAvailableEnemiesTo(...) because it wasn't
 	//		fully analyzed before
 	CallAvailableTeamEnemiesToAmbush(gMapInformation.sCenterGridNo);
+
+	EnvironmentController(TRUE);
 }
 
 

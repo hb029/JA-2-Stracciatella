@@ -29,13 +29,13 @@ void BuildDayAmbientSounds(void);
 void BuildDayLightLevels(void);
 UINT8 GetTimeOfDayAmbientLightLevel(void);
 
-void	EnvBeginRainStorm( UINT8 ubIntensity );
+void EnvBeginRainStorm( UINT8 ubIntensity );
 void EnvEndRainStorm(void);
 
 
-extern UINT8			gubEnvLightValue;
+extern UINT8		gubEnvLightValue;
 extern BOOLEAN		gfDoLighting;
-extern UINT32			guiEnvWeather;
+extern UINT32		guiEnvWeather;
 
 void TurnOnNightLights(void);
 void TurnOffNightLights(void);

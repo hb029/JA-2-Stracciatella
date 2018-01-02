@@ -190,25 +190,21 @@ BOOLEAN ExecuteStrategicEvent( STRATEGICEVENT *pEvent )
 			ProcessTacticalSchedule( (UINT8)pEvent->uiParam );
 			break;
 		case EVENT_BEGINRAINSTORM:
-			//EnvBeginRainStorm( (UINT8)pEvent->uiParam );
+			EnvBeginRainStorm( (UINT8)pEvent->uiParam );
 			break;
 		case EVENT_ENDRAINSTORM:
-			//EnvEndRainStorm( );
+			EnvEndRainStorm( );
 			break;
 		case EVENT_RAINSTORM:
-
-			// ATE: Disabled
-			//
-			//if( pEvent->ubEventType == ENDRANGED_EVENT )
-			//{
-			//	EnvEndRainStorm( );
-			//}
-			//else
-			//{
-			//	EnvBeginRainStorm( (UINT8)pEvent->uiParam );
-			//}
+			if( pEvent->ubEventType == ENDRANGED_EVENT )
+			{
+				EnvEndRainStorm( );
+			}
+			else
+			{
+				EnvBeginRainStorm( (UINT8)pEvent->uiParam );
+			}
 			break;
-
 		case EVENT_MAKE_CIV_GROUP_HOSTILE_ON_NEXT_SECTOR_ENTRANCE:
 			MakeCivGroupHostileOnNextSectorEntrance( (UINT8)pEvent->uiParam );
 			break;

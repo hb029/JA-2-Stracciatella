@@ -20,7 +20,8 @@
 #include "Random.h"
 #include "StrategicMap.h"
 #include "SoundMan.h"
-
+#include "Timer_Control.h"
+#include "Sound_Control.h"
 
 //effects whether or not time of day effects the lighting.  Underground
 //maps have an ambient light level that is saved in the map, and doesn't change.
@@ -91,6 +92,38 @@ UINT8 ubLightningTable[3][10][2] = {
 	}
 };
 
+//rain
+UINT32 guiMinLightningInterval = 5;
+UINT32 guiMaxLightningInterval = 15;
+
+UINT32 guiMinDLInterval = 1;
+UINT32 guiMaxDLInterval = 5;
+
+UINT32 guiProlongLightningIfSeenSomeone = 5;
+UINT32 guiChanceToDoLightningBetweenTurns = 20;
+
+
+// 60 = 1 second
+#define MIN_LIGHTNING_INTERVAL ( 60 * guiMinLightningInterval )
+#define MAX_LIGHTNING_INTERVAL ( 60 * guiMaxLightningInterval )
+
+#define MAX_DELAYED_SOUNDS 10
+#define NO_DL_SOUND 0xFFFFFFFF
+
+// 1000 = 1 second
+#define MIN_DL_INTERVAL ( 1000 * guiMinDLInterval )
+#define MAX_DL_INTERVAL ( 1000 * guiMaxDLInterval )
+
+#define EXTRA_ADD_VIS_DIST_IF_SEEN_SOMEONE ( 1000 * guiProlongLightningIfSeenSomeone	)
+#define CHANCE_TO_DO_LIGHTNING_BETWEEN_TURNS guiChanceToDoLightningBetweenTurns
+
+BOOLEAN gfLightningInProgress = FALSE;
+
+UINT8 ubRealAmbientLightLevel = 0;
+BOOLEAN gfTurnBasedDoLightning = FALSE;
+BOOLEAN gfTurnBasedLightningEnd = FALSE;
+
+void EnvDoLightning(void);
 
 enum Temperatures
 {
@@ -166,10 +199,9 @@ void EnvironmentController( BOOLEAN fCheckForLights )
 		//ExecuteStrategicEventsUntilTimeStamp( (UINT16)GetWorldTotalMin( ) );
 
 		// Polled weather stuff...
-		// ONly do indooors
+		// ONLY do outdooors
 		if( !gfBasement && !gfCaves )
 		{
-#if 0
 			if ( guiEnvWeather & ( WEATHER_FORECAST_THUNDERSHOWERS | WEATHER_FORECAST_SHOWERS ) )
 			{
 				if ( guiRainLoop == NO_SAMPLE )
@@ -192,7 +224,6 @@ void EnvironmentController( BOOLEAN fCheckForLights )
 					guiRainLoop = NO_SAMPLE;
 				}
 			}
-#endif
 		}
 
 		if ( gfDoLighting && fCheckForLights )
@@ -204,7 +235,6 @@ void EnvironmentController( BOOLEAN fCheckForLights )
 			if( !gfBasement && !gfCaves )
 			{
 				// Rain storms....
-#if 0
 				if ( guiEnvWeather & ( WEATHER_FORECAST_THUNDERSHOWERS | WEATHER_FORECAST_SHOWERS ) )
 				{
 					// Thunder showers.. make darker
@@ -217,7 +247,6 @@ void EnvironmentController( BOOLEAN fCheckForLights )
 						ubLightAdjustFromWeather = (UINT8)(__min( gubEnvLightValue+1, NORMAL_LIGHTLEVEL_NIGHT ));
 					}
 				}
-#endif
 			}
 
 
@@ -323,7 +352,7 @@ void BuildDayAmbientSounds( )
 
 	}
 
-	guiRainLoop = NO_SAMPLE;
+	//guiRainLoop = NO_SAMPLE;
 
 }
 
@@ -369,10 +398,10 @@ void ForecastDayEvents( )
 				}
 
 				// ATE: Disable RAIN!
-				//AddSameDayRangedStrategicEvent( EVENT_RAINSTORM, uiStartTime, uiEndTime - uiStartTime, ubStormIntensity );
+				AddSameDayRangedStrategicEvent( EVENT_RAINSTORM, uiStartTime, uiEndTime - uiStartTime, ubStormIntensity );
 
-				//AddSameDayStrategicEvent( EVENT_BEGINRAINSTORM, uiStartTime, ubStormIntensity );
-				//AddSameDayStrategicEvent( EVENT_ENDRAINSTORM, uiEndTime, 0 );
+				AddSameDayStrategicEvent( EVENT_BEGINRAINSTORM, uiStartTime, ubStormIntensity );
+				AddSameDayStrategicEvent( EVENT_ENDRAINSTORM, uiEndTime, 0 );
 			}
 		}
 	}
@@ -515,5 +544,99 @@ INT8 SectorTemperature( UINT32 uiTime, INT16 sSectorX, INT16 sSectorY, INT8 bSec
 	else
 	{
 		return( gubGlobalTemperature );
+	}
+}
+
+void EnvDoLightning(void)
+{
+	static UINT32 uiCount = 10, uiIndex = 0, uiStrike = 0, uiFrameNext = 0;
+	static UINT8 ubLevel = 0, ubLastLevel = 0;
+	static UINT32 uiLastUpdate = 0xFFFFFFFF;
+	static UINT32 uiTurnOffExtraVisDist = 0xFFFFFFFF;
+	static UINT32 pDelayedSounds[MAX_DELAYED_SOUNDS];
+	UINT32 uiDSIndex;
+
+	if (GetJA2Clock() < uiLastUpdate)
+	{
+		uiLastUpdate = 0;
+		memset(pDelayedSounds, NO_DL_SOUND, sizeof(UINT32) * MAX_DELAYED_SOUNDS);
+	}
+
+	if (GetJA2Clock() < uiLastUpdate + 1000 / 60)return;
+	else
+		uiLastUpdate = GetJA2Clock();
+
+	for (uiDSIndex = 0; uiDSIndex < MAX_DELAYED_SOUNDS; ++uiDSIndex)
+		if (GetJA2Clock() > pDelayedSounds[uiDSIndex])
+		{
+			if (Random(2) == 0)
+			{
+				PlayJA2Ambient(LIGHTNING_1, HIGHVOLUME, 1);
+			}
+			else
+			{
+				PlayJA2Ambient(LIGHTNING_2, HIGHVOLUME, 1);
+			}
+			pDelayedSounds[uiDSIndex] = NO_DL_SOUND;
+		}
+
+	if (gfPauseDueToPlayerGamePause)
+	{
+		return;
+	}
+
+	uiCount++;
+	if (uiCount >= (uiFrameNext + 10))
+	{
+		gfLightningInProgress = FALSE;
+
+		uiCount = 0;
+		uiIndex = 0;
+		ubLevel = 0;
+		ubLastLevel = 0;
+
+		uiStrike = Random(3);
+		uiFrameNext = MIN_LIGHTNING_INTERVAL + Random(MAX_LIGHTNING_INTERVAL - MIN_LIGHTNING_INTERVAL);
+	}
+	else if (uiCount >= uiFrameNext)
+	{
+		if (uiCount == uiFrameNext)
+		{
+			for (uiDSIndex = 0; uiDSIndex < MAX_DELAYED_SOUNDS; ++uiDSIndex)
+				if (pDelayedSounds[uiDSIndex] == NO_DL_SOUND)
+				{
+					pDelayedSounds[uiDSIndex] = GetJA2Clock() + MIN_DL_INTERVAL + Random(MAX_DL_INTERVAL - MIN_DL_INTERVAL);
+					break;
+				}
+
+			ubRealAmbientLightLevel = ubAmbientLightLevel;
+
+			gfLightningInProgress = TRUE;
+			AllTeamsLookForAll(FALSE);
+		}
+
+		while (uiCount > ((UINT32)ubLightningTable[uiStrike][uiIndex][0] + uiFrameNext))
+			uiIndex++;
+
+		ubLastLevel = ubLevel;
+		ubLevel = __min(ubRealAmbientLightLevel - 1, ubLightningTable[uiStrike][uiIndex][1]);
+
+		if (ubLastLevel != ubLevel)
+		{
+			if (ubLevel > ubLastLevel)
+			{
+				LightAddBaseLevel((UINT8)(ubLevel - ubLastLevel));
+				if (ubLevel > 0)
+					RenderSetShadows(TRUE);
+			}
+			else
+			{
+				//				LightSubtractBaseLevel(0, (UINT8)(ubLastLevel-ubLevel));
+				LightSetBaseLevel(ubRealAmbientLightLevel - ubLevel);
+				if (ubLevel > 0)
+					RenderSetShadows(TRUE);
+			}
+			SetRenderFlags(RENDER_FLAG_FULL);
+		}
 	}
 }

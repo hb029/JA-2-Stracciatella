@@ -1792,6 +1792,25 @@ static void HandleModAlt(UINT32 const key, UIEventKind* const new_event)
 		case '4': if (CHEATER_CHEAT_LEVEL()) ChangeSoldiersBodyType(CRIPPLECIV,     TRUE);                      break;
 		case '5': if (CHEATER_CHEAT_LEVEL()) ChangeSoldiersBodyType(YAM_MONSTER,    TRUE);                      break;
 
+		case 'a':
+			if (CHEATER_CHEAT_LEVEL())
+			{
+				if (!(guiEnvWeather & WEATHER_FORECAST_SHOWERS) &&
+					!(guiEnvWeather & WEATHER_FORECAST_THUNDERSHOWERS))
+				{
+					EnvBeginRainStorm(0);
+				}
+				else if (guiEnvWeather & WEATHER_FORECAST_SHOWERS &&
+					!(guiEnvWeather & WEATHER_FORECAST_THUNDERSHOWERS))
+				{
+					EnvBeginRainStorm(1);
+				}
+				else
+				{
+					EnvEndRainStorm();
+				}
+			}
+			break;
 		case 'b': if (CHEATER_CHEAT_LEVEL()) *new_event = I_NEW_BADMERC; break;
 		case 'c': if (CHEATER_CHEAT_LEVEL()) CreateNextCivType();        break;
 
