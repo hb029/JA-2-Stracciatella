@@ -418,7 +418,6 @@ static void DrawDeskTopBackground(void);
 static void EnterLaptopInitLaptopPages(void);
 static void InitLaptopOpenQueue(void);
 static void InitalizeSubSitesList(void);
-static BOOLEAN IsItRaining(void);
 static void LoadBookmark(void);
 static void LoadDesktopBackground(void);
 static void LoadLoadPending(void);
@@ -3489,15 +3488,6 @@ static INT32 WWaitDelayIncreasedIfRaining(INT32 iUnitTime)
 		iRetVal = iUnitTime * 0.6f;
 	}
 	return iRetVal;
-}
-
-
-// Used to determine delay if its raining
-static BOOLEAN IsItRaining(void)
-{
-	return
-		guiEnvWeather & WEATHER_FORECAST_SHOWERS ||
-		guiEnvWeather & WEATHER_FORECAST_THUNDERSHOWERS;
 }
 
 

@@ -1122,7 +1122,7 @@ void LoadSavedGame(UINT8 const save_slot_id)
 	//		fully analyzed before
 	CallAvailableTeamEnemiesToAmbush(gMapInformation.sCenterGridNo);
 
-	EnvironmentController(TRUE);
+	EnvironmentController(FALSE);
 }
 
 

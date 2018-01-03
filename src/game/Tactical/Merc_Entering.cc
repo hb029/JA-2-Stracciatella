@@ -781,23 +781,7 @@ void HandleHeliDrop( )
 
 static void HandleFirstHeliDropOfGame(void)
 {
-	// Are we in the first heli drop?
-	if ( gfFirstHeliRun )
-	{
-		SyncStrategicTurnTimes();
-
-		// Call people to area
-		CallAvailableEnemiesTo( gsGridNoSweetSpot );
-
-		// Say quote.....
-		SayQuoteFromAnyBodyInSector( QUOTE_ENEMY_PRESENCE );
-
-		// Start music
-		SetMusicMode( MUSIC_TACTICAL_ENEMYPRESENT );
-
-		gfFirstHeliRun = FALSE;
-
-	}
+	WarpGameTime(60, WARPTIME_PROCESS_EVENTS_NORMALLY);
 
 	// Send message to turn on ai again....
 	DialogueEvent::Add(new DialogueEventCallback<UnPauseAI>());

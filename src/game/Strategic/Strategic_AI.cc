@@ -232,7 +232,6 @@ static const ARMY_COMPOSITION gOrigArmyComp[NUM_ARMY_COMPOSITIONS] =
 	M(EAST_GRUMM_DEFENCE,    80,  20,  80,   0,  15,  15),
 	M(WEST_GRUMM_DEFENCE,    70,   0, 100,  40,  15,  15),
 	M(GRUMM_MINE,            85,  25,  75,  45,  15,  15),
-	M(OMERTA_WELCOME_WAGON,   0,   0, 100,   0,   0,   3),
 	M(BALIME_DEFENCE,        60,  45,  55,  20,  10,   4),
 	M(TIXA_PRISON,           80,  10,  90,  15,  15,  15),
 	M(TIXA_SAMSITE,          85,  10,  90,   0,  12,  12),
@@ -340,7 +339,6 @@ static const GARRISON_GROUP gOrigGarrisonGroup[] =
 	M(SEC_H1,  WEST_GRUMM_DEFENCE  ),
 	M(SEC_H2,  EAST_GRUMM_DEFENCE  ),
 	M(SEC_H3,  GRUMM_MINE          ),
-	M(SEC_A9,  OMERTA_WELCOME_WAGON),
 	M(SEC_L11, BALIME_DEFENCE      ),
 	//30
 	M(SEC_L12, BALIME_DEFENCE      ),
@@ -2920,7 +2918,6 @@ static void EvolveQueenPriorityPhase(BOOLEAN fForceChange)
 			case LEVEL1_DEFENCE:
 			case LEVEL2_DEFENCE:
 			case LEVEL3_DEFENCE:
-			case OMERTA_WELCOME_WAGON:
 			case ROADBLOCK:
 			//case SANMONA_SMALL:
 				//don't consider these compositions
@@ -2986,7 +2983,6 @@ static void EvolveQueenPriorityPhase(BOOLEAN fForceChange)
 				case LEVEL1_DEFENCE:
 				case LEVEL2_DEFENCE:
 				case LEVEL3_DEFENCE:
-				case OMERTA_WELCOME_WAGON:
 				case ROADBLOCK:
 				//case SANMONA_SMALL:
 					//don't consider these compositions

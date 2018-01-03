@@ -106,8 +106,9 @@
 #include "ScreenIDs.h"
 #include "Items.h"
 #include "UILayout.h"
-#include "slog/slog.h"
+#include "Air_Raid.h"
 #include "RT_Time_Defines.h"
+#include "slog/slog.h"
 
 //Used by PickGridNoToWalkIn
 #define MAX_ATTEMPTS 200
@@ -1913,6 +1914,11 @@ void AllMercsHaveWalkedOffSector( )
 	if (fEnemiesInLoadedSector)
 	{
 		HandleLoyaltyImplicationsOfMercRetreat( RETREAT_TACTICAL_TRAVERSAL, gWorldSectorX, gWorldSectorY, gbWorldSectorZ );
+	}
+
+	if (InAirRaid())
+	{
+		EndAirRaid();
 	}
 
 	//Setup strategic traversal information

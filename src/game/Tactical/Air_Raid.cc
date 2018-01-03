@@ -32,6 +32,7 @@
 #include "SoundMan.h"
 #include "Debug.h"
 #include "FileMan.h"
+#include "Environment.h"
 #include "slog/slog.h"
 
 #define SCRIPT_DELAY				10
@@ -122,9 +123,8 @@ struct AIR_RAID_SAVE_STRUCT
 	UINT8   ubFiller[ 32 ]; // XXX HACK000B
 };
 
-
 // END SERIALIZATION
-SOLDIERTYPE *gpRaidSoldier;
+SOLDIERTYPE		*gpRaidSoldier;
 
 
 struct AIR_RAID_DIR
@@ -164,6 +164,28 @@ AIR_RAID_POS ubXYTragetInvFromDirection[ ] =
 	{ -1, -1 }
 };
 
+extern UINT8 ubSAMControlledSectors[MAP_WORLD_X][MAP_WORLD_Y];
+
+
+BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY);
+
+void ScheduleAirRaid(AIR_RAID_DEFINITION* pAirRaidDef)
+{
+	// Make sure only one is cheduled...
+	if ( gfAirRaidScheduled )
+	{
+		return;
+	}
+
+	// Copy definiaiotn structure into global struct....
+	gAirRaidDef = *pAirRaidDef;
+
+	AddSameDayStrategicEvent( EVENT_BEGIN_AIR_RAID, ( GetWorldMinutesInDay() + pAirRaidDef->ubNumMinsFromCurrentTime ), 0 );
+
+	gfAirRaidScheduled = TRUE;
+}
+
+
 BOOLEAN BeginAirRaid( )
 {
 	BOOLEAN fOK = FALSE;
@@ -173,31 +195,30 @@ BOOLEAN BeginAirRaid( )
 	// First remove scheduled flag...
 	gfAirRaidScheduled = FALSE;
 
-	/*
 	if( WillAirRaidBeStopped( gAirRaidDef.sSectorX, gAirRaidDef.sSectorY ) )
 	{
 		return( FALSE );
-	}*/
-
-	// CHECK IF WE CURRENTLY HAVE THIS SECTOR OPEN....
-	/*if (	gAirRaidDef.sSectorX == gWorldSectorX &&
-				gAirRaidDef.sSectorY == gWorldSectorY &&
-				gAirRaidDef.sSectorZ == gbWorldSectorZ )
-	*/
-	// Do we have any guys in here...
-	CFOR_EACH_IN_TEAM(s, OUR_TEAM)
-	{
-		if (s->sSectorX == gAirRaidDef.sSectorX &&
-			s->sSectorY == gAirRaidDef.sSectorY &&
-			s->bSectorZ == gAirRaidDef.sSectorZ &&
-			!s->fBetweenSectors &&
-			s->bLife != 0 &&
-			s->bAssignment != IN_TRANSIT)
-		{
-			fOK = TRUE;
-		}
 	}
 
+	// CHECK IF WE CURRENTLY HAVE THIS SECTOR OPEN....
+	if (gAirRaidDef.sSectorX == gWorldSectorX &&
+		gAirRaidDef.sSectorY == gWorldSectorY &&
+		gAirRaidDef.sSectorZ == gbWorldSectorZ)
+	{
+		// Do we have any guys in here...
+		CFOR_EACH_IN_TEAM(s, OUR_TEAM)
+		{
+			if (s->sSectorX == gAirRaidDef.sSectorX &&
+				s->sSectorY == gAirRaidDef.sSectorY &&
+				s->bSectorZ == gAirRaidDef.sSectorZ &&
+				!s->fBetweenSectors &&
+				s->bLife != 0 &&
+				s->bAssignment != IN_TRANSIT)
+			{
+				fOK = TRUE;
+			}
+		}
+	}
 
 	if ( !fOK )
 	{
@@ -369,9 +390,8 @@ static void TryToStartRaid(void)
 static void AirRaidStart(void)
 {
 	// Begin ambient sound....
-	guiSoundSample = PlayJA2Sample(S_RAID_AMBIENT, 0, 10000, MIDDLEPAN);
-
 	gfFadingRaidIn = TRUE;
+	giNumGridNosMovedThisTurn = 0;
 
 	// Setup start time....
 	RESETTIMECOUNTER( giTimerAirRaidQuote, AIR_RAID_SAY_QUOTE_TIME );
@@ -505,6 +525,7 @@ static void AirRaidLookForDive(void)
 	{
 		// Air raid is over....
 		gubAirRaidMode = AIR_RAID_START_END;
+		giNumGridNosMovedThisTurn = 0;
 	}
 }
 
@@ -617,7 +638,6 @@ static void BeginDive()
 
 	gsNumGridNosMoved = 0;
 	gsNotLocatedYet = TRUE;
-
 }
 
 
@@ -733,18 +753,18 @@ static void DoDive(void)
 
 				if (GridNoOnVisibleWorldTile((INT16)(GETWORLDINDEXFROMWORLDCOORDS(sStrafeY, sStrafeX))))
 				{
-					//if ( gsNotLocatedYet && !( gTacticalStatus.uiFlags & INCOMBAT ) )
-					//{
-					//	gsNotLocatedYet = FALSE;
-					//	LocateGridNo( sGridNo );
-					//}
+					if ( gsNotLocatedYet && !( gTacticalStatus.uiFlags & INCOMBAT ) )
+					{
+						gsNotLocatedYet = FALSE;
+						LocateGridNo( sGridNo );
+					}
 
 					//if ( ( gTacticalStatus.uiFlags & INCOMBAT ) )
 					{
 						// Increase attacker busy...
-						//gTacticalStatus.ubAttackBusyCount++;
-						//SLOGD(DEBUG_TAG_AIRRAID, "Starting attack AIR RAID ( fire gun ), attack count now %d",
-						//	gTacticalStatus.ubAttackBusyCount);
+						gTacticalStatus.ubAttackBusyCount++;
+						SLOGD(DEBUG_TAG_AIRRAID, "Starting attack AIR RAID ( fire gun ), attack count now %d",
+							gTacticalStatus.ubAttackBusyCount);
 
 						// INcrement bullet fired...
 						gpRaidSoldier->bBulletsLeft++;
@@ -777,9 +797,9 @@ static void DoDive(void)
 					//if ( ( gTacticalStatus.uiFlags & INCOMBAT ) )
 					{
 						// Increase attacker busy...
-						//gTacticalStatus.ubAttackBusyCount++;
-						//SLOGD(DEBUG_TAG_AIRRAID, "Starting attack AIR RAID ( second one ), attack count now %d",
-						//	gTacticalStatus.ubAttackBusyCount);
+						gTacticalStatus.ubAttackBusyCount++;
+						SLOGD(DEBUG_TAG_AIRRAID, "Starting attack AIR RAID ( second one ), attack count now %d",
+							gTacticalStatus.ubAttackBusyCount);
 
 						// INcrement bullet fired...
 						gpRaidSoldier->bBulletsLeft++;
@@ -896,12 +916,11 @@ static void DoBombing(void)
 
 					if ( GridNoOnVisibleWorldTile( (INT16)( GETWORLDINDEXFROMWORLDCOORDS( sStrafeY, sStrafeX ) ) ) )
 					{
-						//if ( gsNotLocatedYet && !( gTacticalStatus.uiFlags & INCOMBAT ) )
-						//{
-						//	gsNotLocatedYet = FALSE;
-						//	LocateGridNo( sGridNo );
-						//}
-
+						if ( gsNotLocatedYet && !( gTacticalStatus.uiFlags & INCOMBAT ) )
+						{
+							gsNotLocatedYet = FALSE;
+							LocateGridNo( sGridNo );
+						}
 
 						if ( Random( 2 ) )
 						{
@@ -956,6 +975,40 @@ void HandleAirRaid( )
 	// OK,
 	if ( gfInAirRaid )
 	{
+		if (gfFadingRaidIn)
+		{
+			iVol = giNumGridNosMovedThisTurn;
+			if (iVol >= HIGHVOLUME)
+			{
+				gfFadingRaidIn = FALSE;
+			}
+		}
+		else if (gfFadingRaidOut)
+		{
+			iVol = HIGHVOLUME - giNumGridNosMovedThisTurn;
+			if (iVol <= 0)
+			{
+				gfFadingRaidOut = FALSE;
+				gubAirRaidMode = AIR_RAID_END;
+			}
+		}
+		else
+		{
+			iVol = HIGHVOLUME;
+		}
+
+		iVol = __min(HIGHVOLUME, iVol + 1);
+		iVol = __max(0, iVol - 1);
+
+		if (guiSoundSample == NO_SAMPLE)
+		{
+			guiSoundSample = PlayJA2Sample(S_RAID_AMBIENT, iVol, 10000, MIDDLEPAN);
+		}
+		else
+		{
+			SoundSetVolume(guiSoundSample, iVol);
+		}
+
 		// Are we in TB?
 		if ( ( gTacticalStatus.uiFlags & INCOMBAT ) )
 		{
@@ -967,6 +1020,16 @@ void HandleAirRaid( )
 			}
 		}
 
+		if (WillAirRaidBeStopped(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY))
+		{
+			SLOGD(DEBUG_TAG_AIRRAID, "HandleAirRaid: SAM just taken over");
+			if (gfFadingRaidIn)
+			{
+				giNumGridNosMovedThisTurn = HIGHVOLUME - giNumGridNosMovedThisTurn;
+			}
+			gfFadingRaidIn = FALSE;
+			gfFadingRaidOut = TRUE;
+		}
 
 		uiClock = GetJA2Clock( );
 
@@ -976,48 +1039,9 @@ void HandleAirRaid( )
 
 			guiRaidLastUpdate = uiClock;
 
-			if( gfFadingRaidIn )
+			if ((gfFadingRaidIn || gfFadingRaidOut) && (giNumFrames % 10) == 0)
 			{
-				if( guiSoundSample!=NO_SAMPLE )
-				{
-					if ( ( giNumFrames % 10 ) == 0 )
-					{
-						iVol=SoundGetVolume( guiSoundSample );
-						iVol=__min( HIGHVOLUME, iVol+1);
-						SoundSetVolume(guiSoundSample, iVol);
-						if(iVol==HIGHVOLUME)
-							gfFadingRaidIn=FALSE;
-					}
-				}
-				else
-				{
-					gfFadingRaidIn=FALSE;
-				}
-			}
-			else if( gfFadingRaidOut )
-			{
-				if( guiSoundSample!=NO_SAMPLE )
-				{
-					if ( ( giNumFrames % 10 ) == 0 )
-					{
-						iVol=SoundGetVolume(guiSoundSample);
-
-						iVol=__max( 0, iVol-1);
-
-						SoundSetVolume(guiSoundSample, iVol);
-						if(iVol==0)
-						{
-							gfFadingRaidOut=FALSE;
-
-							gubAirRaidMode = AIR_RAID_END;
-						}
-					}
-				}
-				else
-				{
-					gfFadingRaidOut=FALSE;
-					gubAirRaidMode = AIR_RAID_END;
-				}
+				giNumGridNosMovedThisTurn++;
 			}
 
 			switch( gubAirRaidMode )
@@ -1249,7 +1273,9 @@ void LoadAirRaidInfoFromSaveGameFile(HWFILE const hFile)
 	gfInAirRaid = sAirRaidSaveStruct.fInAirRaid;
 	gfAirRaidScheduled = sAirRaidSaveStruct.fAirRaidScheduled;
 	gubAirRaidMode = sAirRaidSaveStruct.ubAirRaidMode;
-	guiSoundSample = sAirRaidSaveStruct.uiSoundSample;
+	//guiSoundSample = sAirRaidSaveStruct.uiSoundSample;
+	// HACK: The sound engine is not save-persistent so this id is invalid
+	guiSoundSample = NO_SAMPLE;
 	guiRaidLastUpdate = sAirRaidSaveStruct.uiRaidLastUpdate;
 	gfFadingRaidIn = sAirRaidSaveStruct.fFadingRaidIn;
 	gfQuoteSaid = sAirRaidSaveStruct.fQuoteSaid;
@@ -1322,24 +1348,72 @@ void EndAirRaid( )
 			SetTeamStatusGreen(CIV_TEAM);
 		}
 	}
-
-	// OK, look at flags...
-	if ( gAirRaidDef.uiFlags & AIR_RAID_BEGINNING_GAME )
-	{
-		// OK, make enemy appear in Omerta
-		// Talk to strategic AI for this...
-		//GROUP *pGroup;
-		//Create a patrol group originating from sector B9
-		//pGroup = CreateNewEnemyGroupDepartingFromSector( SEC_B9, (UINT8)(2 + Random( 2 ) + gGameOptions.ubDifficultyLevel), 0 );
-		//Move the patrol group north to attack Omerta
-		//AddWaypointToPGroup( pGroup, 9, 1 ); //A9
-		//Because we want them to arrive right away, we will toast the arrival event.  The information
-		//is already set up though.
-		//DeleteStrategicEvent( EVENT_GROUP_ARRIVAL, pGroup->ubGroupID );
-		//Simply reinsert the event, but the time is now.
-		//AddStrategicEvent( EVENT_GROUP_ARRIVAL, GetWorldTotalMin(), pGroup->ubGroupID );
-	}
 	SLOGD(DEBUG_TAG_AIRRAID, "Ending Air Raid." );
+}
+
+BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY)
+{
+	UINT8 ubSamNumber = 0;
+	INT8 bSAMCondition;
+	UINT8 ubChance;
+
+	if (IsItRaining())
+	{
+		SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: it is raining");
+		return(TRUE);
+	}
+
+	SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: enemy air controlled = %d", StrategicMap[CALCULATE_STRATEGIC_INDEX(sSectorX, sSectorY)].fEnemyAirControlled);
+
+	// if enemy controls this SAM site, then it can't stop an air raid
+	if (StrategicMap[CALCULATE_STRATEGIC_INDEX(sSectorX, sSectorY)].fEnemyAirControlled == TRUE)
+	{
+		return(FALSE);
+	}
+
+	if (!StrategicMap[(AIRPORT_X + (MAP_WORLD_X * AIRPORT_Y))].fEnemyControlled && !StrategicMap[(AIRPORT2_X + (MAP_WORLD_X * AIRPORT2_Y))].fEnemyControlled)
+	{
+		SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: enemy has no more airports");
+		return(TRUE);
+	}
+
+	// which SAM controls this sector?
+	ubSamNumber = ubSAMControlledSectors[sSectorY][sSectorX];
+
+	SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: SAM number = %d", ubSamNumber);
+
+	// if none of them
+	if (ubSamNumber == 0)
+	{
+		return(FALSE);
+	}
+
+	// get the condition of that SAM site (NOTE: SAM #s are 1-4, but indexes are 0-3!!!)
+	Assert(ubSamNumber <= NUMBER_OF_SAMS);
+	bSAMCondition = StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(pSamList[ubSamNumber - 1])].bSAMCondition;
+
+	// if it's too busted to work, then it can't stop an air raid
+	SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: SAM condition = %d", bSAMCondition);
+	if (bSAMCondition < MIN_CONDITION_FOR_SAM_SITE_TO_WORK)
+	{
+		// no problem, SAM site not working
+		return(FALSE);
+	}
+
+
+	// Friendly airspace controlled by a working SAM site, so SAM site fires a SAM at air raid bomber
+
+	// calc chance that chopper will be shot down
+	ubChance = bSAMCondition;
+
+	if (PreRandom(100) < ubChance)
+	{
+		SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: return true");
+		return(TRUE);
+	}
+
+	SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: return false");
+	return(FALSE);
 }
 
 

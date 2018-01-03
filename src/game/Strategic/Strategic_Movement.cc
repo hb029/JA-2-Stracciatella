@@ -505,7 +505,7 @@ GROUP* CreateNewEnemyGroupDepartingFromSector( UINT32 uiSector, UINT8 ubNumAdmin
 	pNew->pEnemyGroup->ubNumAdmins = ubNumAdmins;
 	pNew->pEnemyGroup->ubNumTroops = ubNumTroops;
 	pNew->pEnemyGroup->ubNumElites = ubNumElites;
-	pNew->ubGroupSize = (UINT8)(ubNumTroops + ubNumElites);
+	pNew->ubGroupSize = (UINT8)(ubNumAdmins + ubNumTroops + ubNumElites);
 	pNew->ubTransportationMask = FOOT;
 	pNew->fVehicle = FALSE;
 	pNew->ubCreatedSectorID = pNew->ubOriginalSector;

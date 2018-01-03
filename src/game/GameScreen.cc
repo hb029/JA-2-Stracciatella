@@ -61,6 +61,9 @@
 #include "UILayout.h"
 #include "GameState.h"
 #include "EditScreen.h"
+#include "Campaign_Types.h"
+#include "GameSettings.h"
+#include "Game_Event_Hook.h"
 #include "slog/slog.h"
 
 #define ARE_IN_FADE_IN( )		( gfFadeIn || gfFadeInitialized )
@@ -780,15 +783,29 @@ void InitHelicopterEntranceByMercs( void )
 		AirRaidDef.sSectorX		= 9;
 		AirRaidDef.sSectorY		= 1;
 		AirRaidDef.sSectorZ		= 0;
-		AirRaidDef.bIntensity = 2;
-		AirRaidDef.uiFlags		=	AIR_RAID_BEGINNING_GAME;
+		AirRaidDef.bIntensity	= 2;
+		AirRaidDef.uiFlags		= AIR_RAID_BEGINNING_GAME;
 		AirRaidDef.ubNumMinsFromCurrentTime	= 1;
 
-	//	ScheduleAirRaid( &AirRaidDef );
+		ScheduleAirRaid( &AirRaidDef );
 
 		gfTacticalDoHeliRun = TRUE;
-		gfFirstHeliRun			= TRUE;
+		gfFirstHeliRun		= TRUE;
 
 		gTacticalStatus.fDidGameJustStart = FALSE;
+
+		// OK, make enemy appear in Omerta
+		// Talk to strategic AI for this...
+		GROUP *pGroup;
+		// Create a patrol group originating from sector B9
+		pGroup = CreateNewEnemyGroupDepartingFromSector(SEC_B9, (UINT8)(2 + Random(2) + gGameOptions.ubDifficultyLevel), 0, 0);
+		// Move the patrol group north to attack Omerta
+		AddWaypointToPGroup(pGroup, 9, 1); //A9
+											// Because we want them to arrive right away, we will toast the arrival event.  The information
+											// is already set up though.
+		pGroup->ubMoveType = ONE_WAY;
+		DeleteStrategicEvent(EVENT_GROUP_ARRIVAL, pGroup->ubGroupID);
+		// Simply reinsert the event, but the time is now.
+		AddStrategicEvent(EVENT_GROUP_ARRIVAL, GetWorldTotalMin() + 2, pGroup->ubGroupID);
 	}
 }

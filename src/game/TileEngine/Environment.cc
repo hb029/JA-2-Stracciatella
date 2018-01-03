@@ -401,7 +401,7 @@ void ForecastDayEvents( )
 		}
 	}
 
-	EnvironmentController(TRUE);
+	EnvironmentController(FALSE);
 }
 
 UINT8 GetTimeOfDayAmbientLightLevel()
@@ -635,4 +635,12 @@ void EnvDoLightning(void)
 			SetRenderFlags(RENDER_FLAG_FULL);
 		}
 	}
+}
+
+// Used to determine delay if its raining
+BOOLEAN IsItRaining(void)
+{
+	return
+		guiEnvWeather & WEATHER_FORECAST_SHOWERS ||
+		guiEnvWeather & WEATHER_FORECAST_THUNDERSHOWERS;
 }
