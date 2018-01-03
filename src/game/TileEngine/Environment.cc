@@ -346,7 +346,7 @@ void ForecastDayEvents( )
 	//TODO: make a weather model and report to log
 	
 	UINT32 uiOldDay;
-	UINT32 uiStartTime, uiEndTime;
+	UINT32 uiStartTime, uiEndTime = -1;
 	UINT8  ubStormIntensity;
 	UINT32 cnt;
 
@@ -367,28 +367,37 @@ void ForecastDayEvents( )
 		// ATE: Don't forecast if start of game...
 		if ( guiEnvDay > 1 )
 		{
-			cnt = Random(2);
+			cnt = Random(3);
 			
-			// Should it rain...?
-			// Between 6:00 and 10:00
-			uiStartTime = (UINT32)(360 + Random(1080));
-			// Between 5 - 15 miniutes
-			uiEndTime = uiStartTime + Random(180);
-			if (uiEndTime - uiStartTime > 20)
+			do
 			{
-				ubStormIntensity = 0;
+				// Should it rain...?
+				// Between 6:00 and 10:00
+				uiStartTime = (UINT32)(360 + Random(1080));
+				// Between 5 - 15 miniutes
 
-				// Randomize for a storm!
-				if ( Random(10) < 5 )
+				if (uiEndTime != -1)
 				{
-					ubStormIntensity = 1;
-					uiEndTime = uiEndTime - (uiEndTime - uiStartTime) / 2;
+					if (uiEndTime >= uiStartTime) continue;
 				}
 
-				// Add rain!
-				AddStrategicEvent(EVENT_BEGINRAINSTORM, uiStartTime + GetWorldTotalMin(), ubStormIntensity);
-				AddStrategicEvent(EVENT_ENDRAINSTORM, uiEndTime + GetWorldTotalMin(), ubStormIntensity);
-			}
+				uiEndTime = uiStartTime + Random(180);
+				if (uiEndTime - uiStartTime > 10)
+				{
+					ubStormIntensity = 0;
+
+					// Randomize for a storm!
+					if (Random(10) < 5)
+					{
+						ubStormIntensity = 1;
+						uiEndTime = uiEndTime - (uiEndTime - uiStartTime) / 2;
+					}
+
+					// Add rain!
+					AddStrategicEvent(EVENT_BEGINRAINSTORM, uiStartTime + GetWorldTotalMin(), ubStormIntensity);
+					AddStrategicEvent(EVENT_ENDRAINSTORM, uiEndTime + GetWorldTotalMin(), ubStormIntensity);
+				}
+			} while (cnt--);
 		}
 	}
 
