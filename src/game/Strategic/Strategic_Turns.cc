@@ -71,14 +71,14 @@ void HandleStrategicTurn(void)
 		{
 			if ( !IsTimeBeingCompressed() )
 			{
-				uiCheckTime = NUM_REAL_SEC_PER_TACTICAL_TURN;
+				uiCheckTime = NUM_REAL_MILLISEC_PER_TACTICAL_TURN;
 			}
 			else
 			{
 				// OK, if we have compressed time...., adjust our check value to be faster....
 				if( giTimeCompressSpeeds[ giTimeCompressMode ] > 0 )
 				{
-					uiCheckTime = NUM_REAL_SEC_PER_TACTICAL_TURN / ( giTimeCompressSpeeds[ giTimeCompressMode ] * RT_COMPRESSION_TACTICAL_TURN_MODIFIER );
+					uiCheckTime = NUM_REAL_MILLISEC_PER_TACTICAL_TURN / ( giTimeCompressSpeeds[ giTimeCompressMode ] * RT_COMPRESSION_TACTICAL_TURN_MODIFIER );
 				}
 				else
 				{

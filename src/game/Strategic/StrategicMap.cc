@@ -107,6 +107,7 @@
 #include "Items.h"
 #include "UILayout.h"
 #include "slog/slog.h"
+#include "RT_Time_Defines.h"
 
 //Used by PickGridNoToWalkIn
 #define MAX_ATTEMPTS 200
@@ -1969,12 +1970,20 @@ void AllMercsHaveWalkedOffSector( )
 				UINT32 uiWarpTime;
 				uiWarpTime = (GetWorldTotalMin() + 5) * 60 - GetWorldTotalSeconds();
 				WarpGameTime( uiWarpTime, WARPTIME_PROCESS_TARGET_TIME_FIRST );
+				for (INT8 i = 0; i < uiWarpTime / NUM_GAME_SEC_PER_TACTICAL_TURN; ++i)
+				{
+					HandleTacticalEndTurn();
+				}
 			}
 			else if( gbAdjacentSectorZ > 0 )
 			{
 				UINT32 uiWarpTime;
 				uiWarpTime = (GetWorldTotalMin() + 1) * 60 - GetWorldTotalSeconds();
 				WarpGameTime( uiWarpTime, WARPTIME_PROCESS_TARGET_TIME_FIRST );
+				for (INT8 i = 0; i < uiWarpTime / NUM_GAME_SEC_PER_TACTICAL_TURN; ++i)
+				{
+					HandleTacticalEndTurn();
+				}
 			}
 
 			//Because we are actually loading the new map, and we are physically traversing, we don't want

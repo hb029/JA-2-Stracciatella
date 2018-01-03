@@ -42,6 +42,7 @@
 #include "Debug.h"
 #include "Items.h"
 #include "slog/slog.h"
+#include "RT_Time_Defines.h"
 
 // for that single policy check :|
 #include "GamePolicy.h"
@@ -134,7 +135,7 @@ void StartPlayerTeamTurn( BOOLEAN fDoBattleSnd, BOOLEAN fEnteringCombatMode )
 		fInterfacePanelDirty = DIRTYLEVEL2;
 
 		// Adjust time now!
-		WarpGameTime(15, WARPTIME_PROCESS_EVENTS_NORMALLY);
+		WarpGameTime(NUM_GAME_SEC_PER_TACTICAL_TURN, WARPTIME_PROCESS_EVENTS_NORMALLY);
 		UpdateClock( );
 
 		if ( !fEnteringCombatMode )
