@@ -358,10 +358,12 @@ void BuildDayAmbientSounds( )
 
 void ForecastDayEvents( )
 {
+	//TODO: make a weather model and report to log
+	
 	UINT32 uiOldDay;
 	UINT32 uiStartTime, uiEndTime;
 	UINT8  ubStormIntensity;
-//	UINT32 cnt;
+	UINT32 cnt;
 
 	// Get current day and see if different
 	if ( ( uiOldDay = GetWorldDay() ) != guiEnvDay )
@@ -380,32 +382,32 @@ void ForecastDayEvents( )
 		// ATE: Don't forecast if start of game...
 		if ( guiEnvDay > 1 )
 		{
+			cnt = Random(2);
+			
 			// Should it rain...?
-			if ( Random( 100 ) < 20 )
+			// Between 6:00 and 10:00
+			uiStartTime = (UINT32)(360 + Random(1080));
+			// Between 5 - 15 miniutes
+			uiEndTime = uiStartTime + Random(180);
+			if (uiEndTime - uiStartTime > 20)
 			{
-				// Add rain!
-				// Between 6:00 and 10:00
-				uiStartTime = (UINT32)( 360 + Random( 1080 ) );
-				// Between 5 - 15 miniutes
-				uiEndTime		= uiStartTime + ( 5 + Random( 10 ) );
-
 				ubStormIntensity = 0;
 
-				// Randomze for a storm!
-				if ( Random( 10 ) < 5 )
+				// Randomize for a storm!
+				if ( Random(10) < 5 )
 				{
 					ubStormIntensity = 1;
+					uiEndTime = uiEndTime - (uiEndTime - uiStartTime) / 2;
 				}
 
-				// ATE: Disable RAIN!
-				AddSameDayRangedStrategicEvent( EVENT_RAINSTORM, uiStartTime, uiEndTime - uiStartTime, ubStormIntensity );
-
-				AddSameDayStrategicEvent( EVENT_BEGINRAINSTORM, uiStartTime, ubStormIntensity );
-				AddSameDayStrategicEvent( EVENT_ENDRAINSTORM, uiEndTime, 0 );
+				// Add rain!
+				AddStrategicEvent(EVENT_BEGINRAINSTORM, uiStartTime + GetWorldTotalMin(), ubStormIntensity);
+				AddStrategicEvent(EVENT_ENDRAINSTORM, uiEndTime + GetWorldTotalMin(), ubStormIntensity);
 			}
 		}
 	}
 
+	EnvironmentController(TRUE);
 }
 
 UINT8 GetTimeOfDayAmbientLightLevel()
