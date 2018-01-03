@@ -32,8 +32,6 @@
 #include "FileMan.h"
 #include "slog/slog.h"
 
-// the max loyalty rating for any given town
-#define MAX_LOYALTY_VALUE 100
 
 // loyalty Omerta drops to and maxes out at if the player betrays the rebels
 #define HOSTILE_OMERTA_LOYALTY_RATING 10

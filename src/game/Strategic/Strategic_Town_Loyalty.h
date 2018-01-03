@@ -44,6 +44,10 @@
 // Loyalty penalty for being inactive, per day after the third
 #define LOYALTY_PENALTY_INACTIVE													(10 * GAIN_PTS_PER_LOYALTY_PT)
 
+// the max loyalty rating for any given town
+#define MAX_LOYALTY_VALUE 100
+
+
 enum GlobalLoyaltyEventTypes
 {
 	// There are only for distance-adjusted global loyalty effects.  Others go into list above instead!
