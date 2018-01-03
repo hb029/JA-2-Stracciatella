@@ -5350,16 +5350,8 @@ static void SplitComplexObjectIntoSubObjects(OBJECTTYPE* pComplexObject)
 				pNextObj->ubGunShotsLeft = 0;
 				pNextObj->usGunAmmoItem = NONE;
 			}
-
-			/* gunAmmoStatus is currently not being used that way, it's strictly used as a jammed/unjammed, and so should never be 0
-			// if jammed, must remember that, so leave it
-			if ( pNextObj->bGunAmmoStatus > 0 )
-			{
-				pNextObj->bGunAmmoStatus = 0;
-			}*/
 		}
 
-		/* ARM: Can now repair with removeable attachments still attached...
 		// strip off any seperable attachments
 		for( ubCnt = 0; ubCnt < MAX_ATTACHMENTS; ubCnt++ )
 		{
@@ -5372,11 +5364,10 @@ static void SplitComplexObjectIntoSubObjects(OBJECTTYPE* pComplexObject)
 					pNextObj->bAttachStatus[ ubCnt ] = 0;
 				}
 			}
-		}*/
+		}
 
 		// advance to next available subobject
 		pNextObj = &gSubObject[ ++ubNextFreeSlot ];
-
 
 		// if it's a gun
 		if ( GCM->getItem(pComplexObject->usItem)->getItemClass() == IC_GUN )
@@ -5416,7 +5407,6 @@ static void SplitComplexObjectIntoSubObjects(OBJECTTYPE* pComplexObject)
 		}
 
 
-		/* ARM: Can now repair with removeable attachments still attached...
 		// make each detachable attachment into a separate subobject
 		for( ubCnt = 0; ubCnt < MAX_ATTACHMENTS; ubCnt++ )
 		{
@@ -5430,7 +5420,7 @@ static void SplitComplexObjectIntoSubObjects(OBJECTTYPE* pComplexObject)
 					pNextObj = &gSubObject[ ++ubNextFreeSlot ];
 				}
 			}
-		}*/
+		}
 	}
 	else // stacked
 	{
