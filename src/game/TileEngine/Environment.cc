@@ -36,10 +36,17 @@ BOOLEAN gfCaves = FALSE;
 #define DUSK_START		( 20 * 60 )
 #define NIGHT_START		( 22 * 60 )
 */
+/*
 #define DAWN_START		( 6 * 60 + 47 )		//6:47AM
 #define DAY_START		( 7 * 60 + 5 )		//7:05AM
 #define DUSK_START		( 20 * 60 + 57 )	//8:57PM
 #define NIGHT_START		( 21 * 60 + 15 )	//9:15PM
+*/
+// Early summer at meso-american latitude
+#define DAWN_START		( 6 * 60 )		//6:00AM
+#define DAY_START		( 7 * 60 )		//7:00AM
+#define DUSK_START		( 21 * 60 )	//8:00PM
+#define NIGHT_START		( 22 * 60 )	//9:00PM
 
 #define DAWN_TO_DAY		(DAY_START-DAWN_START)
 #define DAY_TO_DUSK		(DUSK_START-DAY_START)
@@ -271,21 +278,10 @@ void BuildDayLightLevels()
 {
 	UINT32 uiLoop, uiHour;
 
-	/*
-	// Dawn; light 12
-	AddEveryDayStrategicEvent( EVENT_CHANGELIGHTVAL, DAWNLIGHT_START, NORMAL_LIGHTLEVEL_NIGHT - 1 );
-
-	// loop from light 12 down to light 4
-	for (uiLoop = 1; uiLoop < 8; uiLoop++)
-	{
-		AddEveryDayStrategicEvent( EVENT_CHANGELIGHTVAL, DAWN_START + 15 * uiLoop,	NORMAL_LIGHTLEVEL_NIGHT - 1 - uiLoop );
-	}
-	*/
-
 	//Transition from night to day
 	for( uiLoop = 0; uiLoop < 9; uiLoop++ )
 	{
-		AddEveryDayStrategicEvent( EVENT_CHANGELIGHTVAL, DAWN_START + 2 * uiLoop,	NORMAL_LIGHTLEVEL_NIGHT - 1 - uiLoop );
+		AddEveryDayStrategicEvent( EVENT_CHANGELIGHTVAL, DAWN_START + (DAWN_TO_DAY * uiLoop) / 8,	NORMAL_LIGHTLEVEL_NIGHT - 1 - uiLoop );
 	}
 
 	// Add events for hot times
@@ -299,21 +295,10 @@ void BuildDayLightLevels()
 	AddEveryDayStrategicEvent( EVENT_TEMPERATURE_UPDATE, GLOBAL_HOT_END, TEMPERATURE_GLOBAL_WARM );
 	AddEveryDayStrategicEvent( EVENT_TEMPERATURE_UPDATE, GLOBAL_WARM_END, TEMPERATURE_GLOBAL_COOL );
 
-/*
-	// Twilight; light 5
-	AddEveryDayStrategicEvent( EVENT_CHANGELIGHTVAL, TWILLIGHT_START, NORMAL_LIGHTLEVEL_DAY + 1 );
-
-	// Dusk; loop from light 5 up to 12
-	for (uiLoop = 1; uiLoop < 8; uiLoop++)
-	{
-		AddEveryDayStrategicEvent( EVENT_CHANGELIGHTVAL, DUSK_START + 15 * uiLoop, NORMAL_LIGHTLEVEL_DAY + 1 + uiLoop );
-	}
-*/
-
 	//Transition from day to night
 	for( uiLoop = 0; uiLoop < 9; uiLoop++ )
 	{
-		AddEveryDayStrategicEvent( EVENT_CHANGELIGHTVAL, DUSK_START + 2 * uiLoop,	NORMAL_LIGHTLEVEL_DAY + 1 + uiLoop );
+		AddEveryDayStrategicEvent( EVENT_CHANGELIGHTVAL, DUSK_START + (DUSK_TO_NIGHT * uiLoop) / 8,	NORMAL_LIGHTLEVEL_DAY + 1 + uiLoop );
 	}
 
 	//Set up the scheduling for turning lights on and off based on the various types.
