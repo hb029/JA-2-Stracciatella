@@ -71,18 +71,18 @@ void createAllHardcodedItemModels(std::vector<const ItemModel*> &items)
 	items[133] = new ItemModel(133, "MUSTARD_GRENADE",            IC_GRENADE, 2,  TOSSCURS,    1, 41,  6,   4, 500,  8,  /* mustard gas grenade*/  0, -3, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_REPAIRABLE);
 	items[134] = new ItemModel(134, "MINI_GRENADE",               IC_GRENADE, 3,  TOSSCURS,    1, 50,  3,   6, 150,  6,  /* mini hand grenade */   0, -4, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_REPAIRABLE);
 	items[135] = new ItemModel(135, "HAND_GRENADE",               IC_GRENADE, 4,  TOSSCURS,    1, 49,  6,   4, 200,  7,  /* reg hand grenade */    0, -4, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_REPAIRABLE);
-	items[136] = new ItemModel(136, "RDX",                        IC_BOMB,    5,  INVALIDCURS, 2, 3,   11,  2, 400,  7,  /* RDX */                 0, -4, ITEM_DAMAGEABLE /*| ITEM_REPAIRABLE*/);
-	items[137] = new ItemModel(137, "TNT",                        IC_BOMB,    6,  INVALIDCURS, 2, 0,   11,  1, 500,  6,  /* TNT (="explosives")*/  0, -4, ITEM_DAMAGEABLE /*| ITEM_REPAIRABLE*/);
-	items[138] = new ItemModel(138, "HMX",                        IC_BOMB,    7,  INVALIDCURS, 2, 23,  11,  1, 1000, 8,  /* HMX (=RDX+TNT) */      0, -4, ITEM_DAMAGEABLE /*| ITEM_REPAIRABLE*/);
-	items[139] = new ItemModel(139, "C1",                         IC_BOMB,    8,  INVALIDCURS, 1, 45,  11,  1, 750,  7,  /* C1  (=RDX+min oil) */  0, -4, ITEM_DAMAGEABLE /*| ITEM_REPAIRABLE*/);
+	items[136] = new ItemModel(136, "RDX",                        IC_BOMB,    5,  INVALIDCURS, 2, 3,   11,  2, 400,  7,  /* RDX */                 0, -4, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_REPAIRABLE);
+	items[137] = new ItemModel(137, "TNT",                        IC_BOMB,    6,  INVALIDCURS, 2, 0,   11,  1, 500,  6,  /* TNT (="explosives")*/  0, -4, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_REPAIRABLE);
+	items[138] = new ItemModel(138, "HMX",                        IC_BOMB,    7,  INVALIDCURS, 2, 23,  11,  1, 1000, 8,  /* HMX (=RDX+TNT) */      0, -4, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_REPAIRABLE);
+	items[139] = new ItemModel(139, "C1",                         IC_BOMB,    8,  INVALIDCURS, 1, 45,  11,  1, 750,  7,  /* C1  (=RDX+min oil) */  0, -4, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_REPAIRABLE);
 	items[140] = new ItemModel(140, "MORTAR_SHELL",               IC_BOMB,    9,  INVALIDCURS, 1, 40,  41,  2, 400,  9,  /* mortar shell */        0, -4, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_REPAIRABLE);
 
 	items[141] = new ItemModel(141, "MINE",                       IC_BOMB,    10, BOMBCURS,    1, 46,  8,   1, 300,  5,  /* mine */                0, -4, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_REPAIRABLE);
-	items[142] = new ItemModel(142, "C4",                         IC_BOMB,    11, INVALIDCURS, 1, 44,  11,  1, 1500, 9,  /* C4  ("plastique") */   0, -4, ITEM_DAMAGEABLE /*| ITEM_REPAIRABLE*/);
+	items[142] = new ItemModel(142, "C4",                         IC_BOMB,    11, INVALIDCURS, 1, 44,  11,  1, 1500, 9,  /* C4  ("plastique") */   0, -4, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_REPAIRABLE);
 	items[143] = new ItemModel(143, "TRIP_FLARE",                 IC_BOMB,    12, BOMBCURS,    1, 42,  4,   2, 0,    0,  /* trip flare */          0, -2, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_NOT_BUYABLE | ITEM_REPAIRABLE);
 	items[144] = new ItemModel(144, "TRIP_KLAXON",                IC_BOMB,    13, BOMBCURS,    1, 43,  4,   2, 0,    0,  /* trip klaxon */         0, -2, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_NOT_BUYABLE | ITEM_REPAIRABLE);
 	items[145] = new ItemModel(145, "SHAPED_CHARGE",              IC_BOMB,    14, INVALIDCURS, 1, 107, 2,   4, 250,  6,  /* shaped charge */       0, -4, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_REPAIRABLE);
-	items[146] = new ItemModel(146, "BREAK_LIGHT",                IC_GRENADE, 15, TOSSCURS,    2, 24,  1,   6, 50,   3,  /* break light (flare)*/  0, 0,  ITEM_DAMAGEABLE /*| ITEM_REPAIRABLE*/);
+	items[146] = new ItemModel(146, "BREAK_LIGHT",                IC_GRENADE, 15, TOSSCURS,    2, 24,  1,   6, 50,   3,  /* break light (flare)*/  0, 0,  ITEM_DAMAGEABLE | ITEM_METAL | ITEM_REPAIRABLE);
 	items[147] = new ItemModel(147, "GL_HE_GRENADE",              IC_GRENADE, 16, INVALIDCURS, 1, 97,  10,  4, 400,  8,  /* 40mm HE grenade */     0, -4, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_REPAIRABLE);
 	items[148] = new ItemModel(148, "GL_TEARGAS_GRENADE",         IC_GRENADE, 17, INVALIDCURS, 1, 111, 10,  4, 250,  6,  /* 40mm tear gas grnd */  0, -2, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_REPAIRABLE);
 	items[149] = new ItemModel(149, "GL_STUN_GRENADE",            IC_GRENADE, 18, INVALIDCURS, 1, 113, 10,  4, 200,  5,  /* 40mm stun grenade */   0, -2, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_REPAIRABLE);
