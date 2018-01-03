@@ -83,11 +83,11 @@ void HourlyLooseItemsFromSectorInventory()
 {
 	UINT8 ubTheftChance;
 
-	for (INT32 y = 0; y < 16; ++y)
+	for (INT32 y = 1; y <= 16; ++y)
 	{
-		for (INT32 x = 0; x < 16; ++x)
+		for (INT32 x = 1; x <= 16; ++x)
 		{
-			SECTORINFO& s = SectorInfo[SECTOR(x + 1, y + 1)];
+			SECTORINFO& s = SectorInfo[SECTOR(x, y)];
 			if (!GetSectorFlagStatus(x, y, 0, SF_ALREADY_VISITED)) continue;
 			
 			if (s.fSurfaceWasEverPlayerControlled &&
@@ -97,7 +97,7 @@ void HourlyLooseItemsFromSectorInventory()
 				ubTheftChance = s.ubTravelRating + 5 * NumEnemiesInAnySector(x, y, 0);
 
 				// Adjust for loyalty, 100% - no theft chance, 0% maximal theft chance
-				UINT8 const town = GetTownIdForSector(SECTOR(x + 1, y + 1));
+				UINT8 const town = GetTownIdForSector(SECTOR(x, y));
 				if (town != BLANK_SECTOR)
 				{
 					ubTheftChance = ((UINT16)ubTheftChance * (MAX_LOYALTY_VALUE - gTownLoyalty[town].ubRating)) / MAX_LOYALTY_VALUE;
