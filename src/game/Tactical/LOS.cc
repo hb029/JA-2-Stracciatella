@@ -2837,7 +2837,7 @@ static UINT8 CalcChanceToGetThrough(BULLET* pBullet)
 			return( 0 );
 		}
 
-		pBullet->sGridNo = MAPROWCOLTOPOS( pBullet->iCurrTileY , pBullet->iCurrTileX );
+		pBullet->sGridNo = GETWORLDINDEXFROMWORLDCOORDS( pBullet->iCurrTileY , pBullet->iCurrTileX );
 
 		if (pBullet->iLoop > pBullet->iRange * 2)
 		{
@@ -3190,7 +3190,7 @@ static INT8 FireBullet(BULLET* pBullet, BOOLEAN fFake)
 	pBullet->iCurrCubesZ = CONVERT_HEIGHTUNITS_TO_INDEX( FIXEDPT_TO_INT32( pBullet->qCurrZ ) );
 	pBullet->iLoop = 1;
 	pBullet->iImpactReduction = 0;
-	pBullet->sGridNo = MAPROWCOLTOPOS( pBullet->iCurrTileY, pBullet->iCurrTileX );
+	pBullet->sGridNo = GETWORLDINDEXFROMWORLDCOORDS( pBullet->iCurrTileY, pBullet->iCurrTileX );
 	SOLDIERTYPE* const pFirer = pBullet->pFirer;
 	if (fFake)
 	{
@@ -4271,7 +4271,7 @@ void MoveBullet(BULLET* const pBullet)
 			return;
 		}
 
-		pBullet->sGridNo = MAPROWCOLTOPOS( pBullet->iCurrTileY , pBullet->iCurrTileX );
+		pBullet->sGridNo = GETWORLDINDEXFROMWORLDCOORDS( pBullet->iCurrTileY , pBullet->iCurrTileX );
 		uiTileInc++;
 
 		if ( (pBullet->iLoop > pBullet->iRange * 2) )
