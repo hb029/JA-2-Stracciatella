@@ -94,6 +94,7 @@
 #include "UILayout.h"
 #include "ContentManager.h"
 #include "GameInstance.h"
+#include "Air_Raid.h"
 #include "policy/GamePolicy.h"
 
 #define MAX_SORT_METHODS					6
@@ -3001,17 +3002,35 @@ static void HandleModCtrl(UINT const key)
 			}
 			break;
 
-	case 'i':
-		if (gamepolicy(isHotkeyEnabled(UI_Map, HKMOD_CTRL, 'i')))
-		{
-			ToggleSectorInventory();
-		}
-		break;
+		case 'i':
+			if (gamepolicy(isHotkeyEnabled(UI_Map, HKMOD_CTRL, 'i')))
+			{
+				ToggleSectorInventory();
+			}
+			break;
 
 		case 'l':
 			// go to LOAD screen
 			gfSaveGame = FALSE;
 			RequestTriggerExitFromMapscreen(MAP_EXIT_TO_LOAD);
+			break;
+
+		case 'r':
+			if (CHEATER_CHEAT_LEVEL())
+			{
+				AIR_RAID_DEFINITION	AirRaidDef;
+
+				AirRaidDef.sSectorX = sSelMapX;
+				AirRaidDef.sSectorY = sSelMapY;
+				AirRaidDef.sSectorZ = 0;
+				AirRaidDef.bIntensity = 4 + Random(gGameOptions.ubDifficultyLevel);
+				AirRaidDef.uiFlags = 0;
+				AirRaidDef.ubNumMinsFromCurrentTime = 5;
+
+				ScheduleAirRaid(&AirRaidDef);
+
+				SLOGD(DEBUG_TAG_SMAP, "Enemy air raid scheduled for sector (%d, %d).", AirRaidDef.sSectorX, AirRaidDef.sSectorY);
+			}
 			break;
 
 		case 's':
