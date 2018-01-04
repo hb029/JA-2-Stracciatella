@@ -163,5 +163,7 @@ void HandleTacticalEndTurn()
 		}
 	}
 
+	CheckForEndOfBattle(FALSE);
+
 	HandleRPCDescription();
 }
