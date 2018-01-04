@@ -343,8 +343,6 @@ void BuildDayAmbientSounds( )
 
 void ForecastDayEvents( )
 {
-	//TODO: make a weather model and report to log
-	
 	UINT32 uiOldDay;
 	UINT32 uiStartTime, uiEndTime = -1;
 	UINT8  ubStormIntensity;
