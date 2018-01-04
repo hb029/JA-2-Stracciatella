@@ -1678,7 +1678,7 @@ INT16 MinAPsToThrow(SOLDIERTYPE const& s, GridNo gridno, bool const add_turning_
 	const ItemModel *item = GCM->getItem(in_hand);
 	// Gennady: This is a very strange piece of code.
 	//          Be very careful with it.
-	if (!item->getItemClass() & IC_GRENADE)
+	if (!(item->getItemClass() & IC_GRENADE))
 	{
 		SLOGI(DEBUG_TAG_POINTS, "MinAPsToThrow - Called when in-hand item is %s",
 					item->getInternalName().c_str());
