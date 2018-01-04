@@ -33,6 +33,15 @@
 #include "Debug.h"
 #include "FileMan.h"
 #include "Environment.h"
+#include "Town_Militia.h"
+#include "Strategic_Town_Loyalty.h"
+#include "WorldMan.h"
+#include "OppList.h"
+
+#include "ContentManager.h"
+#include "GameInstance.h"
+#include "WeaponModels.h"
+
 #include "slog/slog.h"
 
 #define SCRIPT_DELAY				10
@@ -75,6 +84,7 @@ BOOLEAN gfAirRaidHasHadTurn = FALSE;
 UINT8   gubBeginTeamTurn = 0;
 BOOLEAN gfHaveTBBatton = FALSE;
 INT16   gsNotLocatedYet = FALSE;
+GROUP	gChopperGroup;
 static INT32 giNumFrames;
 
 AIR_RAID_DEFINITION gAirRaidDef;
@@ -177,7 +187,7 @@ void ScheduleAirRaid(AIR_RAID_DEFINITION* pAirRaidDef)
 		return;
 	}
 
-	// Copy definiaiotn structure into global struct....
+	// Copy definition structure into global struct....
 	gAirRaidDef = *pAirRaidDef;
 
 	AddSameDayStrategicEvent( EVENT_BEGIN_AIR_RAID, ( GetWorldMinutesInDay() + pAirRaidDef->ubNumMinsFromCurrentTime ), 0 );
@@ -185,44 +195,52 @@ void ScheduleAirRaid(AIR_RAID_DEFINITION* pAirRaidDef)
 	gfAirRaidScheduled = TRUE;
 }
 
+BOOLEAN ChopperAttackSector(UINT8 ubSectorX, UINT8 ubSectorY, INT8 bIntensity);
 
 BOOLEAN BeginAirRaid( )
 {
-	BOOLEAN fOK = FALSE;
-
 	// OK, we have been told to start.....
 
 	// First remove scheduled flag...
 	gfAirRaidScheduled = FALSE;
 
-	if( WillAirRaidBeStopped( gAirRaidDef.sSectorX, gAirRaidDef.sSectorY ) )
+	if (WillAirRaidBeStopped(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY))
 	{
-		return( FALSE );
+		return(FALSE);
 	}
+
+	gfInAirRaid = TRUE;
+
+	// Set flag for handling raid....
+	gTacticalStatus.fEnemyInSector = TRUE;
+
+	ChangeSelectedMapSector(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY, (INT8)gAirRaidDef.sSectorZ);
 
 	// CHECK IF WE CURRENTLY HAVE THIS SECTOR OPEN....
-	if (gAirRaidDef.sSectorX == gWorldSectorX &&
-		gAirRaidDef.sSectorY == gWorldSectorY &&
-		gAirRaidDef.sSectorZ == gbWorldSectorZ)
+	if (!PlayerMercsInSector(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY, 0))
 	{
-		// Do we have any guys in here...
-		CFOR_EACH_IN_TEAM(s, OUR_TEAM)
-		{
-			if (s->sSectorX == gAirRaidDef.sSectorX &&
-				s->sSectorY == gAirRaidDef.sSectorY &&
-				s->bSectorZ == gAirRaidDef.sSectorZ &&
-				!s->fBetweenSectors &&
-				s->bLife != 0 &&
-				s->bAssignment != IN_TRANSIT)
-			{
-				fOK = TRUE;
-			}
-		}
+		EndAirRaid();
+		return TRUE;
 	}
-
-	if ( !fOK )
+	else
 	{
-		return( FALSE );
+		if (gAirRaidDef.sSectorX != gWorldSectorX || gAirRaidDef.sSectorY != gWorldSectorY || gbWorldSectorZ || guiCurrentScreen != GAME_SCREEN)
+		{
+			gChopperGroup.ubGroupSize = 1;
+			gChopperGroup.ubSectorX = gAirRaidDef.sSectorX;
+			gChopperGroup.ubSectorY = gAirRaidDef.sSectorY;
+			gChopperGroup.ubSectorZ = 0;
+			gChopperGroup.fPlayer = FALSE;
+
+			gfCantRetreatInPBI = TRUE;
+			gfEnteringMapScreenToEnterPreBattleInterface = TRUE;
+			gubEnemyEncounterCode = ENEMY_AIR_RAID_CODE;
+
+			InitPreBattleInterface(&gChopperGroup, TRUE);
+			InterruptTime();
+			PauseGame();
+			LockPauseState(LOCK_PAUSE_02);
+		}
 	}
 
 	// ( unless we are in prebattle interface, then ignore... )
@@ -231,11 +249,10 @@ BOOLEAN BeginAirRaid( )
 		return( FALSE );
 	}
 
-	ChangeSelectedMapSector( gAirRaidDef.sSectorX, gAirRaidDef.sSectorY, ( INT8 )gAirRaidDef.sSectorZ );
-
 	if (gAirRaidDef.sSectorX != gWorldSectorX ||
 		gAirRaidDef.sSectorY != gWorldSectorY ||
-		gAirRaidDef.sSectorZ != gbWorldSectorZ || guiCurrentScreen == MAP_SCREEN )
+		gAirRaidDef.sSectorZ != gbWorldSectorZ ||
+		guiCurrentScreen == MAP_SCREEN )
 	{
 		// sector not loaded
 		// Set flag for handling raid....
@@ -274,31 +291,29 @@ BOOLEAN BeginAirRaid( )
 		gfQuoteSaid				= FALSE;
 	}
 
-	// Set flag for handling raid....
-	gfInAirRaid = TRUE;
 	giNumFrames = 0;
-
-
+	giNumGridNosMovedThisTurn = 0;
 
 	guiRaidLastUpdate = GetJA2Clock( );
-
 
 	gbNumDives = 0;
 	gfAirRaidHasHadTurn = FALSE;
 
 	SOLDIERTYPE& s = GetMan(MAX_NUM_SOLDIERS - 1);
 	memset(&s, 0, sizeof(s));
-	s.bLevel              = 0;
-	s.bTeam               = 1;
-	s.bSide               = 1;
-	s.ubID                = MAX_NUM_SOLDIERS - 1;
-	s.attacker            = 0;
-	s.usAttackingWeapon   = HK21E;
-	s.inv[HANDPOS].usItem = HK21E;
+	s.bLevel				= 0;
+	s.bTeam					= 1;
+	s.bSide					= 1;
+	s.ubID					= MAX_NUM_SOLDIERS - 1;
+	s.attacker				= 0;
+	s.usAttackingWeapon		= G11;
+	s.ubAttackingHand		= HANDPOS;
+	s.inv[HANDPOS].usItem	= G11;
+	s.bLevel				= 1;
 	gpRaidSoldier = &s;
 
 	// Determine how many dives this one will be....
-	gbMaxDives = (INT8)( gAirRaidDef.bIntensity + Random( gAirRaidDef.bIntensity - 1 ) );
+	gbMaxDives = gAirRaidDef.bIntensity;
 
 	SLOGD(DEBUG_TAG_AIRRAID, "Begin Air Raid." );
 
@@ -366,6 +381,10 @@ static void TryToStartRaid(void)
 	// Some are:
 
 	// Cannot be in battle ( this is handled by the fact of it begin shceduled in the first place...
+	if ( gTacticalStatus.uiFlags & INCOMBAT )
+	{
+		return;
+	}
 
 	// Cannot be auto-bandaging?
 	if ( gTacticalStatus.fAutoBandageMode )
@@ -380,10 +399,13 @@ static void TryToStartRaid(void)
 	}
 
 	// Cannot be traversing.....
+	if (gfTacticalTraversal)
+	{
+		return;
+	}
 
 	// Ok, go...
 	gubAirRaidMode = AIR_RAID_START;
-
 }
 
 
@@ -759,7 +781,7 @@ static void DoDive(void)
 						LocateGridNo( sGridNo );
 					}
 
-					//if ( ( gTacticalStatus.uiFlags & INCOMBAT ) )
+					if ( ( gTacticalStatus.uiFlags & INCOMBAT ) )
 					{
 						// Increase attacker busy...
 						gTacticalStatus.ubAttackBusyCount++;
@@ -771,8 +793,21 @@ static void DoDive(void)
 					}
 
 					// For now use first position....
+					
+					gpRaidSoldier->target = WhoIsThere2(GETWORLDINDEXFROMWORLDCOORDS(sStrafeY, sStrafeX), 1);
+					if (gpRaidSoldier->target == NULL)
+					{
+						gpRaidSoldier->target = WhoIsThere2(GETWORLDINDEXFROMWORLDCOORDS(sStrafeY, sStrafeX), 0);
+					}
+					if (gpRaidSoldier->target)
+					{
+						gpRaidSoldier->bAimShotLocation = AIM_SHOT_TORSO;
+					}
 
-					gpRaidSoldier->target = NULL;
+					if (gsNumGridNosMoved % (GCM->getWeapon(gpRaidSoldier->usAttackingWeapon)->ubShotsPerBurst + 1) == 0)
+					{
+						//PlayJA2Sample(GCM->getWeapon(gpRaidSoldier->usAttackingWeapon)->burstSound.c_str(), GCM->getWeapon(gpRaidSoldier->usAttackingWeapon)->ubAttackVolume, 1, MIDDLEPAN);
+					}
 					FireBulletGivenTarget( gpRaidSoldier, sStrafeX, sStrafeY, 0, gpRaidSoldier->usAttackingWeapon, 10, FALSE, FALSE );
 				}
 
@@ -794,7 +829,7 @@ static void DoDive(void)
 
 				if (GridNoOnVisibleWorldTile((INT16)(GETWORLDINDEXFROMWORLDCOORDS(sStrafeY, sStrafeX))))
 				{
-					//if ( ( gTacticalStatus.uiFlags & INCOMBAT ) )
+					if ( ( gTacticalStatus.uiFlags & INCOMBAT ) )
 					{
 						// Increase attacker busy...
 						gTacticalStatus.ubAttackBusyCount++;
@@ -806,8 +841,22 @@ static void DoDive(void)
 
 					}
 
-					// For now use first position....
-					FireBulletGivenTarget( gpRaidSoldier, sStrafeX, sStrafeY, 0, gpRaidSoldier->usAttackingWeapon, 10, FALSE, FALSE );
+					// Stick to targets at crosshair, rooftop first
+					gpRaidSoldier->target = WhoIsThere2(GETWORLDINDEXFROMWORLDCOORDS(sStrafeY, sStrafeX), 1);
+					if (gpRaidSoldier->target == NULL)
+					{
+						gpRaidSoldier->target = WhoIsThere2(GETWORLDINDEXFROMWORLDCOORDS(sStrafeY, sStrafeX), 0);
+					}
+					if (gpRaidSoldier->target)
+					{
+						gpRaidSoldier->bAimShotLocation = AIM_SHOT_TORSO;
+					}
+
+					if (gsNumGridNosMoved % (GCM->getWeapon(gpRaidSoldier->usAttackingWeapon)->ubShotsPerBurst + 1) == 0)
+					{
+						PlayJA2Sample(GCM->getWeapon(gpRaidSoldier->usAttackingWeapon)->burstSound.c_str(), GCM->getWeapon(gpRaidSoldier->usAttackingWeapon)->ubAttackVolume, 1, MIDDLEPAN);
+					}
+					FireBulletGivenTarget(gpRaidSoldier, sStrafeX, sStrafeY, 0, gpRaidSoldier->usAttackingWeapon, 10, FALSE, FALSE);
 				}
 
 			}
@@ -1145,6 +1194,13 @@ void HandleAirRaid( )
 			}
 		}
 	}
+	else
+	{
+		if (gfInAirRaid)
+		{
+			BeginAirRaid();
+		}
+	}
 }
 
 
@@ -1275,7 +1331,11 @@ void LoadAirRaidInfoFromSaveGameFile(HWFILE const hFile)
 	gubAirRaidMode = sAirRaidSaveStruct.ubAirRaidMode;
 	//guiSoundSample = sAirRaidSaveStruct.uiSoundSample;
 	// HACK: The sound engine is not save-persistent so this id is invalid
-	guiSoundSample = NO_SAMPLE;
+	if (guiSoundSample != NO_SAMPLE)
+	{
+		SoundStop(guiSoundSample);
+		guiSoundSample = NO_SAMPLE;
+	}
 	guiRaidLastUpdate = sAirRaidSaveStruct.uiRaidLastUpdate;
 	gfFadingRaidIn = sAirRaidSaveStruct.fFadingRaidIn;
 	gfQuoteSaid = sAirRaidSaveStruct.fQuoteSaid;
@@ -1333,9 +1393,15 @@ static void SetTeamStatusGreen(INT8 team)
 void EndAirRaid( )
 {
 	gfInAirRaid = FALSE;
+	gTacticalStatus.fEnemyInSector = gTacticalStatus.uiFlags & INCOMBAT;
 
 	// Stop sound
 	SoundStop( guiSoundSample );
+
+	if (gbNumDives < gbMaxDives)
+	{
+		ChopperAttackSector(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY, gbMaxDives - gbNumDives);
+	}
 
 	// Change music back...
 	if ( !( gTacticalStatus.uiFlags & INCOMBAT ) )
@@ -1416,6 +1482,77 @@ BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY)
 	return(FALSE);
 }
 
+BOOLEAN ChopperAttackSector(UINT8 ubSectorX, UINT8 ubSectorY, INT8 bIntensity)
+{
+	// TODO: Balance this effect as soon as the queen uses air-raids
+	UINT8 ubCasualties = Random(bIntensity + 1);
+	UINT8 ubNumMilitia = CountAllMilitiaInSector(ubSectorX, ubSectorY);
+	wchar_t str[256];
+	wchar_t pSectorStr[128];
+	UINT8 const bTownId = GetTownIdForSector(SECTOR(ubSectorX, ubSectorY));
+	SECTORINFO *pSectorInfo = &(SectorInfo[SECTOR(ubSectorX, ubSectorY)]);
+
+	// Update the schedule
+	gfInAirRaid = FALSE;
+	gbNumDives = gbMaxDives;
+
+	switch (Random(4))
+	{
+		case 0:	PlayJA2Sample(S_RAID_TB_DIVE, MIDVOLUME, 1, MIDDLEPAN); break;
+		case 1: PlayJA2Sample(S_RAID_TB_BOMB, MIDVOLUME, 1, MIDDLEPAN); break;
+		case 2: PlayJA2Sample(S_RAID_DIVE, MIDVOLUME, 1, MIDDLEPAN); break;
+		default: PlayJA2Sample(S_RAID_WHISTLE, MIDVOLUME, 1, MIDDLEPAN);
+	}
+
+	if (!gfTownUsesLoyalty[bTownId])
+	{
+		return TRUE;
+	}
+
+	if (!pSectorInfo->fSurfaceWasEverPlayerControlled)
+	{
+		return TRUE;
+	}
+
+	ChangeSelectedMapSector(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY, (INT8)gAirRaidDef.sSectorZ);
+	DoScreenIndependantMessageBox(TacticalStr[AIR_RAID_TURN_STR], MSG_BOX_FLAG_OK, MapScreenDefaultOkBoxCallback); // HACK0000
+
+	if (ubNumMilitia > 0)
+	{
+		HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_ABANDON_MILITIA, ubSectorX, ubSectorY, 0);
+	}
+
+	while (ubCasualties--)
+	{
+		// Kill lowly soldiers first
+		if (pSectorInfo->ubNumberOfCivsAtLevel[GREEN_MILITIA] > 0)
+		{
+			HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
+			StrategicRemoveMilitiaFromSector(ubSectorX, ubSectorY, GREEN_MILITIA, 1);
+			continue;
+		}
+		if (pSectorInfo->ubNumberOfCivsAtLevel[REGULAR_MILITIA] > 0)
+		{
+			HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
+			StrategicRemoveMilitiaFromSector(ubSectorX, ubSectorY, REGULAR_MILITIA, 1);
+			continue;
+		}
+		if (pSectorInfo->ubNumberOfCivsAtLevel[ELITE_MILITIA] > 0)
+		{
+			HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
+			StrategicRemoveMilitiaFromSector(ubSectorX, ubSectorY, ELITE_MILITIA, 1);
+			continue;
+		}
+	}
+
+	if (ubCasualties > 0)
+	{
+		DecrementTownLoyalty(bTownId, ubCasualties * LOYALTY_PENALTY_JOEY_KILLED);
+	}
+
+	// True means civilians killed
+	return ubCasualties > 0;
+}
 
 #ifdef WITH_UNITTESTS
 #include "gtest/gtest.h"

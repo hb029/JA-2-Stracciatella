@@ -4446,6 +4446,11 @@ BOOLEAN CheckForEndOfBattle( BOOLEAN fAnEnemyRetreated )
 		fBattleWon = FALSE;
 	}
 
+	if (gfInAirRaid)
+	{
+		fBattleWon = FALSE;
+	}
+
 	if (CheckForLosingEndOfBattle())
 	{
 		fBattleLost = TRUE;

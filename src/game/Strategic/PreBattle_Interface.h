@@ -27,6 +27,7 @@ enum
 	//General encounter codes (gubEnemyEncounterCode)
 	NO_ENCOUNTER_CODE,			//when there is no encounter
 	ENEMY_INVASION_CODE,
+	ENEMY_AIR_RAID_CODE,
 	ENEMY_ENCOUNTER_CODE,
 	ENEMY_AMBUSH_CODE,
 	ENTERING_ENEMY_SECTOR_CODE,

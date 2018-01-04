@@ -259,13 +259,14 @@ void InitPreBattleInterface(GROUP* const battle_group, bool const persistent_pbi
 				gubExplicitEnemyEncounterCode = ENTERING_ENEMY_SECTOR_CODE;
 			}
 		}
-		else if (gubEnemyEncounterCode == ENTERING_ENEMY_SECTOR_CODE ||
-				gubEnemyEncounterCode == ENEMY_ENCOUNTER_CODE            ||
-				gubEnemyEncounterCode == ENEMY_AMBUSH_CODE               ||
-				gubEnemyEncounterCode == ENEMY_INVASION_CODE             ||
-				gubEnemyEncounterCode == BLOODCAT_AMBUSH_CODE            ||
-				gubEnemyEncounterCode == ENTERING_BLOODCAT_LAIR_CODE     ||
-				gubEnemyEncounterCode == CREATURE_ATTACK_CODE)
+		else if (gubEnemyEncounterCode == ENTERING_ENEMY_SECTOR_CODE	||
+				gubEnemyEncounterCode == ENEMY_ENCOUNTER_CODE			||
+				gubEnemyEncounterCode == ENEMY_AMBUSH_CODE				||
+				gubEnemyEncounterCode == ENEMY_INVASION_CODE			||
+				gubEnemyEncounterCode == BLOODCAT_AMBUSH_CODE			||
+				gubEnemyEncounterCode == ENTERING_BLOODCAT_LAIR_CODE	||
+				gubEnemyEncounterCode == CREATURE_ATTACK_CODE			||
+				gubEnemyEncounterCode == ENEMY_AIR_RAID_CODE)
 		{ // Use same code
 			gubExplicitEnemyEncounterCode = gubEnemyEncounterCode;
 		}
@@ -361,7 +362,8 @@ void InitPreBattleInterface(GROUP* const battle_group, bool const persistent_pbi
 		else if (gpBattleGroup->fPlayer)
 		{
 			if (gubEnemyEncounterCode != BLOODCAT_AMBUSH_CODE &&
-					gubEnemyEncounterCode != ENTERING_BLOODCAT_LAIR_CODE)
+				gubEnemyEncounterCode != ENTERING_BLOODCAT_LAIR_CODE
+				)
 			{
 				UINT8 const n_stationary_enemies = NumStationaryEnemiesInSector(x, y);
 				if (n_stationary_enemies != 0)
@@ -410,15 +412,17 @@ void InitPreBattleInterface(GROUP* const battle_group, bool const persistent_pbi
 		}
 		else
 		{ // Are enemies invading a town, or just encountered the player.
-			UINT8 const sector = SECTOR(x, y);
-			if (GetTownIdForSector(sector))
+			if (gubEnemyEncounterCode != ENEMY_AIR_RAID_CODE)
 			{
-				gubEnemyEncounterCode = ENEMY_INVASION_CODE;
-			}
-			else
-			{
-				switch (sector)
+				UINT8 const sector = SECTOR(x, y);
+				if (GetTownIdForSector(sector))
 				{
+					gubEnemyEncounterCode = ENEMY_INVASION_CODE;
+				}
+				else
+				{
+					switch (sector)
+					{
 					case SEC_D2:
 					case SEC_D15:
 					case SEC_G8:
@@ -429,6 +433,7 @@ void InitPreBattleInterface(GROUP* const battle_group, bool const persistent_pbi
 					default:
 						gubEnemyEncounterCode = ENEMY_ENCOUNTER_CODE;
 						break;
+					}
 				}
 			}
 		}
@@ -482,6 +487,7 @@ void InitPreBattleInterface(GROUP* const battle_group, bool const persistent_pbi
 
 			case ENEMY_AMBUSH_CODE:
 			case BLOODCAT_AMBUSH_CODE:
+			case ENEMY_AIR_RAID_CODE:
 				// Don't allow autoresolve for ambushes
 				DisableButton(iPBButton[0]);
 				autoresolve_help = gzNonPersistantPBIText[3];
@@ -529,6 +535,7 @@ void InitPreBattleInterface(GROUP* const battle_group, bool const persistent_pbi
 			case CREATURE_ATTACK_CODE:
 			case ENEMY_ENCOUNTER_CODE:
 			case ENEMY_INVASION_CODE:         help = gzNonPersistantPBIText[2]; goto set_help;
+			case ENEMY_AIR_RAID_CODE:		  help = gzNonPersistantPBIText[4]; goto disable_set_help;
 			case ENTERING_ENEMY_SECTOR_CODE:  help = gzNonPersistantPBIText[3]; goto disable_set_help;
 			case ENEMY_AMBUSH_CODE:           help = gzNonPersistantPBIText[4]; goto disable_set_help;
 			case FIGHTING_CREATURES_CODE:     help = gzNonPersistantPBIText[5]; goto disable_set_help;
@@ -734,6 +741,9 @@ static void RenderPBHeader(INT32* piX, INT32* piWidth)
 			break;
 		case ENTERING_BLOODCAT_LAIR_CODE:
 			str = gpStrategicString[STR_PB_ENTERINGBLOODCATLAIR_HEADER];
+			break;
+		case ENEMY_AIR_RAID_CODE:
+			str = TacticalStr[AIR_RAID_TURN_STR]; // HACK0000
 			break;
 
 		default: abort(); // HACK000E
