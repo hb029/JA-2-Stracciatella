@@ -243,7 +243,7 @@ static void EditModeInit(void)
 	//essentially, we are turning the game off so the game doesn't process in conjunction with the
 	//editor.
 	guiSaveTacticalStatusFlags = gTacticalStatus.uiFlags;
-	gTacticalStatus.uiFlags |= TURNBASED | SHOW_ALL_ITEMS;
+	gTacticalStatus.uiFlags |= SHOW_ALL_ITEMS;
 	gTacticalStatus.uiTimeOfLastInput = GetJA2Clock();
 	gTacticalStatus.uiTimeSinceDemoOn = gTacticalStatus.uiTimeOfLastInput;
 
