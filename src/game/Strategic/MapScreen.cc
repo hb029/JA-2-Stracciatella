@@ -832,7 +832,12 @@ static void DrawCharacterInfo(SOLDIERTYPE const& s)
 			break;
 		}
 	}
-	DrawStringCentered(assignment2, CHAR_ASSIGN_X, CHAR_ASSIGN2_Y, CHAR_ASSIGN_WID, CHAR_ASSIGN_HEI, CHAR_FONT);
+	
+	//HACK0000 German version does not display well. Strings are too long.
+	wchar_t assignment2pruned[13];
+	wcslcpy(assignment2pruned, assignment2, lengthof(assignment2pruned));
+	assignment2pruned[11] = L'.';
+	DrawStringCentered(assignment2pruned, CHAR_ASSIGN_X, CHAR_ASSIGN2_Y, CHAR_ASSIGN_WID, CHAR_ASSIGN_HEI, CHAR_FONT);
 
 	DrawCharHealth(s);
 
