@@ -30,7 +30,7 @@ void MakeClosestEnemyChosenOne()
 	}
 
 	UINT8 const sector = SECTOR(gWorldSectorX, gWorldSectorY);
-	if (SectorInfo[sector].fSurfaceWasEverPlayerControlled)
+	if (!StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(sector)].fEnemyControlled)
 	{
 		// no defense situation anymore
 		return;
