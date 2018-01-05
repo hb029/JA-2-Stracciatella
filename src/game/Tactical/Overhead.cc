@@ -1847,7 +1847,7 @@ static BOOLEAN HandleAtNewGridNo(SOLDIERTYPE* pSoldier, BOOLEAN* pfKeepMoving)
 	}
 
 	// First if we are in realtime combat or noncombat
-	if (gTacticalStatus.uiFlags & REALTIME || !(gTacticalStatus.uiFlags & INCOMBAT))
+	if (!(gTacticalStatus.uiFlags & INCOMBAT))
 	{
 		// Update value for RT breath update
 		pSoldier->ubTilesMovedPerRTBreathUpdate++;

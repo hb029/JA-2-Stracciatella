@@ -208,7 +208,7 @@ static UICursorID HandleActivatedTargetCursor(SOLDIERTYPE* const s, GridNo const
 		}
 	}
 
-	if ((gTacticalStatus.uiFlags & REALTIME || !(gTacticalStatus.uiFlags & INCOMBAT)) &&
+	if (!(gTacticalStatus.uiFlags & INCOMBAT) &&
 		COUNTERDONE(TARGETREFINE))
 	{
 		RESETCOUNTER(TARGETREFINE);
@@ -367,7 +367,7 @@ static UICursorID HandleNonActivatedTargetCursor(SOLDIERTYPE* const s, GridNo co
 	bool const is_throwing_knife = GCM->getItem(s->inv[HANDPOS].usItem)->getItemClass() == IC_THROWING_KNIFE;
 	if (!is_throwing_knife)
 	{
-		if (gTacticalStatus.uiFlags & REALTIME || !(gTacticalStatus.uiFlags & INCOMBAT))
+		if (!(gTacticalStatus.uiFlags & INCOMBAT))
 		{
 			DetermineCursorBodyLocation(GetSelectedMan(), show_APs, fRecalc);
 		}
@@ -598,7 +598,7 @@ static UICursorID HandleKnifeCursor(SOLDIERTYPE* const s, GridNo const map_pos, 
 			if (!EnoughPoints(s, ap_costs, 0, FALSE)) enough_points = false;
 		}
 
-		if ((gTacticalStatus.uiFlags & REALTIME || !(gTacticalStatus.uiFlags & INCOMBAT)) &&
+		if (!(gTacticalStatus.uiFlags & INCOMBAT) &&
 			COUNTERDONE(NONGUNTARGETREFINE))
 		{
 			RESETCOUNTER(NONGUNTARGETREFINE);
@@ -677,7 +677,7 @@ static UICursorID HandlePunchCursor(SOLDIERTYPE* const s, GridNo const map_pos, 
 			if (!EnoughPoints(s, ap_costs, 0, FALSE)) enough_points = false;
 		}
 
-		if ((gTacticalStatus.uiFlags & REALTIME || !(gTacticalStatus.uiFlags & INCOMBAT)) &&
+		if (!(gTacticalStatus.uiFlags & INCOMBAT) &&
 			COUNTERDONE(NONGUNTARGETREFINE))
 		{
 			RESETCOUNTER(NONGUNTARGETREFINE);
