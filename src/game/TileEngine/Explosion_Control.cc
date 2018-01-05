@@ -214,13 +214,6 @@ static void GenerateExplosionFromExplosionPointer(EXPLOSIONTYPE* pExplosion)
 	AniParams.sStartFrame					= pExplosion->sCurrentFrame;
 	AniParams.uiFlags             = ANITILE_FORWARD | ANITILE_EXPLOSION;
 
-	if ( ubTerrainType == LOW_WATER || ubTerrainType == MED_WATER || ubTerrainType == DEEP_WATER )
-	{
-		// Change type to water explosion...
-		inf = &explosion_info[WATER_BLAST];
-		AniParams.uiFlags						|= ANITILE_ALWAYS_TRANSLUCENT;
-	}
-
 	if ( sZ < WALL_HEIGHT )
 	{
 		AniParams.uiFlags |= ANITILE_NOZBLITTER;
@@ -236,6 +229,13 @@ static void GenerateExplosionFromExplosionPointer(EXPLOSIONTYPE* pExplosion)
 	AniParams.ubKeyFrame2     = inf->damage_key_frame;
 	AniParams.uiKeyFrame2Code = ANI_KEYFRAME_BEGIN_DAMAGE;
 	AniParams.v.explosion     = pExplosion;
+
+	if ( ubTerrainType == LOW_WATER || ubTerrainType == MED_WATER || ubTerrainType == DEEP_WATER )
+	{
+		// Change type to water explosion...
+		inf = &explosion_info[WATER_BLAST];
+		AniParams.uiFlags						|= ANITILE_ALWAYS_TRANSLUCENT;
+	}
 
 	AniParams.zCachedFile = inf->blast_anim;
 	CreateAnimationTile( &AniParams );
@@ -386,6 +386,13 @@ static bool ExplosiveDamageStructureAtGridNo(STRUCTURE* const pCurrent, STRUCTUR
 		return true;
 	}
 
+	if ( DoesSAMExistHere(gWorldSectorX, gWorldSectorY, gbWorldSectorZ, grid_no) )
+	{
+		UpdateAndDamageSAMIfFound(gWorldSectorX, gWorldSectorY, gbWorldSectorZ, grid_no, wound_amt);
+		return true;
+	}
+
+
 	// ATE: Continue if we are only looking for walls
 	if (only_walls && !(pCurrent->fFlags & STRUCTURE_WALLSTUFF)) return true;
 
@@ -470,7 +477,7 @@ static bool ExplosiveDamageStructureAtGridNo(STRUCTURE* const pCurrent, STRUCTUR
 
 			destruction_partner = orig_destruction_partner;
 
-			// OK, destrcution index is , as default, the partner, until we go over the first set of explsion
+			// OK, destrcution index is , as default, the partner, until we go over the first set of explosion
 			// debris...
 			UINT16 const tile_idx = destruction_partner >= 40 ?
 				GetTileIndexFromTypeSubIndex(SECONDEXPLDEBRIS, destruction_partner - 40) :
@@ -1820,6 +1827,26 @@ static void TogglePressureActionItemsInGridNo(INT16 sGridNo)
 }
 
 
+static void DelayedBillyTriggerToBlockOnExit(void)
+{
+	if (WhoIsThere2(gsTempActionGridNo, 0) == NULL)
+	{
+		TriggerNPCRecord( BILLY, 6 );
+	}
+	else
+	{
+		// delay further!
+		SetCustomizableTimerCallbackAndDelay( 1000, DelayedBillyTriggerToBlockOnExit, TRUE );
+	}
+}
+
+
+static void BillyBlocksDoorCallback(void)
+{
+	TriggerNPCRecord( BILLY, 6 );
+}
+
+
 static BOOLEAN HookerInRoom(UINT8 ubRoom)
 {
 	FOR_EACH_IN_TEAM(s, CIV_TEAM)
@@ -1981,8 +2008,6 @@ static void PerformItemAction(INT16 sGridNo, OBJECTTYPE* pObj)
 			TogglePressureActionItemsInGridNo( sGridNo );
 			break;
 		case ACTION_ITEM_ENTER_BROTHEL:
-			// JA2Gold: Disable brothel tracking
-			/*
 			if ( ! (gTacticalStatus.uiFlags & INCOMBAT) )
 			{
 				const SOLDIERTYPE* const tgt = WhoIsThere2(sGridNo, 0);
@@ -2051,11 +2076,8 @@ static void PerformItemAction(INT16 sGridNo, OBJECTTYPE* pObj)
 				}
 
 			}
-			*/
 			break;
 		case ACTION_ITEM_EXIT_BROTHEL:
-			// JA2Gold: Disable brothel tracking
-			/*
 			if ( ! (gTacticalStatus.uiFlags & INCOMBAT) )
 			{
 				const SOLDIERTYPE* const tgt = WhoIsThere2(sGridNo, 0);
@@ -2072,7 +2094,6 @@ static void PerformItemAction(INT16 sGridNo, OBJECTTYPE* pObj)
 					SetCustomizableTimerCallbackAndDelay( 1000, DelayedBillyTriggerToBlockOnExit, TRUE );
 				}
 			}
-			*/
 			break;
 		case ACTION_ITEM_KINGPIN_ALARM:
 			PlayLocationJA2Sample(sGridNo, KLAXON_ALARM, MIDVOLUME, 5);
@@ -2112,7 +2133,7 @@ static void PerformItemAction(INT16 sGridNo, OBJECTTYPE* pObj)
 				INT16		sDoorSpot;
 				UINT8		ubDirection;
 
-				SOLDIERTYPE* tgt = WhoIsThere2(sGridNo, 0);
+				SOLDIERTYPE* const tgt = WhoIsThere2(sGridNo, 0);
 				if (tgt != NULL)
 					if (tgt->bTeam == OUR_TEAM)
 					{
@@ -2172,7 +2193,6 @@ static void PerformItemAction(INT16 sGridNo, OBJECTTYPE* pObj)
 									DirtyMercPanelInterface(tgt, DIRTYLEVEL1);
 								}
 							}
-
 						}
 						break;
 					}
@@ -2648,6 +2668,8 @@ bool DoesSAMExistHere(INT16 const x, INT16 const y, INT16 const z, GridNo const 
 void UpdateAndDamageSAMIfFound( INT16 sSectorX, INT16 sSectorY, INT16 sSectorZ, INT16 sGridNo, UINT8 ubDamage )
 {
 	INT16 sSectorNo;
+	INT8 sector;
+	BOOLEAN fReplaceTile;
 
 	// OK, First check if SAM exists, and if not, return
 	if ( !DoesSAMExistHere( sSectorX, sSectorY, sSectorZ, sGridNo ) )
@@ -2658,6 +2680,8 @@ void UpdateAndDamageSAMIfFound( INT16 sSectorX, INT16 sSectorY, INT16 sSectorZ, 
 	// Damage.....
 	sSectorNo = CALCULATE_STRATEGIC_INDEX( sSectorX, sSectorY );
 
+	fReplaceTile = StrategicMap[sSectorNo].bSAMCondition >= MIN_CONDITION_FOR_SAM_SITE_TO_WORK;
+
 	if ( StrategicMap[ sSectorNo ].bSAMCondition >= ubDamage )
 	{
 		StrategicMap[ sSectorNo ].bSAMCondition -= ubDamage;
@@ -2667,10 +2691,39 @@ void UpdateAndDamageSAMIfFound( INT16 sSectorX, INT16 sSectorY, INT16 sSectorZ, 
 		StrategicMap[ sSectorNo ].bSAMCondition = 0;
 	}
 
-	// SAM site may have been put out of commission...
-	UpdateAirspaceControl( );
+	if (fReplaceTile)
+	{
+		fReplaceTile = StrategicMap[sSectorNo].bSAMCondition < MIN_CONDITION_FOR_SAM_SITE_TO_WORK;
+	}
 
-	// ATE: GRAPHICS UPDATE WILL GET DONE VIA NORMAL EXPLOSION CODE.....
+	sector = SECTOR( sSectorX, sSectorY );
+
+	if (fReplaceTile)
+	{
+		for (INT32 i = 0; i != NUMBER_OF_SAMS; ++i)
+		{
+			if (pSamList[i] != sector) continue;
+
+			UINT16 const good_graphic    = GetTileIndexFromTypeSubIndex(EIGHTISTRUCT, gbSAMGraphicList[i]);
+			UINT16 const damaged_graphic = good_graphic - 2; // Damaged one (current) is 2 less
+			GridNo const gridno          = pSamGridNoAList[i];
+
+			ApplyMapChangesToMapTempFile app;
+			RemoveStruct(   gridno, good_graphic);
+			AddStructToHead(gridno, damaged_graphic);
+
+			// Re-render the world!
+			gTacticalStatus.uiFlags |= NOHIDE_REDUNDENCY;
+			// FOR THE NEXT RENDER LOOP, RE-EVALUATE REDUNDENT TILES
+			InvalidateWorldRedundency( );
+			SetRenderFlags(RENDER_FLAG_FULL);
+
+			break;
+		}
+
+		// SAM site may have been put out of commission...
+		UpdateAirspaceControl( );
+	}
 }
 
 
@@ -2692,6 +2745,12 @@ void UpdateSAMDoneRepair(INT16 const x, INT16 const y, INT16 const z)
 			ApplyMapChangesToMapTempFile app;
 			RemoveStruct(   gridno, damaged_graphic);
 			AddStructToHead(gridno, good_graphic);
+
+			// Re-render the world!
+			gTacticalStatus.uiFlags |= NOHIDE_REDUNDENCY;
+			// FOR THE NEXT RENDER LOOP, RE-EVALUATE REDUNDENT TILES
+			InvalidateWorldRedundency( );
+			SetRenderFlags(RENDER_FLAG_FULL);
 		}
 		else
 		{ // We add temp changes to map not loaded

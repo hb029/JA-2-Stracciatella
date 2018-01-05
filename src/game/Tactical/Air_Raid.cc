@@ -37,7 +37,9 @@
 #include "Strategic_Town_Loyalty.h"
 #include "WorldMan.h"
 #include "OppList.h"
+#include "Directories.h"
 
+#include "CalibreModel.h"
 #include "ContentManager.h"
 #include "GameInstance.h"
 #include "WeaponModels.h"
@@ -65,7 +67,7 @@ extern INT32 giTimerAirRaidUpdate;
 BOOLEAN gfInAirRaid = FALSE;
 BOOLEAN gfAirRaidScheduled = FALSE;
 UINT8   gubAirRaidMode;
-UINT32  guiSoundSample;
+UINT32  guiSoundSample = NO_SAMPLE;
 UINT32  guiRaidLastUpdate;
 BOOLEAN gfFadingRaidIn = FALSE;
 BOOLEAN gfQuoteSaid = FALSE;
@@ -308,9 +310,9 @@ BOOLEAN BeginAirRaid( )
 	s.bSide					= 1;
 	s.ubID					= MAX_NUM_SOLDIERS - 1;
 	s.attacker				= 0;
-	s.usAttackingWeapon		= G11;
+	s.usAttackingWeapon		= __ITEM_18;
 	s.ubAttackingHand		= HANDPOS;
-	s.inv[HANDPOS].usItem	= G11;
+	s.inv[HANDPOS].usItem	= __ITEM_18;
 	s.bLevel				= 1;
 	gpRaidSoldier = &s;
 
@@ -806,10 +808,6 @@ static void DoDive(void)
 						gpRaidSoldier->bAimShotLocation = AIM_SHOT_TORSO;
 					}
 
-					if (gsNumGridNosMoved % (GCM->getWeapon(gpRaidSoldier->usAttackingWeapon)->ubShotsPerBurst + 1) == 0)
-					{
-						//PlayJA2Sample(GCM->getWeapon(gpRaidSoldier->usAttackingWeapon)->burstSound.c_str(), GCM->getWeapon(gpRaidSoldier->usAttackingWeapon)->ubAttackVolume, 1, MIDDLEPAN);
-					}
 					FireBulletGivenTarget( gpRaidSoldier, sStrafeX, sStrafeY, 0, gpRaidSoldier->usAttackingWeapon, 10, FALSE, FALSE );
 				}
 
@@ -854,13 +852,20 @@ static void DoDive(void)
 						gpRaidSoldier->bAimShotLocation = AIM_SHOT_TORSO;
 					}
 
-					if (gsNumGridNosMoved % (GCM->getWeapon(gpRaidSoldier->usAttackingWeapon)->ubShotsPerBurst + 1) == 0)
-					{
-						PlayJA2Sample(GCM->getWeapon(gpRaidSoldier->usAttackingWeapon)->burstSound.c_str(), GCM->getWeapon(gpRaidSoldier->usAttackingWeapon)->ubAttackVolume, 1, MIDDLEPAN);
-					}
 					FireBulletGivenTarget(gpRaidSoldier, sStrafeX, sStrafeY, 0, gpRaidSoldier->usAttackingWeapon, 10, FALSE, FALSE);
 				}
 
+			}
+
+			if (giNumGridNosMovedThisTurn % 2 == 0)
+			{
+				char zBurstString[50];
+				// Pick sound file baed on how many bullets we are going to fire...
+				sprintf(zBurstString, SOUNDSDIR "/weapons/%s%d.wav",
+					GCM->getWeapon(gpRaidSoldier->usAttackingWeapon)->calibre->burstSoundString.c_str(),
+					1);
+
+				PlayJA2Sample(zBurstString, GCM->getWeapon(gpRaidSoldier->usAttackingWeapon)->ubAttackVolume, 1, MIDDLEPAN);
 			}
 
 			if ( giNumGridNosMovedThisTurn >= 6 )
@@ -1119,7 +1124,7 @@ void HandleAirRaid( )
 
 				case AIR_RAID_END:
 
-					EndAirRaid( );
+					EndAirRaid();
 					break;
 
 				case AIR_RAID_BEGIN_DIVE:
@@ -1428,6 +1433,12 @@ BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY)
 	if (IsItRaining())
 	{
 		SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: it is raining");
+		return(TRUE);
+	}
+
+	if (NightTime())
+	{
+		SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: it is night");
 		return(TRUE);
 	}
 

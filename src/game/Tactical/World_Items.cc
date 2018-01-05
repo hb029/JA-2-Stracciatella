@@ -150,6 +150,8 @@ void FindPanicBombsAndTriggers(void)
 			gTacticalStatus.fPanicFlags |= PANIC_BOMBS_HERE;
 		}
 	}
+
+	//TODO: IsThisSectorASAMSector(x, y, z);
 }
 
 

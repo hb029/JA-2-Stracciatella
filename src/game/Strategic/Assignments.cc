@@ -89,7 +89,7 @@ enum{
 	REPAIR_MENU_VEHICLE1 = 0,
 	REPAIR_MENU_VEHICLE2,
 	REPAIR_MENU_VEHICLE3,
-//	REPAIR_MENU_SAM_SITE,
+	REPAIR_MENU_SAM_SITE,
 	REPAIR_MENU_ROBOT,
 	REPAIR_MENU_ITEMS,
 	REPAIR_MENU_CANCEL,
@@ -230,26 +230,22 @@ BOOLEAN gfReEvaluateEveryonesNothingToDo = FALSE;
 #define MAX_DISTANCE_FOR_TRAINING		5
 */
 
-/*
 // controls how easily SAM sites are repaired
 // NOTE: A repairman must generate a least this many points / hour to be ABLE to repair a SAM site at all!
 #define SAM_SITE_REPAIR_DIVISOR		10
 
 // minimum condition a SAM site must be in to be fixable
 #define MIN_CONDITION_TO_FIX_SAM 20
-*/
 
 
 // a list of which sectors have characters
 static BOOLEAN fSectorsWithSoldiers[MAP_WORLD_X * MAP_WORLD_Y][4];
 
 
-/* No point in allowing SAM site repair any more.  Jan/13/99.  ARM
 BOOLEAN IsTheSAMSiteInSectorRepairable( INT16 sSectorX, INT16 sSectorY, INT16 sSectorZ );
-BOOLEAN SoldierInSameSectorAsSAM( SOLDIERTYPE *pSoldier );
-BOOLEAN CanSoldierRepairSAM( SOLDIERTYPE *pSoldier, INT8 bRepairPoints );
-BOOLEAN IsSoldierCloseEnoughToSAMControlPanel( SOLDIERTYPE *pSoldier );
-*/
+BOOLEAN SoldierInSameSectorAsSAM( const SOLDIERTYPE *pSoldier );
+BOOLEAN CanSoldierRepairSAM( const SOLDIERTYPE *pSoldier, INT8 bRepairPoints );
+BOOLEAN IsSoldierCloseEnoughToSAMControlPanel( const SOLDIERTYPE *pSoldier );
 
 
 void InitSectorsWithSoldiersList( void )
@@ -376,6 +372,8 @@ static bool IsAnythingAroundForSoldierToRepair(SOLDIERTYPE const& s)
 	// Robot?
 	if (CanCharacterRepairRobot(&s)) return true;
 
+	if (CanSoldierRepairSAM(&s, SAM_SITE_REPAIR_DIVISOR)) return true;
+
 	// Vehicles?
 	if (s.bSectorZ == 0)
 	{
@@ -411,6 +409,10 @@ static BOOLEAN HasCharacterFinishedRepairing(SOLDIERTYPE* pSoldier)
 	else if( pSoldier -> fFixingRobot )
 	{
 		fCanStillRepair = CanCharacterRepairRobot( pSoldier );
+	}
+	else if( pSoldier->fFixingSAMSite )
+	{
+		fCanStillRepair = CanSoldierRepairSAM( pSoldier, SAM_SITE_REPAIR_DIVISOR );
 	}
 	else	// repairing items
 	{
@@ -975,7 +977,8 @@ void UpdateAssignments()
 
 	// rest resting mercs, fatigue active mercs,
 	// check for mercs tired enough go to sleep, and wake up well-rested mercs
-	HandleRestFatigueAndSleepStatus();
+	HandleRestFatigueAndSleepStatus( );
+
 
 	// update mapscreen
 	fCharacterInfoPanelDirty = TRUE;
@@ -1606,7 +1609,6 @@ static void HandleRepairmenInSector(INT16 const x, INT16 const y, INT8 const z)
 }
 
 
-/* No point in allowing SAM site repair any more.  Jan/13/99.  ARM
 INT8 HandleRepairOfSAMSite( SOLDIERTYPE *pSoldier, INT8 bPointsAvailable, BOOLEAN * pfNothingLeftToRepair )
 {
 	INT8 bPtsUsed = 0;
@@ -1629,7 +1631,7 @@ INT8 HandleRepairOfSAMSite( SOLDIERTYPE *pSoldier, INT8 bPointsAvailable, BOOLEA
 	sStrategicSector = CALCULATE_STRATEGIC_INDEX( pSoldier->sSectorX, pSoldier->sSectorY );
 
 	// do we have more than enough?
-	if( 100 - StrategicMap[ sStrategicSector ].bSAMCondition >= bPointsAvailable / SAM_SITE_REPAIR_DIVISOR )
+	if( 100 - StrategicMap[ sStrategicSector ].bSAMCondition > bPointsAvailable / SAM_SITE_REPAIR_DIVISOR )
 	{
 		// no, use up all we have
 		StrategicMap[ sStrategicSector ].bSAMCondition += bPointsAvailable / SAM_SITE_REPAIR_DIVISOR;
@@ -1637,6 +1639,7 @@ INT8 HandleRepairOfSAMSite( SOLDIERTYPE *pSoldier, INT8 bPointsAvailable, BOOLEA
 
 		// SAM site may have been put back into working order...
 		UpdateAirspaceControl( );
+		*pfNothingLeftToRepair = FALSE;
 	}
 	else
 	{
@@ -1648,20 +1651,11 @@ INT8 HandleRepairOfSAMSite( SOLDIERTYPE *pSoldier, INT8 bPointsAvailable, BOOLEA
 // FULL STRENGTH (condition 100), but as soon as it reaches MIN_CONDITION_TO_FIX_SAM!!!
 
 		// Bring Hit points back up to full, adjust graphic to full graphic.....
-		UpdateSAMDoneRepair( pSoldier -> sSectorX, pSoldier -> sSectorY, pSoldier -> bSectorZ );
-	}
-
-	if ( StrategicMap[ sStrategicSector ].bSAMCondition == 100 )
-	{
+		UpdateSAMDoneRepair( pSoldier -> sSectorX, pSoldier -> sSectorY, 0 );
 		*pfNothingLeftToRepair = TRUE;
-	}
-	else
-	{
-		*pfNothingLeftToRepair = FALSE;
 	}
 	return( bPtsUsed );
 }
-*/
 
 
 // does another merc have a repairable item on them?
@@ -1857,6 +1851,21 @@ static void HandleRepairBySoldier(SOLDIERTYPE& s)
 
 			// Robot
 			repair_pts_left -= HandleRepairOfRobotBySoldier(repair_pts_left, &nothing_left_to_repair);
+		}
+	}
+	else if (s.fFixingSAMSite)
+	{
+		if (CanSoldierRepairSAM(&s, repair_pts_left))
+		{
+			// repairing the SAM control is very slow & difficult
+			if (!(HAS_SKILL_TRAIT(&s, ELECTRONICS)))
+			{
+				repair_pts_left    /= 2;
+				initial_repair_pts /= 2;
+			}
+
+			// SAM
+			repair_pts_left -= HandleRepairOfSAMSite( &s, repair_pts_left, &nothing_left_to_repair );
 		}
 	}
 	else
@@ -3152,13 +3161,11 @@ static void DisplayRepairMenu(SOLDIERTYPE const& s)
 		}
 	}
 
-#if 0 // No point in allowing SAM site repair any more.  Jan/13/99.  ARM
 	if (IsThisSectorASAMSector(s.sSectorX, s.sSectorY, s.bSectorZ) &&
 			IsTheSAMSiteInSectorRepairable(s.sSectorX, s.sSectorY, s.bSectorZ))
 	{
 		AddMonoString(box, pRepairStrings[1]);
 	}
-#endif
 
 	if (IsRobotInThisSector(s.sSectorX, s.sSectorY, s.bSectorZ))
 	{ // Robot
@@ -3200,14 +3207,12 @@ static void HandleShadingOfLinesForRepairMenu()
 		}
 	}
 
-#if 0 // No point in allowing SAM site repair any more.  Jan/13/99.  ARM
 	if (IsThisSectorASAMSector(s.sSectorX, s.sSectorY, s.bSectorZ) &&
 			IsTheSAMSiteInSectorRepairable(s.sSectorX, s.sSectorY, s.bSectorZ))
 	{
 		// handle enable disable of repair sam option
 		ShadeStringInBox(box, line++, !CanSoldierRepairSAM(&s, SAM_SITE_REPAIR_DIVISOR));
 	}
-#endif
 
 	if (IsRobotInThisSector(s.sSectorX, s.sSectorY, s.bSectorZ))
 	{
@@ -3271,15 +3276,12 @@ static void CreateDestroyMouseRegionForRepairMenu(void)
 			}
 		}
 
-/* No point in allowing SAM site repair any more.  Jan/13/99.  ARM
-		// SAM site
-		if (IsThisSectorASAMSector(s.sSectorX, s.sSectorY, s.bSectorZ) &&
-				IsTheSAMSiteInSectorRepairable(s.sSectorX, s.sSectorY, s.bSectorZ))
+		if ( IsThisSectorASAMSector(s.sSectorX, s.sSectorY, s.bSectorZ) &&
+				IsTheSAMSiteInSectorRepairable(s.sSectorX, s.sSectorY, s.bSectorZ) )
 		{
 			MakeRepairRegion(idx++, x, y, w, h, REPAIR_MENU_SAM_SITE);
 			y += h;
 		}
-*/
 
 		// robot
 		if (IsRobotInThisSector(s.sSectorX, s.sSectorY, s.bSectorZ))
@@ -3382,7 +3384,6 @@ static void RepairMenuBtnCallback(MOUSE_REGION* pRegion, INT32 iReason)
 			fShowAssignmentMenu = FALSE;
 
 		}
-/* No point in allowing SAM site repair any more.  Jan/13/99.  ARM
 		else if( iRepairWhat == REPAIR_MENU_SAM_SITE )
 		{
 			// repair SAM site
@@ -3408,7 +3409,6 @@ static void RepairMenuBtnCallback(MOUSE_REGION* pRegion, INT32 iReason)
 			// assign to a movement group
 			AssignMercToAMovementGroup(*pSoldier);
 		}
-*/
 		else if( iRepairWhat == REPAIR_MENU_ROBOT )
 		{
 			// repair ROBOT
@@ -3564,7 +3564,7 @@ void HandleShadingOfLinesForAssignmentMenus()
 				PopUpShade const shade =
 					!BasicCanCharacterDoctor(s) ? POPUP_SHADE           :
 					!CanCharacterDoctor(s)      ? POPUP_SHADE_SECONDARY :
-									POPUP_SHADE_NONE;
+					                              POPUP_SHADE_NONE;
 				ShadeStringInBox(box, ASSIGN_MENU_DOCTOR, shade);
 			}
 
@@ -3572,7 +3572,7 @@ void HandleShadingOfLinesForAssignmentMenus()
 				PopUpShade const shade =
 					!BasicCanCharacterRepair(s) ? POPUP_SHADE           :
 					!CanCharacterRepair(s)      ? POPUP_SHADE_SECONDARY :
-									POPUP_SHADE_NONE;
+					                              POPUP_SHADE_NONE;
 				ShadeStringInBox(box, ASSIGN_MENU_REPAIR, shade);
 			}
 
@@ -3698,7 +3698,7 @@ void DetermineWhichAssignmentMenusCanBeShown(void)
 		HideBoxIfShown(ghAttributeBox);
 		HideBoxIfShown(ghVehicleBox);
 
-		// do we really want ot hide this box?
+		// do we really want to hide this box?
 		//if (!fShowContractMenu) HideBoxIfShown(ghRemoveMercAssignBox);
 		//HideBox( ghSquadBox );
 
@@ -4620,7 +4620,7 @@ static void SquadMenuBtnCallback(MOUSE_REGION* const pRegion, INT32 const reason
 		}
 
 		/* Can the character join this squad?  If already in it, accept that as a
-			* legal choice and exit menu */
+		 * legal choice and exit menu */
 		SOLDIERTYPE& s = *GetSelectedAssignSoldier(FALSE);
 		switch (CanCharacterSquad(s, value))
 		{
@@ -5127,8 +5127,12 @@ static void AssignmentMenuBtnCallback(MOUSE_REGION* pRegion, INT32 iReason)
 						fShowVehicleMenu = FALSE;
 						fTeamPanelDirty = TRUE;
 						fMapScreenBottomDirty = TRUE;
-						fShowRepairMenu = TRUE;
-						DisplayRepairMenu(*pSoldier);
+
+						if( pSoldier -> bSectorZ ==0 )
+						{
+							fShowRepairMenu = TRUE;
+							DisplayRepairMenu(*pSoldier);
+						}
 					}
 					else if( CanCharacterRepairButDoesntHaveARepairkit( pSoldier ) )
 					{
@@ -5271,7 +5275,7 @@ static void HandleShadingOfLinesForSquadMenu(void)
 			// Shade, if the reason doesn't have a good explanatory message
 			bResult == CHARACTER_CANT_JOIN_SQUAD ? POPUP_SHADE      :
 			bResult == CHARACTER_CAN_JOIN_SQUAD  ? POPUP_SHADE_NONE :
-					POPUP_SHADE_SECONDARY;
+			                                       POPUP_SHADE_SECONDARY;
 		ShadeStringInBox(box, i, shade);
 	}
 }
@@ -5567,8 +5571,8 @@ void SetTacticalPopUpAssignmentBoxXY()
 
 	// ATE: Check if we are past tactical viewport....
 	// Use estimate widths/heights
-	if (sX > g_ui.m_screenWidth  - 50)	sX -= 90;
-	if (sY > g_ui.m_screenHeight)		sY = g_ui.m_screenHeight;
+	if (sX > SCREEN_WIDTH - 100) sX = SCREEN_WIDTH - 100;
+	if (sY > 320 - 130)          sY = 190;
 
 	gsAssignmentBoxesX = sX;
 	gsAssignmentBoxesY = sY;
@@ -5709,7 +5713,7 @@ static bool CharacterIsTakingItEasy(SOLDIERTYPE const&);
 static void HandleRestFatigueAndSleepStatus()
 {
 	{ /* Run through all player characters and handle their rest, fatigue, and
-		* going to sleep */
+		 * going to sleep */
 		bool   reason_added = false;
 		bool   box_set_up   = false;
 		UINT16 sleep_quote  = QUOTE_NEED_SLEEP;
@@ -5739,11 +5743,11 @@ static void HandleRestFatigueAndSleepStatus()
 			if (s.bBreathMax <= BREATHMAX_ABSOLUTE_MINIMUM)
 			{
 				/* If between sectors, don't put tired mercs to sleep, will be handled
-					* when they arrive at the next sector */
+				 * when they arrive at the next sector */
 				if (s.fBetweenSectors) continue;
 
 				/* He goes to sleep, provided it's at all possible (it still won't happen
-					* in a hostile sector, etc.) */
+				 * in a hostile sector, etc.) */
 				if (!SetMercAsleep(s, false)) continue;
 
 				if (s.bAssignment < ON_DUTY || s.bAssignment == VEHICLE)
@@ -5791,7 +5795,7 @@ static void HandleRestFatigueAndSleepStatus()
 	}
 
 	{ /* Now handle waking. Needs seperate list queue, that's why it has its own
-		* loop */
+		 * loop */
 		bool box_set_up   = false;
 		bool reason_added = false;
 		FOR_EACH_IN_TEAM(i, OUR_TEAM)
@@ -6098,10 +6102,9 @@ void SetSoldierAssignmentRepair(SOLDIERTYPE& s, BOOLEAN const sam, BOOLEAN const
 }
 
 
-/* No point in allowing SAM site repair any more.  Jan/13/99.  ARM
-BOOLEAN CanSoldierRepairSAM( SOLDIERTYPE *pSoldier, INT8 bRepairPoints)
+BOOLEAN CanSoldierRepairSAM(const SOLDIERTYPE *pSoldier, INT8 bRepairPoints)
 {
-	INT16 sGridNoA = 0, sGridNoB = 0;
+	//INT16 sGridNoA = 0, sGridNoB = 0;
 
 	// is the soldier in the sector as the SAM
 	if (!SoldierInSameSectorAsSAM(pSoldier))
@@ -6136,7 +6139,6 @@ BOOLEAN IsTheSAMSiteInSectorRepairable( INT16 sSectorX, INT16 sSectorY, INT16 sS
 	INT32 iCounter = 0;
 	INT8 bSAMCondition;
 
-
 	// is the guy above ground, if not, it can't be fixed, now can it?
 	if( sSectorZ != 0 )
 	{
@@ -6149,7 +6151,8 @@ BOOLEAN IsTheSAMSiteInSectorRepairable( INT16 sSectorX, INT16 sSectorY, INT16 sS
 		{
 			bSAMCondition = StrategicMap[ CALCULATE_STRATEGIC_INDEX( sSectorX, sSectorY ) ].bSAMCondition;
 
-			if( ( bSAMCondition < 100 ) && ( bSAMCondition >= MIN_CONDITION_TO_FIX_SAM ) )
+			if( ( bSAMCondition < 100 ) &&
+					( bSAMCondition >= MIN_CONDITION_TO_FIX_SAM ) )
 			{
 				return( TRUE );
 			}
@@ -6165,7 +6168,7 @@ BOOLEAN IsTheSAMSiteInSectorRepairable( INT16 sSectorX, INT16 sSectorY, INT16 sS
 	return( FALSE );
 }
 
-BOOLEAN SoldierInSameSectorAsSAM( SOLDIERTYPE *pSoldier )
+BOOLEAN SoldierInSameSectorAsSAM( const SOLDIERTYPE *pSoldier )
 {
 	INT32 iCounter = 0;
 
@@ -6187,7 +6190,7 @@ BOOLEAN SoldierInSameSectorAsSAM( SOLDIERTYPE *pSoldier )
 	return( FALSE );
 }
 
-BOOLEAN IsSoldierCloseEnoughToSAMControlPanel( SOLDIERTYPE *pSoldier )
+BOOLEAN IsSoldierCloseEnoughToSAMControlPanel( const SOLDIERTYPE *pSoldier )
 {
 
 	INT32 iCounter = 0;
@@ -6207,7 +6210,7 @@ BOOLEAN IsSoldierCloseEnoughToSAMControlPanel( SOLDIERTYPE *pSoldier )
 
 	return( FALSE );
 }
-*/
+//*/
 
 
 static BOOLEAN HandleAssignmentExpansionAndHighLightForAssignMenu(SOLDIERTYPE* pSoldier)
@@ -6435,7 +6438,7 @@ BOOLEAN PutMercInAwakeState( SOLDIERTYPE *pSoldier )
 	if ( pSoldier->fMercAsleep )
 	{
 		StopTimeCompression();
-		
+
 		if ( ( gfWorldLoaded ) && ( pSoldier->bInSector ) )
 		{
 			const UINT16 state = (guiCurrentScreen == GAME_SCREEN ? WKAEUP_FROM_SLEEP : STANDING);
@@ -6502,7 +6505,7 @@ BOOLEAN AnyMercInGroupCantContinueMoving(GROUP const& g)
 		if (!PlayerSoldierTooTiredToTravel(s)) continue;
 
 		/* NOTE: we only complain about it if it's gonna force the group to stop
-			* moving! */
+		 * moving! */
 		group_must_stop = TRUE;
 
 		HandleImportantMercQuote(&s, quote);
@@ -6831,12 +6834,10 @@ void SetAssignmentForList(INT8 const bAssignment, INT8 const bParam)
 				{
 					// make sure he can repair the SPECIFIC thing being repaired too (must be in its sector, for example)
 					BOOLEAN const fCanFixSpecificTarget =
-#if 0
 						sel->fFixingSAMSite              ? CanSoldierRepairSAM(&s, SAM_SITE_REPAIR_DIVISOR)                     :
-#endif
 						sel->bVehicleUnderRepairID != -1 ? CanCharacterRepairVehicle(s, GetVehicle(sel->bVehicleUnderRepairID)) :
 						sel->fFixingRobot                ? CanCharacterRepairRobot(&s)                                          :
-						TRUE;
+						                                   TRUE;
 					if (fCanFixSpecificTarget)
 					{
 						SetSoldierAssignmentRepair(s, sel->fFixingSAMSite, sel->fFixingRobot, sel->bVehicleUnderRepairID);
@@ -7220,7 +7221,7 @@ void ResumeOldAssignment(SOLDIERTYPE* const s)
 	StopTimeCompression();
 
 	/* Assignment has changed, redraw left side as well as the map (to update
-		* on/off duty icons) */
+	 * on/off duty icons) */
 	fTeamPanelDirty          = TRUE;
 	fCharacterInfoPanelDirty = TRUE;
 	fMapPanelDirty           = TRUE;

@@ -4392,6 +4392,11 @@ BOOLEAN CheckForEndOfCombatMode( BOOLEAN fIncrementTurnsNotSeen )
 
 static void DeathNoMessageTimerCallback(void)
 {
+	if (InAirRaid())
+	{
+		EndAirRaid();
+	}
+
 	CheckAndHandleUnloadingOfCurrentWorld();
 }
 
@@ -5976,6 +5981,11 @@ void RemoveSoldierFromTacticalSector(SOLDIERTYPE& s)
 static void EndBattleWithUnconsciousGuysCallback(MessageBoxReturnValue const bExitValue)
 {
 	// Enter mapscreen.....
+	if (InAirRaid())
+	{
+		EndAirRaid();
+	}
+
 	CheckAndHandleUnloadingOfCurrentWorld();
 	FinishAnySkullPanelAnimations();
 }

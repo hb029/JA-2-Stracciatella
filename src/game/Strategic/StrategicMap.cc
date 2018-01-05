@@ -414,6 +414,22 @@ void InitializeSAMSites()
 }
 
 
+void RepairArmySAMSites()
+{
+	//HB: Repair the SAM-Sites in case no reinforcements arrive soon, 1 of 80 per hour
+	FOR_EACH(INT16 const, i, pSamList)
+	{
+		if(StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(*i)].bSAMCondition < 100
+				&& StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(*i)].fEnemyControlled == TRUE)
+		{
+			StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(*i)].bSAMCondition += 1;
+		}
+	}
+
+	UpdateAirspaceControl();
+}
+
+
 // get short sector name without town name
 void GetShortSectorString(const INT16 sMapX, const INT16 sMapY, wchar_t* const sString, const size_t Length)
 {
@@ -1906,6 +1922,11 @@ void AllMercsHaveWalkedOffSector( )
 {
 	BOOLEAN fEnemiesInLoadedSector = FALSE;
 
+	if (InAirRaid())
+	{
+		EndAirRaid();
+	}
+
 	if( NumEnemiesInAnySector( gWorldSectorX, gWorldSectorY, gbWorldSectorZ ) )
 	{
 		fEnemiesInLoadedSector = TRUE;
@@ -1914,11 +1935,6 @@ void AllMercsHaveWalkedOffSector( )
 	if (fEnemiesInLoadedSector)
 	{
 		HandleLoyaltyImplicationsOfMercRetreat( RETREAT_TACTICAL_TRAVERSAL, gWorldSectorX, gWorldSectorY, gbWorldSectorZ );
-	}
-
-	if (InAirRaid())
-	{
-		EndAirRaid();
 	}
 
 	//Setup strategic traversal information
