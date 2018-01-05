@@ -195,7 +195,7 @@ void ScheduleAirRaid(AIR_RAID_DEFINITION* pAirRaidDef)
 	gfAirRaidScheduled = TRUE;
 }
 
-BOOLEAN ChopperAttackSector(UINT8 ubSectorX, UINT8 ubSectorY, INT8 bIntensity);
+void ChopperAttackSector(UINT8 ubSectorX, UINT8 ubSectorY, INT8 bIntensity);
 
 BOOLEAN BeginAirRaid( )
 {
@@ -214,12 +214,14 @@ BOOLEAN BeginAirRaid( )
 	// Set flag for handling raid....
 	gTacticalStatus.fEnemyInSector = TRUE;
 
-	ChangeSelectedMapSector(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY, (INT8)gAirRaidDef.sSectorZ);
-
 	// CHECK IF WE CURRENTLY HAVE THIS SECTOR OPEN....
 	if (!PlayerMercsInSector(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY, 0))
 	{
+		ChangeSelectedMapSector(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY, (INT8)gAirRaidDef.sSectorZ);
+		DoScreenIndependantMessageBox(TacticalStr[AIR_RAID_TURN_STR], MSG_BOX_FLAG_OK, MapScreenDefaultOkBoxCallback); // HACK0000
+
 		EndAirRaid();
+		
 		return TRUE;
 	}
 	else
@@ -1474,6 +1476,8 @@ BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY)
 
 	if (PreRandom(100) < ubChance)
 	{
+		HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_BATTLE_WON, sSectorX, sSectorY, 0);
+
 		SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: return true");
 		return(TRUE);
 	}
@@ -1482,7 +1486,7 @@ BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY)
 	return(FALSE);
 }
 
-BOOLEAN ChopperAttackSector(UINT8 ubSectorX, UINT8 ubSectorY, INT8 bIntensity)
+void ChopperAttackSector(UINT8 ubSectorX, UINT8 ubSectorY, INT8 bIntensity)
 {
 	// TODO: Balance this effect as soon as the queen uses air-raids
 	UINT8 ubCasualties = Random(bIntensity + 1);
@@ -1506,20 +1510,18 @@ BOOLEAN ChopperAttackSector(UINT8 ubSectorX, UINT8 ubSectorY, INT8 bIntensity)
 
 	if (!gfTownUsesLoyalty[bTownId])
 	{
-		return TRUE;
+		return;
 	}
 
 	if (!pSectorInfo->fSurfaceWasEverPlayerControlled)
 	{
-		return TRUE;
+		return;
 	}
-
-	ChangeSelectedMapSector(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY, (INT8)gAirRaidDef.sSectorZ);
-	DoScreenIndependantMessageBox(TacticalStr[AIR_RAID_TURN_STR], MSG_BOX_FLAG_OK, MapScreenDefaultOkBoxCallback); // HACK0000
 
 	if (ubNumMilitia > 0)
 	{
 		HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_ABANDON_MILITIA, ubSectorX, ubSectorY, 0);
+		SLOGD(DEBUG_TAG_AIRRAID, "ChopperAttackSector: Militia abandoned");
 	}
 
 	while (ubCasualties--)
@@ -1547,11 +1549,9 @@ BOOLEAN ChopperAttackSector(UINT8 ubSectorX, UINT8 ubSectorY, INT8 bIntensity)
 
 	if (ubCasualties > 0)
 	{
+		SLOGD(DEBUG_TAG_AIRRAID, "ChopperAttackSector: %d Civilians killed", ubCasualties);
 		DecrementTownLoyalty(bTownId, ubCasualties * LOYALTY_PENALTY_JOEY_KILLED);
 	}
-
-	// True means civilians killed
-	return ubCasualties > 0;
 }
 
 #ifdef WITH_UNITTESTS
