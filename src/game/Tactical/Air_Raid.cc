@@ -38,6 +38,7 @@
 #include "WorldMan.h"
 #include "OppList.h"
 #include "Directories.h"
+#include "Meanwhile.h"
 
 #include "CalibreModel.h"
 #include "ContentManager.h"
@@ -220,7 +221,11 @@ BOOLEAN BeginAirRaid( )
 	if (!PlayerMercsInSector(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY, 0))
 	{
 		ChangeSelectedMapSector(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY, (INT8)gAirRaidDef.sSectorZ);
-		DoScreenIndependantMessageBox(TacticalStr[AIR_RAID_TURN_STR], MSG_BOX_FLAG_OK, MapScreenDefaultOkBoxCallback); // HACK0000
+		
+		if (!AreInMeanwhile())
+		{
+			DoScreenIndependantMessageBox(TacticalStr[AIR_RAID_TURN_STR], MSG_BOX_FLAG_OK, MapScreenDefaultOkBoxCallback); // HACK0000
+		}
 
 		EndAirRaid();
 		
