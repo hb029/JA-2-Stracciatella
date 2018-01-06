@@ -351,9 +351,11 @@ static INT16 PickRandomLocationAtMinSpacesAway(INT16 sGridNo, INT16 sMinValue, I
 
 	while( sNewGridNo == NOWHERE )
 	{
-		sNewX = sX + sMinValue + (INT16)Random( sRandomVar );
-		sNewY = sY + sMinValue + (INT16)Random( sRandomVar );
+		// First define a shift
+		sNewX = sMinValue + (INT16)Random( sRandomVar );
+		sNewY = sMinValue + (INT16)Random( sRandomVar );
 
+		// Invert it randomly
 		if ( Random( 2 ) )
 		{
 			sNewX = -1 * sNewX;
@@ -363,6 +365,10 @@ static INT16 PickRandomLocationAtMinSpacesAway(INT16 sGridNo, INT16 sMinValue, I
 		{
 			sNewY = -1 * sNewY;
 		}
+
+		// Add the offset
+		sNewX = sX + sNewX;
+		sNewY = sY + sNewY;
 
 		// Make gridno....
 		sNewGridNo = GETWORLDINDEXFROMWORLDCOORDS( sNewY, sNewX );
