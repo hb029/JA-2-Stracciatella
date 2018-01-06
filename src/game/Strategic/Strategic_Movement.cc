@@ -52,6 +52,7 @@
 #include "FileMan.h"
 #include "Items.h"
 #include "Air_Raid.h"
+#include "Strategic_Mines.h"
 
 
 // the delay for a group about to arrive
@@ -1854,6 +1855,10 @@ static void InitiateGroupMovementToNextSector(GROUP* pGroup)
 	}
 	else // Enemy group decides to call in an air-strike short before arrival to boost the advantage by at least 25%
 	{
+		UINT8 const sector = SECTOR(pGroup->ubNextX, pGroup->ubNextY);
+		UINT8 const ubTownId = GetTownIdForSector(sector);
+		INT8 const mine = GetMineSectorForTown(ubTownId);
+
 		INT8 bIntensity = pGroup->ubGroupSize / 4 + Random(gGameOptions.ubDifficultyLevel);
 		UINT8 ubNumMinsFromCurrentTime = pGroup->uiTraverseTime;
 		if (ubNumMinsFromCurrentTime > bIntensity / 2)
@@ -1865,7 +1870,9 @@ static void InitiateGroupMovementToNextSector(GROUP* pGroup)
 			ubNumMinsFromCurrentTime = 1; // Go in with friendly fire risk
 		}
 
-		if (pGroup->ubSectorZ == 0)
+		// Attack surface sectors of mining towns so the loyalty impact of air-force terror matters
+		if (pGroup->ubSectorZ == 0 &&
+			PlayerControlsMine(mine))
 		{
 			AIR_RAID_DEFINITION	AirRaidDef;
 
