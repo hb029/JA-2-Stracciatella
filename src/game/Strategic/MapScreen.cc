@@ -3033,7 +3033,7 @@ static void HandleModCtrl(UINT const key)
 				AirRaidDef.sSectorX = sSelMapX;
 				AirRaidDef.sSectorY = sSelMapY;
 				AirRaidDef.sSectorZ = 0;
-				AirRaidDef.bIntensity = 4 + Random(gGameOptions.ubDifficultyLevel);
+				AirRaidDef.bIntensity = 5 + Random(gGameOptions.ubDifficultyLevel);
 				AirRaidDef.uiFlags = 0;
 				AirRaidDef.ubNumMinsFromCurrentTime = 5;
 

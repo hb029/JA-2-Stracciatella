@@ -51,6 +51,7 @@
 #include "ScreenIDs.h"
 #include "FileMan.h"
 #include "Items.h"
+#include "Air_Raid.h"
 
 
 // the delay for a group about to arrive
@@ -1849,6 +1850,33 @@ static void InitiateGroupMovementToNextSector(GROUP* pGroup)
 		if( !pGroup->ubSectorZ )
 		{
 			DelayEnemyGroupsIfPathsCross(*pGroup);
+		}
+	}
+	else // Enemy group decides to call in an air-strike short before arrival to boost the advantage by at least 25%
+	{
+		INT8 bIntensity = pGroup->ubGroupSize / 4 + Random(gGameOptions.ubDifficultyLevel);
+		UINT8 ubNumMinsFromCurrentTime = pGroup->uiTraverseTime;
+		if (ubNumMinsFromCurrentTime > bIntensity / 2)
+		{
+			ubNumMinsFromCurrentTime -= bIntensity / 2; // Count two dives per minute
+		}
+		else
+		{
+			ubNumMinsFromCurrentTime = 1; // Go in with friendly fire risk
+		}
+
+		if (pGroup->ubSectorZ == 0)
+		{
+			AIR_RAID_DEFINITION	AirRaidDef;
+
+			AirRaidDef.sSectorX = pGroup->ubNextX;
+			AirRaidDef.sSectorY = pGroup->ubNextY;
+			AirRaidDef.sSectorZ = 0;
+			AirRaidDef.bIntensity = bIntensity;
+			AirRaidDef.uiFlags = AIR_RAID_BEGINNING_GAME;
+			AirRaidDef.ubNumMinsFromCurrentTime = ubNumMinsFromCurrentTime;
+
+			ScheduleAirRaid(&AirRaidDef);
 		}
 	}
 }
