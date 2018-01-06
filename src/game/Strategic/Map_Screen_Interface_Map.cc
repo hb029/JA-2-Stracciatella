@@ -261,6 +261,7 @@ INT32 iZoomY = 0;
 
 
 // map shading colors
+extern UINT8 ubSAMControlledSectors[MAP_WORLD_X][MAP_WORLD_Y];
 
 enum{
 	MAP_SHADE_BLACK =0,
@@ -631,26 +632,36 @@ void DrawMap(void)
 		{
 			for (INT16 cnt2 = 1; cnt2 < MAP_WORLD_Y - 1; ++cnt2)
 			{
+				UINT8 ubSamNumber = 0;
+
+				// which SAM controls this sector?
+				ubSamNumber = ubSAMControlledSectors[cnt2][cnt];
+
+				// get the condition of that SAM site (NOTE: SAM #s are 1-4, but indexes are 0-3!!!)
+				Assert(ubSamNumber <= NUMBER_OF_SAMS);
+
+
 				if (!GetSectorFlagStatus(cnt, cnt2, iCurrentMapSectorZ, SF_ALREADY_VISITED))
 				{
-					INT32 color;
+					INT32 color = MAP_SHADE_BLACK;
 					if (fShowAircraftFlag)
 					{
 						if (!StrategicMap[cnt + cnt2 * WORLD_MAP_X].fEnemyAirControlled)
 						{
-							// sector not visited, not air controlled
-							color = MAP_SHADE_DK_GREEN;
+							if (StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(pSamList[ubSamNumber - 1])].bSAMCondition >= MIN_CONDITION_FOR_SAM_SITE_TO_WORK)
+							{
+								// sector not visited and air controlled
+								color = MAP_SHADE_DK_GREEN;
+							}
 						}
 						else
 						{
-							// sector not visited, controlled and air not
-							color = MAP_SHADE_DK_RED;
+							if (StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(pSamList[ubSamNumber - 1])].bSAMCondition >= MIN_CONDITION_FOR_SAM_SITE_TO_WORK)
+							{
+								// sector not visited and air controlled
+								color = MAP_SHADE_DK_RED;
+							}
 						}
-					}
-					else
-					{
-						// not visited
-						color = MAP_SHADE_BLACK;
 					}
 					ShadeMapElem(cnt, cnt2, color);
 				}
@@ -658,18 +669,22 @@ void DrawMap(void)
 				{
 					if (fShowAircraftFlag)
 					{
-						INT32 color;
 						if (!StrategicMap[cnt + cnt2 * WORLD_MAP_X].fEnemyAirControlled)
 						{
-							// sector visited and air controlled
-							color = MAP_SHADE_LT_GREEN;
+							if (StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(pSamList[ubSamNumber - 1])].bSAMCondition >= MIN_CONDITION_FOR_SAM_SITE_TO_WORK)
+							{
+								// sector not visited and air controlled
+								ShadeMapElem(cnt, cnt2, MAP_SHADE_LT_GREEN);
+							}
 						}
 						else
 						{
-							// sector visited but not air controlled
-							color = MAP_SHADE_LT_RED;
+							if (StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(pSamList[ubSamNumber - 1])].bSAMCondition >= MIN_CONDITION_FOR_SAM_SITE_TO_WORK)
+							{
+								// sector not visited and air controlled
+								ShadeMapElem(cnt, cnt2, MAP_SHADE_LT_RED);
+							}
 						}
-						ShadeMapElem(cnt, cnt2, color);
 					}
 				}
 			}
