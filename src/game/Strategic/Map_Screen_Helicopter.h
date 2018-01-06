@@ -64,15 +64,6 @@ enum
 	NUMBER_OF_REFUEL_SITES,
 };
 
-// the sam site enums
-enum{
-	SAM_SITE_ONE = 0,			// near Chitzena
-	SAM_SITE_TWO,					// near Drassen
-	SAM_SITE_THREE,				// near Cambria
-	SAM_SITE_FOUR,				// near Meduna
-	NUMBER_OF_SAM_SITES,
-};
-
 // helicopter vehicle id value
 extern INT32 iHelicopterVehicleId;
 

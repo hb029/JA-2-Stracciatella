@@ -187,7 +187,7 @@ static void AddTextToTownBox(PopUpBox* const box)
 		case SEC_N3:  title = pLandTypeStrings[MEDUNA_AIRPORT_SITE];                     break;
 
 		case SEC_N4:
-			if (fSamSiteFound[SAM_SITE_FOUR])
+			if (fSamSiteFound[3])
 			{
 				title = pLandTypeStrings[MEDUNA_SAM_SITE];
 				break;
@@ -337,9 +337,9 @@ static void AddTextToBlankSectorBox(PopUpBox* const box)
 	const wchar_t* title;
 	switch( usSectorValue )
 	{
-		case SEC_D2:  title = (fSamSiteFound[SAM_SITE_ONE]   ? pLandTypeStrings[TROPICS_SAM_SITE] : pLandTypeStrings[TROPICS]); break; // Chitzena SAM
-		case SEC_D15: title = (fSamSiteFound[SAM_SITE_TWO]   ? pLandTypeStrings[SPARSE_SAM_SITE]  : pLandTypeStrings[SPARSE]);  break; // Drassen SAM
-		case SEC_I8:  title = (fSamSiteFound[SAM_SITE_THREE] ? pLandTypeStrings[SAND_SAM_SITE]    : pLandTypeStrings[SAND]);    break; // Cambria SAM
+		case SEC_D2:  title = (fSamSiteFound[0]   ? pLandTypeStrings[TROPICS_SAM_SITE] : pLandTypeStrings[TROPICS]); break; // Chitzena SAM
+		case SEC_D15: title = (fSamSiteFound[1]   ? pLandTypeStrings[SPARSE_SAM_SITE]  : pLandTypeStrings[SPARSE]);  break; // Drassen SAM
+		case SEC_I8:  title = (fSamSiteFound[2] ? pLandTypeStrings[SAND_SAM_SITE]    : pLandTypeStrings[SAND]);    break; // Cambria SAM
 
 		// SAM Site 4 in Meduna is within town limits, so it's handled in AddTextToTownBox()
 
@@ -386,15 +386,15 @@ static void AddCommonInfoToBox(PopUpBox* const box)
 	switch( SECTOR( bCurrentTownMineSectorX, bCurrentTownMineSectorY ) )
 	{
 		case SEC_D2: //Chitzena SAM
-			if( !fSamSiteFound[ SAM_SITE_ONE ] )
+			if( !fSamSiteFound[ 0 ] )
 				fUnknownSAMSite = TRUE;
 			break;
 		case SEC_D15: //Drassen SAM
-			if( !fSamSiteFound[ SAM_SITE_TWO ] )
+			if( !fSamSiteFound[ 1 ] )
 				fUnknownSAMSite = TRUE;
 			break;
 		case SEC_I8: //Cambria SAM
-			if( !fSamSiteFound[ SAM_SITE_THREE ] )
+			if( !fSamSiteFound[ 2 ] )
 				fUnknownSAMSite = TRUE;
 			break;
 		// SAM Site 4 in Meduna is within town limits, so it's always controllable

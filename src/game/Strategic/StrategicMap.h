@@ -41,7 +41,6 @@ static inline void SetWorldSectorInvalid()
 
 #define NUMBER_OF_SAMS 4
 
-
 extern INT16 const pSamList[NUMBER_OF_SAMS];
 extern INT16 pSamGridNoAList[ NUMBER_OF_SAMS ];
 extern INT16 pSamGridNoBList[ NUMBER_OF_SAMS ];
@@ -54,7 +53,10 @@ extern	BOOLEAN		gfUseAlternateMap;
 
 // min condition for sam site to be functional
 #define MIN_CONDITION_FOR_SAM_SITE_TO_WORK 80
-
+// minimum condition a SAM site must be in to be fixable
+#define MIN_CONDITION_TO_FIX_SAM 20
+// minimum percentage of enemy soldiers killed for destroying the sam
+#define SAM_PANIC_BOMB_TOLERANCE 75
 
 // FUNCTIONS FOR DERTERMINING GOOD SECTOR EXIT DATA
 #define CHECK_DIR_X_DELTA			( WORLD_TILE_X * 4 )
@@ -100,6 +102,8 @@ void UpdateAirspaceControl( void );
 bool IsThisSectorASAMSector(INT16 x, INT16 y, INT8 z);
 
 void InitializeSAMSites();
+
+void SetUpSAMPanicBomb(UINT8 ubSamIndex);
 
 // Number of sectors this town takes up
 UINT8 GetTownSectorSize(INT8 town_id);

@@ -245,18 +245,23 @@ INT8 PanicAI(SOLDIERTYPE *pSoldier, UINT8 ubCanMove)
 			//////////////////////////////////////////////////////////////////////
 			// ACTIVATE DETONATOR: blow up sector's panic bombs
 			//////////////////////////////////////////////////////////////////////
+			UINT32	uiPercentEnemiesKilled;
 
-			// if we have enough APs to activate it now
-			if (pSoldier->bActionPoints >= AP_USE_REMOTE)
+			uiPercentEnemiesKilled = (UINT32)(100 * (UINT32)(gTacticalStatus.ubArmyGuysKilled) / (UINT32)(gTacticalStatus.Team[ENEMY_TEAM].bMenInSector + gTacticalStatus.ubArmyGuysKilled));
+			if (uiPercentEnemiesKilled >= gTacticalStatus.ubPanicTolerance[0])
 			{
-				SLOGD(DEBUG_TAG_AI, "%ls is activating his detonator",pSoldier->name);
-				// blow up all the PANIC bombs!
-				return(AI_ACTION_USE_DETONATOR);
-			}
-			else     // otherwise, wait a turn
-			{
-				pSoldier->usActionData = NOWHERE;
-				return(AI_ACTION_NONE);
+				// if we have enough APs to activate it now
+				if (pSoldier->bActionPoints >= AP_USE_REMOTE)
+				{
+					SLOGD(DEBUG_TAG_AI, "%ls is activating his detonator",pSoldier->name);
+					// blow up all the PANIC bombs!
+					return(AI_ACTION_USE_DETONATOR);
+				}
+				else     // otherwise, wait a turn
+				{
+					pSoldier->usActionData = NOWHERE;
+					return(AI_ACTION_NONE);
+				}
 			}
 		}
 	}

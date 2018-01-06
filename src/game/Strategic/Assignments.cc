@@ -234,9 +234,6 @@ BOOLEAN gfReEvaluateEveryonesNothingToDo = FALSE;
 // NOTE: A repairman must generate a least this many points / hour to be ABLE to repair a SAM site at all!
 #define SAM_SITE_REPAIR_DIVISOR		10
 
-// minimum condition a SAM site must be in to be fixable
-#define MIN_CONDITION_TO_FIX_SAM 20
-
 
 // a list of which sectors have characters
 static BOOLEAN fSectorsWithSoldiers[MAP_WORLD_X * MAP_WORLD_Y][4];
@@ -1638,7 +1635,6 @@ INT8 HandleRepairOfSAMSite( SOLDIERTYPE *pSoldier, INT8 bPointsAvailable, BOOLEA
 		bPtsUsed = bPointsAvailable - ( bPointsAvailable % SAM_SITE_REPAIR_DIVISOR );
 
 		// SAM site may have been put back into working order...
-		UpdateAirspaceControl( );
 		*pfNothingLeftToRepair = FALSE;
 	}
 	else
@@ -1647,13 +1643,11 @@ INT8 HandleRepairOfSAMSite( SOLDIERTYPE *pSoldier, INT8 bPointsAvailable, BOOLEA
 		bPtsUsed = SAM_SITE_REPAIR_DIVISOR * ( 100 - StrategicMap[ sStrategicSector ].bSAMCondition );
 		StrategicMap[ sStrategicSector ].bSAMCondition = 100;
 
-//ARM: NOTE THAT IF THIS CODE IS EVER RE-ACTIVATED, THE SAM GRAPHICS SHOULD CHANGE NOT WHEN THE SAM SITE RETURNS TO
-// FULL STRENGTH (condition 100), but as soon as it reaches MIN_CONDITION_TO_FIX_SAM!!!
-
-		// Bring Hit points back up to full, adjust graphic to full graphic.....
-		UpdateSAMDoneRepair( pSoldier -> sSectorX, pSoldier -> sSectorY, 0 );
 		*pfNothingLeftToRepair = TRUE;
 	}
+
+	UpdateAirspaceControl();
+
 	return( bPtsUsed );
 }
 
@@ -6095,10 +6089,10 @@ void SetSoldierAssignmentRepair(SOLDIERTYPE& s, BOOLEAN const sam, BOOLEAN const
 		SetTimeOfAssignmentChangeForMerc(&s);
 	}
 	MakeSureToolKitIsInHand(&s);
+	PostSetAssignment(s, REPAIR);
 	s.fFixingSAMSite        = sam;
 	s.fFixingRobot          = robot;
 	s.bVehicleUnderRepairID = vehicle_id;
-	PostSetAssignment(s, REPAIR);
 }
 
 
@@ -6136,7 +6130,6 @@ BOOLEAN CanSoldierRepairSAM(const SOLDIERTYPE *pSoldier, INT8 bRepairPoints)
 
 BOOLEAN IsTheSAMSiteInSectorRepairable( INT16 sSectorX, INT16 sSectorY, INT16 sSectorZ )
 {
-	INT32 iCounter = 0;
 	INT8 bSAMCondition;
 
 	// is the guy above ground, if not, it can't be fixed, now can it?
@@ -6145,9 +6138,9 @@ BOOLEAN IsTheSAMSiteInSectorRepairable( INT16 sSectorX, INT16 sSectorY, INT16 sS
 		return( FALSE );
 	}
 
-	for( iCounter = 0; iCounter < NUMBER_OF_SAMS; iCounter++ )
+	for (UINT8 i = 0; i < NUMBER_OF_SAMS; ++i)
 	{
-		if( pSamList[ iCounter ] == SECTOR( sSectorX, sSectorY ) )
+		if(pSamList[i] == SECTOR( sSectorX, sSectorY ))
 		{
 			bSAMCondition = StrategicMap[ CALCULATE_STRATEGIC_INDEX( sSectorX, sSectorY ) ].bSAMCondition;
 
@@ -6170,8 +6163,6 @@ BOOLEAN IsTheSAMSiteInSectorRepairable( INT16 sSectorX, INT16 sSectorY, INT16 sS
 
 BOOLEAN SoldierInSameSectorAsSAM( const SOLDIERTYPE *pSoldier )
 {
-	INT32 iCounter = 0;
-
 	// is the soldier on the surface?
 	if( pSoldier -> bSectorZ != 0 )
 	{
@@ -6179,9 +6170,9 @@ BOOLEAN SoldierInSameSectorAsSAM( const SOLDIERTYPE *pSoldier )
 	}
 
 	// now check each sam site in the list
-	for( iCounter = 0; iCounter < NUMBER_OF_SAMS; iCounter++ )
+	for (UINT8 i = 0; i < NUMBER_OF_SAMS; ++i)
 	{
-		if( pSamList[ iCounter] == SECTOR( pSoldier -> sSectorX, pSoldier -> sSectorY ) )
+		if(pSamList[i] == SECTOR(pSoldier->sSectorX, pSoldier->sSectorY))
 		{
 			return( TRUE );
 		}
@@ -6192,26 +6183,22 @@ BOOLEAN SoldierInSameSectorAsSAM( const SOLDIERTYPE *pSoldier )
 
 BOOLEAN IsSoldierCloseEnoughToSAMControlPanel( const SOLDIERTYPE *pSoldier )
 {
-
-	INT32 iCounter = 0;
-
-		// now check each sam site in the list
-	for( iCounter = 0; iCounter < NUMBER_OF_SAMS; iCounter++ )
+	if (pSoldier->fBetweenSectors)
 	{
-		if( pSamList[ iCounter ] == SECTOR( pSoldier -> sSectorX, pSoldier -> sSectorY ) )
+		return(FALSE);
+	}
+	
+	// now check each sam site in the list
+	for (UINT8 i = 0; i < NUMBER_OF_SAMS; ++i)
+	{
+		if(pSamList[i] == SECTOR(pSoldier->sSectorX, pSoldier->sSectorY))
 		{
-// Assignment distance limits removed.  Sep/11/98.  ARM
-//			if( ( PythSpacesAway( pSamGridNoAList[ iCounter ], pSoldier -> sGridNo ) < MAX_DISTANCE_FOR_REPAIR )||( PythSpacesAway( pSamGridNoBList[ iCounter ], pSoldier -> sGridNo ) < MAX_DISTANCE_FOR_REPAIR ) )
-			{
-				return( TRUE );
-			}
+			return( TRUE );
 		}
 	}
 
 	return( FALSE );
 }
-//*/
-
 
 static BOOLEAN HandleAssignmentExpansionAndHighLightForAssignMenu(SOLDIERTYPE* pSoldier)
 {

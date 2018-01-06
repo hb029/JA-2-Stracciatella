@@ -155,29 +155,32 @@ BOOLEAN		gfUseAlternateMap = FALSE;
 BOOLEAN fFoundOrta = FALSE;
 
 // have any of the sam sites been found
-BOOLEAN fSamSiteFound[ NUMBER_OF_SAMS ]={
-	FALSE,
-	FALSE,
-	FALSE,
-	FALSE,
-};
-
-INT16 const pSamList[] =
+BOOLEAN fSamSiteFound[ NUMBER_OF_SAMS ] =
 {
-	SEC_D2,
-	SEC_D15,
-	SEC_I8,
-	SEC_N4
+	FALSE,
+	FALSE,
+	FALSE,
+	FALSE,
 };
 
-INT16 pSamGridNoAList[ NUMBER_OF_SAMS ]={
+INT16 const pSamList[ NUMBER_OF_SAMS ] =
+{
+	SEC_D2,		// near Chitzena
+	SEC_D15,	// near Drassen
+	SEC_I8,		// near Cambria
+	SEC_N4		// in Meduna
+};
+
+INT16 pSamGridNoAList[ NUMBER_OF_SAMS ] =
+{
 	10196,
 	11295,
 	16080,
 	11913,
 };
 
-INT16 pSamGridNoBList[ NUMBER_OF_SAMS ]={
+INT16 pSamGridNoBList[ NUMBER_OF_SAMS ] =
+{
 	10195,
 	11135,
 	15920,
@@ -405,9 +408,10 @@ void InitializeSAMSites()
 	g_merc_arrive_sector = START_SECTOR;
 
 	// All SAM sites start game in perfect working condition.
-	FOR_EACH(INT16 const, i, pSamList)
+	for (UINT8 i = 0; i < NUMBER_OF_SAMS; ++i)
 	{
-		StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(*i)].bSAMCondition = 100;
+		StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(pSamList[i])].bSAMCondition = 100;
+		SetUpSAMPanicBomb(i);
 	}
 
 	UpdateAirspaceControl();
@@ -1373,14 +1377,14 @@ void GetSectorIDString(INT16 const x, INT16 const y, INT8 const z, wchar_t* cons
 
 			case SEC_D2: // Chitzena SAM
 				add =
-					!fSamSiteFound[SAM_SITE_ONE] ? pLandTypeStrings[TROPICS]          :
+					!fSamSiteFound[0] ? pLandTypeStrings[TROPICS]          :
 					detailed                     ? pLandTypeStrings[TROPICS_SAM_SITE] :
 					pLandTypeStrings[SAM_SITE];
 				break;
 
 			case SEC_D15: // Drassen SAM
 				add =
-					!fSamSiteFound[SAM_SITE_TWO] ? pLandTypeStrings[SPARSE]          :
+					!fSamSiteFound[1] ? pLandTypeStrings[SPARSE]          :
 					detailed                     ? pLandTypeStrings[SPARSE_SAM_SITE] :
 					pLandTypeStrings[SAM_SITE];
 				break;
@@ -1392,7 +1396,7 @@ void GetSectorIDString(INT16 const x, INT16 const y, INT8 const z, wchar_t* cons
 
 			case SEC_I8: // Cambria SAM
 				add =
-					!fSamSiteFound[SAM_SITE_THREE] ? pLandTypeStrings[SAND]          :
+					!fSamSiteFound[2] ? pLandTypeStrings[SAND]          :
 					detailed                       ? pLandTypeStrings[SAND_SAM_SITE] :
 					pLandTypeStrings[SAM_SITE];
 				break;
@@ -1411,7 +1415,7 @@ void GetSectorIDString(INT16 const x, INT16 const y, INT8 const z, wchar_t* cons
 				break;
 
 			case SEC_N4: // Meduna's SAM site
-				if (!fSamSiteFound[SAM_SITE_FOUR]) goto plain_sector;
+				if (!fSamSiteFound[3]) goto plain_sector;
 				add =
 					detailed ? pLandTypeStrings[MEDUNA_SAM_SITE] :
 					pLandTypeStrings[SAM_SITE];
@@ -2454,7 +2458,6 @@ void SetupNewStrategicGame()
 // a -1 will be returned upon failure
 INT8 GetSAMIdFromSector( INT16 sSectorX, INT16 sSectorY, INT8 bSectorZ )
 {
-	INT8 bCounter = 0;
 	INT16 sSectorValue = 0;
 
 	// check if valid sector
@@ -2467,11 +2470,11 @@ INT8 GetSAMIdFromSector( INT16 sSectorX, INT16 sSectorY, INT8 bSectorZ )
 	sSectorValue = SECTOR( sSectorX, sSectorY );
 
 	// run through list of sam sites
-	for( bCounter = 0; bCounter < 4; bCounter++ )
+	for (UINT8 i = 0; i < NUMBER_OF_SAMS; ++i)
 	{
-		if( pSamList[ bCounter ] == sSectorValue )
+		if( pSamList[i] == sSectorValue )
 		{
-			return( bCounter );
+			return(i);
 		}
 	}
 
@@ -2591,7 +2594,6 @@ void UpdateAirspaceControl( void )
 		// update destination column for any mercs in transit
 		fTeamPanelDirty = TRUE;
 	}
-
 
 	// ARM: airspace control now affects refueling site availability, so update that too with every change!
 	UpdateRefuelSiteAvailability( );
@@ -3740,4 +3742,54 @@ UINT GetWorldSector()
 {
 	if (gWorldSectorX == 0 || gWorldSectorY == 0) return NO_SECTOR;
 	return SECTOR(gWorldSectorX, gWorldSectorY);
+}
+
+void SetUpSAMPanicBomb(UINT8 ubSamIndex)
+{
+	Assert(ubSamIndex < NUMBER_OF_SAMS);
+
+	OBJECTTYPE BombObject;
+	CreateItem(C1, 100, &BombObject);
+	BombObject.usAttachItem[0] = REMDETONATOR;
+	BombObject.bAttachStatus[0] = 100;
+
+	BombObject.bTrap = 4 + Random(gGameOptions.ubDifficultyLevel);
+	BombObject.bFrequency = PANIC_FREQUENCY; // This frequency is reserved at SAM sector maps
+	BombObject.bDetonatorType = BOMB_REMOTE;
+	BombObject.usBombItem = MINI_GRENADE; // This beats the SAM down to 70% to 60%, a job for at least 2 days.
+	BombObject.ubTolerance = SAM_PANIC_BOMB_TOLERANCE; // 75% for the last of 4 pulls the trigger.
+
+	if (gWorldSectorX != SECTORX(pSamList[ubSamIndex]) || gWorldSectorY != SECTORY(pSamList[ubSamIndex]) || gbWorldSectorZ != 0)
+	{
+		UINT32     uiNumberOfItems;
+		WORLDITEM* pItemList;
+		LoadWorldItemsFromTempItemFile(SECTORX(pSamList[ubSamIndex]), SECTORY(pSamList[ubSamIndex]), 0, &uiNumberOfItems, &pItemList);
+
+		if (uiNumberOfItems > 0)
+		{
+			UINT32 uiNewTotal = uiNumberOfItems;
+
+			// set up item list ptrs
+			WORLDITEM const* const end = pItemList + uiNumberOfItems;
+			for (WORLDITEM* wi = pItemList; wi != end; ++wi)
+			{
+				if (wi->sGridNo != pSamGridNoBList[ubSamIndex]) continue;
+				if (wi->o.usBombItem == NONE) continue;
+
+				// remove
+				--uiNewTotal;
+				wi->fExists = FALSE;
+			}
+
+			// only save if something was stolen
+			if (uiNewTotal < uiNumberOfItems)
+			{
+				SaveWorldItemsToTempItemFile(SECTORX(pSamList[ubSamIndex]), SECTORY(pSamList[ubSamIndex]), 0, uiNumberOfItems, pItemList);
+			}
+
+		}
+		MemFree(pItemList);
+
+		AddItemsToUnLoadedSector(SECTORX(pSamList[ubSamIndex]), SECTORY(pSamList[ubSamIndex]), 0, pSamGridNoBList[ubSamIndex], 1, &BombObject, 0, WORLD_ITEM_ARMED_BOMB, 0, HIDDEN_ITEM);
+	}
 }

@@ -1378,6 +1378,15 @@ static void ChooseMiscGearForSoldierCreateStruct(SOLDIERCREATE_STRUCT* pp, INT8 
 		NOTHING
 	};
 
+	if (IsThisSectorASAMSector(gWorldSectorX, gWorldSectorY, gbWorldSectorZ) &&
+		StrategicMap[CALCULATE_STRATEGIC_INDEX(gWorldSectorX, gWorldSectorY)].fEnemyControlled)
+	{
+		OBJECTTYPE Object;
+		CreateItem(REMOTEBOMBTRIGGER, 80 + Random(21), &Object);
+		Object.fFlags |= OBJECT_UNDROPPABLE;
+		PlaceObjectInSoldierCreateStruct(pp, &Object);
+	}
+
 	// count how many are eligible
 	UINT16 usNumMatches = 0;
 	for (const INT32* i = iMiscItemsList; *i != NOTHING; ++i)

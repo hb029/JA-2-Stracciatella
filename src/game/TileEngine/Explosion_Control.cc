@@ -2655,7 +2655,7 @@ bool DoesSAMExistHere(INT16 const x, INT16 const y, INT16 const z, GridNo const 
 	if (z != 0) return false;
 
 	INT16 const sector = SECTOR(x, y);
-	for (INT32 i = 0; i != NUMBER_OF_SAMS; ++i)
+	for (UINT8 i = 0; i < NUMBER_OF_SAMS; ++i)
 	{
 		if (pSamList[i] != sector) continue;
 		if (pSamGridNoAList[i] == gridno) return true;
@@ -2668,7 +2668,7 @@ bool DoesSAMExistHere(INT16 const x, INT16 const y, INT16 const z, GridNo const 
 void UpdateAndDamageSAMIfFound( INT16 sSectorX, INT16 sSectorY, INT16 sSectorZ, INT16 sGridNo, UINT8 ubDamage )
 {
 	INT16 sSectorNo;
-	INT8 sector;
+	UINT8 sector;
 	BOOLEAN fReplaceTile;
 
 	// OK, First check if SAM exists, and if not, return
@@ -2680,7 +2680,7 @@ void UpdateAndDamageSAMIfFound( INT16 sSectorX, INT16 sSectorY, INT16 sSectorZ, 
 	// Damage.....
 	sSectorNo = CALCULATE_STRATEGIC_INDEX( sSectorX, sSectorY );
 
-	fReplaceTile = StrategicMap[sSectorNo].bSAMCondition >= MIN_CONDITION_FOR_SAM_SITE_TO_WORK;
+	fReplaceTile = StrategicMap[sSectorNo].bSAMCondition >= MIN_CONDITION_TO_FIX_SAM;
 
 	if ( StrategicMap[ sSectorNo ].bSAMCondition >= ubDamage )
 	{
@@ -2693,14 +2693,14 @@ void UpdateAndDamageSAMIfFound( INT16 sSectorX, INT16 sSectorY, INT16 sSectorZ, 
 
 	if (fReplaceTile)
 	{
-		fReplaceTile = StrategicMap[sSectorNo].bSAMCondition < MIN_CONDITION_FOR_SAM_SITE_TO_WORK;
+		fReplaceTile = StrategicMap[sSectorNo].bSAMCondition < MIN_CONDITION_TO_FIX_SAM;
 	}
 
 	sector = SECTOR( sSectorX, sSectorY );
 
 	if (fReplaceTile)
 	{
-		for (INT32 i = 0; i != NUMBER_OF_SAMS; ++i)
+		for (UINT8 i = 0; i < NUMBER_OF_SAMS; ++i)
 		{
 			if (pSamList[i] != sector) continue;
 
@@ -2733,7 +2733,7 @@ void UpdateSAMDoneRepair(INT16 const x, INT16 const y, INT16 const z)
 	if (z != 0) return;
 
 	INT16 const sector = SECTOR(x, y);
-	for (INT32 i = 0; i != NUMBER_OF_SAMS; ++i)
+	for (UINT8 i = 0; i < NUMBER_OF_SAMS; ++i)
 	{
 		if (pSamList[i] != sector) continue;
 
@@ -2760,8 +2760,6 @@ void UpdateSAMDoneRepair(INT16 const x, INT16 const y, INT16 const z)
 		break;
 	}
 
-	// SAM site may have been put back into working order
-	UpdateAirspaceControl();
 }
 
 

@@ -21,6 +21,7 @@
 #include "PreBattle_Interface.h"
 #include "Map_Screen_Interface.h"
 #include "Tactical_Save.h"
+#include "Explosion_Control.h"
 
 
 void GetSectorFacilitiesFlags(INT16 const x, INT16 const y, wchar_t* const buf, size_t const length)
@@ -277,6 +278,25 @@ BOOLEAN SetThisSectorAsEnemyControlled(INT16 const sMapX, INT16 const sMapY, INT
 			if (IsRefuelSiteInSector(usMapSector))
 			{
 				UpdateRefuelSiteAvailability( );
+			}
+
+			if (IsThisSectorASAMSector(sMapX, sMapY, bMapZ))
+			{
+				if (StrategicMap[usMapSector].bSAMCondition < MIN_CONDITION_TO_FIX_SAM)
+				{
+					UpdateSAMDoneRepair(sMapX, sMapY, 0);
+				}
+
+				StrategicMap[usMapSector].bSAMCondition = 100;
+				for (INT8 i = 0; i != NUMBER_OF_SAMS; ++i)
+				{
+					if (pSamList[i] == sector)
+					{
+						SetUpSAMPanicBomb(i);
+					}
+				}
+				// SAM site may have been put back into working order
+				UpdateAirspaceControl();
 			}
 
 			// ARM: this must be AFTER all resulting loyalty effects are resolved, or reduced mine income shown won't be accurate

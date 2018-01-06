@@ -147,6 +147,10 @@ void FindPanicBombsAndTriggers(void)
 		}
 		else
 		{
+			if (gTacticalStatus.ubPanicTolerance[bPanicIndex] < o.ubTolerance)
+			{
+				gTacticalStatus.ubPanicTolerance[bPanicIndex] = o.ubTolerance;
+			}
 			gTacticalStatus.fPanicFlags |= PANIC_BOMBS_HERE;
 		}
 	}
