@@ -1419,10 +1419,10 @@ void EndAirRaid( )
 	// Change music back...
 	if ( !( gTacticalStatus.uiFlags & INCOMBAT ) )
 	{
-		SetMusicMode( MUSIC_TACTICAL_NOTHING );
-
 		if (!IsTeamActive(ENEMY_TEAM) && !IsTeamActive(CREATURE_TEAM))
 		{
+			SetMusicMode(MUSIC_TACTICAL_NOTHING);
+
 			SetTeamStatusGreen(MILITIA_TEAM);
 			SetTeamStatusGreen(CIV_TEAM);
 		}
