@@ -190,6 +190,18 @@ void ScheduleAirRaid(AIR_RAID_DEFINITION* pAirRaidDef)
 		return;
 	}
 
+	if (!StrategicMap[(AIRPORT_X + (MAP_WORLD_X * AIRPORT_Y))].fEnemyControlled && !StrategicMap[(AIRPORT2_X + (MAP_WORLD_X * AIRPORT2_Y))].fEnemyControlled)
+	{
+		SLOGD(DEBUG_TAG_AIRRAID, "ScheduleAirRaid: enemy has no more airports");
+		return;
+	}
+
+	if (pAirRaidDef->bIntensity < 2)
+	{
+		SLOGD(DEBUG_TAG_AIRRAID, "ScheduleAirRaid: intensity is less than 2");
+		return;
+	}
+
 	// Copy definition structure into global struct....
 	gAirRaidDef = *pAirRaidDef;
 
