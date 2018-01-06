@@ -54,6 +54,7 @@
 #include "Render_Dirty.h"
 #include "VSurface.h"
 #include "UILayout.h"
+#include "Air_Raid.h"
 
 
 extern BOOLEAN gfDelayAutoResolveStart;
@@ -847,10 +848,10 @@ void RenderPreBattleInterface()
 		PrintConfined(65, 17, 64, gpStrategicString[STR_PB_LOCATION]);
 
 		wchar_t const* const encounter =
-			gubEnemyEncounterCode != CREATURE_ATTACK_CODE        ? gpStrategicString[STR_PB_ENEMIES] :
-			gubEnemyEncounterCode == BLOODCAT_AMBUSH_CODE || // XXX case is unreachable, because of != above
-			gubEnemyEncounterCode == ENTERING_BLOODCAT_LAIR_CODE ? gpStrategicString[STR_PB_BLOODCATS] :
-			gpStrategicString[STR_PB_CREATURES];
+			gubEnemyEncounterCode == CREATURE_ATTACK_CODE ? gpStrategicString[STR_PB_CREATURES] :
+			gubEnemyEncounterCode == BLOODCAT_AMBUSH_CODE || gubEnemyEncounterCode == ENTERING_BLOODCAT_LAIR_CODE ? gpStrategicString[STR_PB_BLOODCATS] :
+			gubEnemyEncounterCode == ENEMY_AIR_RAID_CODE ? TacticalStr[AIR_RAID_TURN_STR] :
+			gpStrategicString[STR_PB_ENEMIES];
 		PrintConfined( 54, 38, 52, encounter);
 		PrintConfined(139, 38, 52, gpStrategicString[STR_PB_MERCS]);
 		PrintConfined(224, 38, 52, gpStrategicString[STR_PB_MILITIA]);
@@ -890,7 +891,8 @@ void RenderPreBattleInterface()
 		}
 		else
 		{ // Know exactly how many
-			INT32 const n = NumEnemiesInSector(sec_x, sec_y);
+			INT32 n = NumEnemiesInSector(sec_x, sec_y);
+			if (InAirRaid()) n += 1;
 			swprintf(str, lengthof(str), L"%d", n);
 			enemies = str;
 		}
