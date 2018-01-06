@@ -1029,27 +1029,27 @@ static void GoToSectorCallback(GUI_BUTTON* btn, INT32 reason)
 	{
 		if( reason & MSYS_CALLBACK_REASON_LBUTTON_UP )
 		{
-				if( _KeyDown( ALT ) && CHEATER_CHEAT_LEVEL() )
+			if( _KeyDown( ALT ) && CHEATER_CHEAT_LEVEL() )
+			{
+				if( !gfPersistantPBI )
 				{
-					if( !gfPersistantPBI )
-					{
-						return;
-					}
-					PlayJA2Sample(EXPLOSION_1, HIGHVOLUME, 1, MIDDLEPAN);
-					gStrategicStatus.usPlayerKills += NumEnemiesInSector( gubPBSectorX, gubPBSectorY );
-					EliminateAllEnemies( gubPBSectorX, gubPBSectorY );
-					SetMusicMode( MUSIC_TACTICAL_VICTORY );
-					btn->uiFlags &= ~BUTTON_CLICKED_ON;
-					btn->Draw();
-					InvalidateRegion(btn->X(), btn->Y(), btn->BottomRightX(), btn->BottomRightY());
-					ExecuteBaseDirtyRectQueue();
-					EndFrameBufferRender( );
-					RefreshScreen();
-					KillPreBattleInterface();
-					StopTimeCompression();
-					SetMusicMode( MUSIC_TACTICAL_NOTHING );
 					return;
 				}
+				PlayJA2Sample(EXPLOSION_1, HIGHVOLUME, 1, MIDDLEPAN);
+				gStrategicStatus.usPlayerKills += NumEnemiesInSector( gubPBSectorX, gubPBSectorY );
+				EliminateAllEnemies( gubPBSectorX, gubPBSectorY );
+				SetMusicMode( MUSIC_TACTICAL_VICTORY );
+				btn->uiFlags &= ~BUTTON_CLICKED_ON;
+				btn->Draw();
+				InvalidateRegion(btn->X(), btn->Y(), btn->BottomRightX(), btn->BottomRightY());
+				ExecuteBaseDirtyRectQueue();
+				EndFrameBufferRender( );
+				RefreshScreen();
+				KillPreBattleInterface();
+				StopTimeCompression();
+				SetMusicMode( MUSIC_TACTICAL_NOTHING );
+				return;
+			}
 			if( gfPersistantPBI && gpBattleGroup && gpBattleGroup->fPlayer &&
 					gubEnemyEncounterCode != ENEMY_AMBUSH_CODE &&
 					gubEnemyEncounterCode != CREATURE_ATTACK_CODE &&
