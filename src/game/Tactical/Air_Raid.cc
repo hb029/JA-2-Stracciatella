@@ -67,7 +67,7 @@ extern INT32 giTimerAirRaidUpdate;
 
 BOOLEAN gfInAirRaid = FALSE;
 BOOLEAN gfAirRaidScheduled = FALSE;
-UINT8   gubAirRaidMode;
+UINT8   gubAirRaidMode = AIR_RAID_INACTIVE;
 UINT32  guiSoundSample = NO_SAMPLE;
 UINT32  guiRaidLastUpdate;
 BOOLEAN gfFadingRaidIn = FALSE;
@@ -218,13 +218,12 @@ BOOLEAN BeginAirRaid( )
 
 	// First remove scheduled flag...
 	gfAirRaidScheduled = FALSE;
+	gubAirRaidMode = AIR_RAID_PENDING;
 
 	if (WillAirRaidBeStopped(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY))
 	{
 		return(FALSE);
 	}
-
-	gfInAirRaid = TRUE;
 
 	// Set flag for handling raid....
 	gTacticalStatus.fEnemyInSector = TRUE;
@@ -269,6 +268,8 @@ BOOLEAN BeginAirRaid( )
 	{
 		return( FALSE );
 	}
+	
+	gfInAirRaid = TRUE;
 
 	if (gAirRaidDef.sSectorX != gWorldSectorX ||
 		gAirRaidDef.sSectorY != gWorldSectorY ||
@@ -309,7 +310,7 @@ BOOLEAN BeginAirRaid( )
 	else
 	{
 		gubAirRaidMode = AIR_RAID_TRYING_TO_START;
-		gfQuoteSaid				= FALSE;
+		gfQuoteSaid	= FALSE;
 	}
 
 	giNumFrames = 0;
@@ -1048,44 +1049,50 @@ static void DoBombing(void)
 
 void HandleAirRaid( )
 {
-	INT32 iVol;
 	UINT32 uiClock;
 
 	// OK,
 	if ( gfInAirRaid )
 	{
-		if (gfFadingRaidIn)
+		if (gubAirRaidMode > AIR_RAID_TRYING_TO_START &&
+			gubAirRaidMode < AIR_RAID_END)
 		{
-			iVol = giNumGridNosMovedThisTurn;
-			if (iVol >= HIGHVOLUME)
-			{
-				gfFadingRaidIn = FALSE;
-			}
-		}
-		else if (gfFadingRaidOut)
-		{
-			iVol = HIGHVOLUME - giNumGridNosMovedThisTurn;
-			if (iVol <= 0)
-			{
-				gfFadingRaidOut = FALSE;
-				gubAirRaidMode = AIR_RAID_END;
-			}
-		}
-		else
-		{
-			iVol = HIGHVOLUME;
-		}
+			// Air raid is audible
+			INT32 iVol;
 
-		iVol = __min(HIGHVOLUME, iVol + 1);
-		iVol = __max(0, iVol - 1);
+			if (gfFadingRaidIn)
+			{
+				iVol = giNumGridNosMovedThisTurn;
+				if (iVol >= HIGHVOLUME)
+				{
+					gfFadingRaidIn = FALSE;
+				}
+			}
+			else if (gfFadingRaidOut)
+			{
+				iVol = HIGHVOLUME - giNumGridNosMovedThisTurn;
+				if (iVol <= 0)
+				{
+					gfFadingRaidOut = FALSE;
+					gubAirRaidMode = AIR_RAID_END;
+				}
+			}
+			else
+			{
+				iVol = HIGHVOLUME;
+			}
 
-		if (guiSoundSample == NO_SAMPLE)
-		{
-			guiSoundSample = PlayJA2Sample(S_RAID_AMBIENT, iVol, 10000, MIDDLEPAN);
-		}
-		else
-		{
-			SoundSetVolume(guiSoundSample, iVol);
+			iVol = __min(HIGHVOLUME, iVol + 1);
+			iVol = __max(0, iVol - 1);
+
+			if (guiSoundSample == NO_SAMPLE)
+			{
+				guiSoundSample = PlayJA2Sample(S_RAID_AMBIENT, iVol, 10000, MIDDLEPAN);
+			}
+			else
+			{
+				SoundSetVolume(guiSoundSample, iVol);
+			}
 		}
 
 		// Are we in TB?
@@ -1226,7 +1233,7 @@ void HandleAirRaid( )
 	}
 	else
 	{
-		if (gfInAirRaid)
+		if (gubAirRaidMode == AIR_RAID_PENDING)
 		{
 			BeginAirRaid();
 		}
@@ -1422,8 +1429,9 @@ static void SetTeamStatusGreen(INT8 team)
 
 void EndAirRaid( )
 {
-	gfInAirRaid = FALSE;
-	gTacticalStatus.fEnemyInSector = gTacticalStatus.uiFlags & INCOMBAT;
+	// Update enemy in sector status
+	gTacticalStatus.fEnemyInSector = NumEnemyInSector() > 0;
+	gfBlitBattleSectorLocator = gTacticalStatus.fEnemyInSector;
 
 	// Stop sound
 	SoundStop( guiSoundSample );
@@ -1444,6 +1452,21 @@ void EndAirRaid( )
 			SetTeamStatusGreen(CIV_TEAM);
 		}
 	}
+
+	// Reset the globals of this "class"
+	gfInAirRaid = FALSE;
+	gfAirRaidScheduled = FALSE;
+	gubAirRaidMode = AIR_RAID_INACTIVE;
+	guiSoundSample = NO_SAMPLE;
+	gfFadingRaidIn = FALSE;
+	gfFadingRaidOut = FALSE;
+	gfAirRaidHasHadTurn = FALSE;
+	gubBeginTeamTurn = 0;
+	gfHaveTBBatton = FALSE;
+	gsNotLocatedYet = FALSE;
+	giNumGridNosMovedThisTurn = 0;
+	gubEnemyEncounterCode = NO_ENCOUNTER_CODE;
+
 	SLOGD(DEBUG_TAG_AIRRAID, "Ending Air Raid." );
 }
 

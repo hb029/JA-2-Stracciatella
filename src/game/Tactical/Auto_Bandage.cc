@@ -35,6 +35,7 @@
 #include "MemMan.h"
 #include "Button_System.h"
 #include "UILayout.h"
+#include "Air_Raid.h"
 
 #include "Soldier.h"
 
@@ -76,7 +77,7 @@ void BeginAutoBandage( )
 	BOOLEAN fFoundAMedKit = FALSE;
 
 	// If we are in combat, we con't...
-	if ( (gTacticalStatus.uiFlags & INCOMBAT) || (NumEnemyInSector() != 0) )
+	if ( (gTacticalStatus.uiFlags & INCOMBAT) || (NumEnemyInSector() != 0) || (InAirRaid()) )
 	{
 		DoMessageBox(MSG_BOX_BASIC_STYLE, g_langRes->Message[STR_SECTOR_NOT_CLEARED], GAME_SCREEN, MSG_BOX_FLAG_OK, NULL, NULL);
 		return;
