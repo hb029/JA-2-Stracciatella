@@ -3053,9 +3053,7 @@ void ExecuteStrategicAIAction( UINT16 usActionCode, INT16 sSectorX, INT16 sSecto
 			break;
 
 		case STRATEGIC_AI_ACTION_KINGPIN_DEAD:
-			//Immediate send a small garrison to C5 (to discourage access to Tony the dealer)
-			/*
-			for( i = 0; i < giGarrisonArraySize; i++ )
+			for (INT8 i = 0; i < giGarrisonArraySize; i++ )
 			{
 				if( gGarrisonGroup[ i ].ubComposition == SANMONA_SMALL )
 				{
@@ -3068,7 +3066,6 @@ void ExecuteStrategicAIAction( UINT16 usActionCode, INT16 sSectorX, INT16 sSecto
 					break;
 				}
 			}
-			*/
 			break;
 		case NPC_ACTION_SEND_SOLDIERS_TO_DRASSEN:
 			//Send 6, 9, or 12 troops (based on difficulty) one of the Drassen sectors.  If nobody is there when they arrive,
