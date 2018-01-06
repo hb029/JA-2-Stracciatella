@@ -310,9 +310,9 @@ BOOLEAN BeginAirRaid( )
 	s.bSide					= 1;
 	s.ubID					= MAX_NUM_SOLDIERS - 1;
 	s.attacker				= 0;
-	s.usAttackingWeapon		= __ITEM_18;
+	s.usAttackingWeapon		= __ITEM_33;
 	s.ubAttackingHand		= HANDPOS;
-	s.inv[HANDPOS].usItem	= __ITEM_18;
+	s.inv[HANDPOS].usItem	= __ITEM_33;
 	s.bLevel				= 1;
 	gpRaidSoldier = &s;
 
@@ -710,7 +710,7 @@ static void DoDive(void)
 			}
 		}
 
-		if ( gsNotLocatedYet && !( gTacticalStatus.uiFlags & INCOMBAT ) )
+		if ( gsNotLocatedYet && gTacticalStatus.uiFlags & INCOMBAT )
 		{
 			gsNotLocatedYet = FALSE;
 			LocateGridNo( gsDiveTargetLocation );
@@ -755,6 +755,17 @@ static void DoDive(void)
 			sGridNo = GETWORLDINDEXFROMWORLDCOORDS( gsDiveY, gsDiveX );
 			gpRaidSoldier->sGridNo = sGridNo;
 
+			if (giNumGridNosMovedThisTurn % 2 == 0)
+			{
+				char zBurstString[50];
+				// Pick sound file baed on how many bullets we are going to fire...
+				sprintf(zBurstString, SOUNDSDIR "/weapons/%s%d.wav",
+					GCM->getWeapon(__ITEM_33)->calibre->burstSoundString.c_str(),
+					2);
+
+				PlayJA2Sample(zBurstString, GCM->getWeapon(__ITEM_33)->ubAttackVolume / 2, 1, MIDDLEPAN);
+			}
+
 			if ( sOldGridNo != sGridNo )
 			{
 				gsNumGridNosMoved++;
@@ -779,7 +790,7 @@ static void DoDive(void)
 
 				if (GridNoOnVisibleWorldTile((INT16)(GETWORLDINDEXFROMWORLDCOORDS(sStrafeY, sStrafeX))))
 				{
-					if ( gsNotLocatedYet && !( gTacticalStatus.uiFlags & INCOMBAT ) )
+					if ( gsNotLocatedYet && gTacticalStatus.uiFlags & INCOMBAT )
 					{
 						gsNotLocatedYet = FALSE;
 						LocateGridNo( sGridNo );
@@ -857,17 +868,6 @@ static void DoDive(void)
 
 			}
 
-			if (giNumGridNosMovedThisTurn % 2 == 0)
-			{
-				char zBurstString[50];
-				// Pick sound file baed on how many bullets we are going to fire...
-				sprintf(zBurstString, SOUNDSDIR "/weapons/%s%d.wav",
-					GCM->getWeapon(gpRaidSoldier->usAttackingWeapon)->calibre->burstSoundString.c_str(),
-					1);
-
-				PlayJA2Sample(zBurstString, GCM->getWeapon(gpRaidSoldier->usAttackingWeapon)->ubAttackVolume, 1, MIDDLEPAN);
-			}
-
 			if ( giNumGridNosMovedThisTurn >= 6 )
 			{
 				if ( ( gTacticalStatus.uiFlags & INCOMBAT ) )
@@ -908,7 +908,7 @@ static void DoBombing(void)
 			}
 		}
 
-		if ( gsNotLocatedYet && !( gTacticalStatus.uiFlags & INCOMBAT ) )
+		if ( gsNotLocatedYet && gTacticalStatus.uiFlags & INCOMBAT )
 		{
 			gsNotLocatedYet = FALSE;
 			LocateGridNo( gsDiveTargetLocation );
@@ -972,7 +972,7 @@ static void DoBombing(void)
 
 					if ( GridNoOnVisibleWorldTile( (INT16)( GETWORLDINDEXFROMWORLDCOORDS( sStrafeY, sStrafeX ) ) ) )
 					{
-						if ( gsNotLocatedYet && !( gTacticalStatus.uiFlags & INCOMBAT ) )
+						if ( gsNotLocatedYet && gTacticalStatus.uiFlags & INCOMBAT )
 						{
 							gsNotLocatedYet = FALSE;
 							LocateGridNo( sGridNo );
