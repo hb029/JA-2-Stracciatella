@@ -2229,6 +2229,8 @@ BOOLEAN OKForSectorExit( INT8 bExitDirection, UINT16 usAdditionalData, UINT32 *p
 	// must have a selected soldier to be allowed to tactically traverse.
 	if (sel == NULL) return FALSE;
 
+	if (sel->bOppCnt > 0) return FALSE;
+
 	/*
 	//Exception code for the two sectors in San Mona that are separated by a cliff.  We want to allow strategic
 	//traversal, but NOT tactical traversal.  The only way to tactically go from D4 to D5 (or viceversa) is to enter
@@ -2284,7 +2286,11 @@ BOOLEAN OKForSectorExit( INT8 bExitDirection, UINT16 usAdditionalData, UINT32 *p
 
 			if ( SoldierOKForSectorExit( pSoldier, bExitDirection, usAdditionalData ) )
 			{
-				fAtLeastOneMercControllable++;
+				if (pSoldier->bOppCnt == 0)
+				{
+					// Opponents disable retreat
+					fAtLeastOneMercControllable++;
+				}
 
 				if (pSoldier == sel) fOnlySelectedGuy = TRUE;
 			}
