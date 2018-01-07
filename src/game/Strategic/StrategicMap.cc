@@ -1926,11 +1926,6 @@ void AllMercsHaveWalkedOffSector( )
 {
 	BOOLEAN fEnemiesInLoadedSector = FALSE;
 
-	if (InAirRaid())
-	{
-		EndAirRaid();
-	}
-
 	if( NumEnemiesInAnySector( gWorldSectorX, gWorldSectorY, gbWorldSectorZ ) )
 	{
 		fEnemiesInLoadedSector = TRUE;
@@ -3496,7 +3491,7 @@ BOOLEAN HandlePotentialBringUpAutoresolveToFinishBattle( )
 					}
 					else
 					{
-						//DoScreenIndependantMessageBox(gzLateLocalizedString[STR_LATE_39], MSG_BOX_FLAG_OK, MapScreenDefaultOkBoxCallback);
+						DoScreenIndependantMessageBox(gzLateLocalizedString[STR_LATE_39], MSG_BOX_FLAG_OK, MapScreenDefaultOkBoxCallback);
 					}
 
 					return( TRUE );
@@ -3576,6 +3571,12 @@ try
 
 
 	CheckForEndOfCombatMode( FALSE );
+
+	if (InAirRaid())
+	{
+		EndAirRaid();
+	}
+
 	EndTacticalBattleForEnemy();
 
 	// ATE: Change cursor to wait cursor for duration of frame.....
