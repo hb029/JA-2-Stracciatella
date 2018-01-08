@@ -89,6 +89,8 @@
 #include "slog/slog.h"
 #include "ContentManager.h"
 #include "GameInstance.h"
+#include "Action_Items.h"
+#include "Explosion_Control.h"
 
 
 static const INT16 sBasementEnterGridNos[] = { 13362, 13363, 13364, 13365, 13525, 13524 };
@@ -2172,10 +2174,6 @@ void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum
 				break;
 
 			case NPC_ACTION_SEX:
-				// Delete menu
-				//DeleteTalkingMenu( );
-				//gFadeOutDoneCallback = DoneFadeOutActionSex;
-				//FadeOutGameScreen( );
 				SetPendingNewScreen( SEX_SCREEN );
 				break;
 
@@ -2283,36 +2281,6 @@ unlock:
 						pDoor->fLocked = FALSE;
 					}
 				}
-				/*
-				// handle door opening here
-				{
-					STRUCTURE * pStructure;
-					pStructure = FindStructure( sGridNo, STRUCTURE_ANYDOOR );
-					if (pStructure)
-					{
-
-
-
-						pStructure->
-
-						if (pStructure->fFlags & STRUCTURE_OPEN)
-						{
-							// it's already open - this MIGHT be an error but probably not
-							// because we are basically just ensuring that the door is open
-						}
-						else
-						{
-							if (pStructure->fFlags & STRUCTURE_BASE_TILE)
-							{
-								HandleDoorChangeFromGridNo( NULL, sGridNo, FALSE );
-							}
-							else
-							{
-								HandleDoorChangeFromGridNo( NULL, pStructure->sBaseGridNo, FALSE );
-							}
-						}
-					}
-				}*/
 				break;
 			}
 
@@ -2532,6 +2500,29 @@ unlock:
 
 				// Initially assume none available
 				SetFactTrue( FACT_NO_GIRLS_AVAILABLE );
+				
+				{
+					OBJECTTYPE DoorCloser;
+
+					// close the doors
+					DoorCloser.bActionValue = ACTION_ITEM_CLOSE_DOOR;
+					PerformItemAction(12290, &DoorCloser); // Carla
+					PerformItemAction(13413, &DoorCloser); // Cindy
+					PerformItemAction(11173, &DoorCloser); // Bambi
+					PerformItemAction(10852, &DoorCloser); // Maria
+
+					// lock the doors
+					DoorCloser.bActionValue = ACTION_ITEM_UNLOCK_DOOR;
+					PerformItemAction(12290, &DoorCloser); // Carla
+					PerformItemAction(13413, &DoorCloser); // Cindy
+					PerformItemAction(11173, &DoorCloser); // Bambi
+					PerformItemAction(10852, &DoorCloser); // Maria
+					DoorCloser.bActionValue = ACTION_ITEM_TOGGLE_LOCK;
+					PerformItemAction(12290, &DoorCloser); // Carla
+					PerformItemAction(13413, &DoorCloser); // Cindy
+					PerformItemAction(11173, &DoorCloser); // Bambi
+					PerformItemAction(10852, &DoorCloser); // Maria
+				}
 
 				// Carla... available 66% of the time
 				if ( Random( 3 ) )

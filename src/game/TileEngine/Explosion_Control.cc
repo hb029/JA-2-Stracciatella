@@ -1861,7 +1861,7 @@ static BOOLEAN HookerInRoom(UINT8 ubRoom)
 	return FALSE;
 }
 
-static void PerformItemAction(INT16 sGridNo, OBJECTTYPE* pObj)
+void PerformItemAction(INT16 sGridNo, OBJECTTYPE* pObj)
 {
 	STRUCTURE * pStructure;
 
@@ -2015,9 +2015,9 @@ static void PerformItemAction(INT16 sGridNo, OBJECTTYPE* pObj)
 				{
 					if (tgt->sOldGridNo == sGridNo + DirectionInc(SOUTH))
 					{
-						gMercProfiles[ MADAME ].bNPCData2++;
+						gMercProfiles[ MADAME ].bNPCData2++; // note a merc on the guest list
 
-						SetFactTrue( FACT_PLAYER_USED_BROTHEL );
+						SetFactTrue( FACT_PLAYER_USED_BROTHEL ); // note the rebels are no more new to it
 						SetFactTrue( FACT_PLAYER_PASSED_GOON );
 
 						// If we for any reason trigger Madame's record 34 then we don't bother to do
@@ -2028,51 +2028,45 @@ static void PerformItemAction(INT16 sGridNo, OBJECTTYPE* pObj)
 
 						// Madame's quote about female mercs should therefore not be made on a timer
 
-						if ( gMercProfiles[ MADAME ].bNPCData2 > 2 )
-						{
-							// more than 2 entering brothel
-							TriggerNPCRecord( MADAME, 35 );
-							return;
-						}
-
-						if ( gMercProfiles[ MADAME ].bNPCData2 == gMercProfiles[ MADAME ].bNPCData )
+						gMercProfiles[MADAME].bNPCData--; // strike one from the invited list
+						if ( gMercProfiles[ MADAME ].bNPCData == 0)
 						{
 							// full # of mercs who paid have entered brothel
 							// have Billy block the way again
 							SetCustomizableTimerCallbackAndDelay( 2000, BillyBlocksDoorCallback, FALSE );
 							//TriggerNPCRecord( BILLY, 6 );
 						}
-						else if ( gMercProfiles[ MADAME ].bNPCData2 > gMercProfiles[ MADAME ].bNPCData )
+						if ( gMercProfiles[ MADAME ].bNPCData < 0 )
 						{
 							// more than full # of mercs who paid have entered brothel
 							// have Billy block the way again?
+							gMercProfiles[MADAME].bNPCData = 0;
 							if ( CheckFact( FACT_PLAYER_FORCED_WAY_INTO_BROTHEL, 0 ) )
 							{
 								// player already did this once!
-								TriggerNPCRecord( MADAME, 35 );
+								HandleNPCTriggerNPC(MADAME, 35, TRUE, TRIGGER_NPC);
 								return;
 							}
 							else
 							{
-								SetCustomizableTimerCallbackAndDelay( 2000, BillyBlocksDoorCallback, FALSE );
+								// once this is tolerated
+								HandleNPCTriggerNPC(MADAME, 34, TRUE, TRIGGER_NPC);
 								SetFactTrue( FACT_PLAYER_FORCED_WAY_INTO_BROTHEL );
-								TriggerNPCRecord( MADAME, 34 );
+								return;
 							}
 						}
 
 						if (gMercProfiles[tgt->ubProfile].bSex == FEMALE)
 						{
 							// woman walking into brothel
-							TriggerNPCRecordImmediately( MADAME, 33 );
+							HandleNPCTriggerNPC(MADAME, 33, TRUE, TRIGGER_NPC);
 						}
-
 					}
 					else
 					{
 						// someone wants to leave the brothel
 						TriggerNPCRecord( BILLY, 5 );
 					}
-
 				}
 
 			}
@@ -2083,12 +2077,16 @@ static void PerformItemAction(INT16 sGridNo, OBJECTTYPE* pObj)
 				const SOLDIERTYPE* const tgt = WhoIsThere2(sGridNo, 0);
 				if (tgt != NULL && tgt->bTeam == OUR_TEAM && tgt->sOldGridNo == sGridNo + DirectionInc(NORTH))
 				{
-					gMercProfiles[ MADAME ].bNPCData2--;
-					if ( gMercProfiles[ MADAME ].bNPCData2 == 0 )
+					if (gMercProfiles[MADAME].bNPCData2 == 1)
 					{
-						// reset paid #
-						gMercProfiles[ MADAME ].bNPCData = 0;
+						gMercProfiles[MADAME].bNPCData = 0; // reset paid number of guests
 					}
+
+					if (gMercProfiles[MADAME].bNPCData2 > 0) // ignore overnight stands
+					{
+						gMercProfiles[MADAME].bNPCData2--; // count down the guest list
+					}
+
 					// Billy should move back to block the door again
 					gsTempActionGridNo = sGridNo;
 					SetCustomizableTimerCallbackAndDelay( 1000, DelayedBillyTriggerToBlockOnExit, TRUE );
@@ -2126,76 +2124,73 @@ static void PerformItemAction(INT16 sGridNo, OBJECTTYPE* pObj)
 			pObj->fFlags &= (~OBJECT_DISABLED_BOMB);
 			break;
 		case ACTION_ITEM_SEX:
-			if ( ! (gTacticalStatus.uiFlags & INCOMBAT) )
+			if (gTacticalStatus.uiFlags & INCOMBAT) break;
+			else
 			{
 				OBJECTTYPE DoorCloser;
-				INT16		sTeleportSpot;
-				INT16		sDoorSpot;
-				UINT8		ubDirection;
+				INT16 sTeleportSpot;
+				INT16 sDoorSpot;
+				UINT8 ubDirection;
 
 				SOLDIERTYPE* const tgt = WhoIsThere2(sGridNo, 0);
-				if (tgt != NULL)
-					if (tgt->bTeam == OUR_TEAM)
-					{
-						UINT8 const room     = GetRoom(sGridNo);
-						UINT8 const old_room = GetRoom(tgt->sOldGridNo);
-						if (room != NO_ROOM && old_room != NO_ROOM && old_room != room)
-						{
-							// also require there to be a miniskirt civ in the room
-							if (HookerInRoom(room))
-							{
+				UINT8 const room = GetRoom(sGridNo);
+				UINT8 const old_room = GetRoom(tgt->sOldGridNo);
 
-								// stop the merc...
-								EVENT_StopMerc(tgt);
+				if (tgt == NULL) break;
+				if (tgt->bTeam != OUR_TEAM) break;
+				// there is just no audio for this kind of event
+				if (gMercProfiles[tgt->ubProfile].bSex == FEMALE) break;
+				if (room == NO_ROOM || old_room == NO_ROOM || old_room == room) break;
+				// also require there to be a miniskirt civ in the room
+				if (!HookerInRoom(room)) break;
 
-								switch( sGridNo )
-								{
-									case 13414:
-										sDoorSpot = 13413;
-										sTeleportSpot = 13413;
-										break;
-									case 11174:
-										sDoorSpot = 11173;
-										sTeleportSpot = 11173;
-										break;
-									case 12290:
-										sDoorSpot = 12290;
-										sTeleportSpot = 12291;
-										break;
+				// stop the merc...
+				EVENT_StopMerc(tgt);
 
-									default:
+				switch (sGridNo)
+				{
+				case 13414:
+					sDoorSpot = 13413;
+					sTeleportSpot = 13413;
+					break;
+				case 11174:
+					sDoorSpot = 11173;
+					sTeleportSpot = 11173;
+					break;
+				case 12290:
+					sDoorSpot = 12290;
+					sTeleportSpot = 12291;
+					break;
 
-										sDoorSpot = NOWHERE;
-										sTeleportSpot = NOWHERE;
+				default:
+
+					sDoorSpot = NOWHERE;
+					sTeleportSpot = NOWHERE;
 
 
-								}
+				}
 
-								if ( sDoorSpot != NOWHERE && sTeleportSpot != NOWHERE )
-								{
-									// close the door...
-									DoorCloser.bActionValue = ACTION_ITEM_CLOSE_DOOR;
-									PerformItemAction( sDoorSpot, &DoorCloser );
+				if (sDoorSpot != NOWHERE && sTeleportSpot != NOWHERE)
+				{
+					// close the door...
+					DoorCloser.bActionValue = ACTION_ITEM_CLOSE_DOOR;
+					PerformItemAction(sDoorSpot, &DoorCloser);
 
-									// have sex
-									HandleNPCDoAction( 0, NPC_ACTION_SEX, 0 );
+					// have sex
+					HandleNPCDoAction(0, NPC_ACTION_SEX, 0);
 
-									// move the merc outside of the room again
-									sTeleportSpot = FindGridNoFromSweetSpotWithStructData(tgt, STANDING, sTeleportSpot, 2, &ubDirection, FALSE);
-									ChangeSoldierState(tgt, STANDING, 0, TRUE);
-									TeleportSoldier(*tgt, sTeleportSpot, false);
+					// move the merc outside of the room again
+					sTeleportSpot = FindGridNoFromSweetSpotWithStructData(tgt, STANDING, sTeleportSpot, 2, &ubDirection, FALSE);
+					ChangeSoldierState(tgt, STANDING, 0, TRUE);
+					TeleportSoldier(*tgt, sTeleportSpot, false);
 
-									HandleMoraleEvent(tgt, MORALE_SEX, gWorldSectorX, gWorldSectorY, gbWorldSectorZ);
-									FatigueCharacter(*tgt);
-									FatigueCharacter(*tgt);
-									FatigueCharacter(*tgt);
-									FatigueCharacter(*tgt);
-									DirtyMercPanelInterface(tgt, DIRTYLEVEL1);
-								}
-							}
-						}
-						break;
-					}
+					HandleMoraleEvent(tgt, MORALE_SEX, gWorldSectorX, gWorldSectorY, gbWorldSectorZ);
+					FatigueCharacter(*tgt);
+					FatigueCharacter(*tgt);
+					FatigueCharacter(*tgt);
+					FatigueCharacter(*tgt);
+					DirtyMercPanelInterface(tgt, DIRTYLEVEL1);
+				}
 			}
 			break;
 		case ACTION_ITEM_REVEAL_ROOM:

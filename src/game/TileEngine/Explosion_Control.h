@@ -64,6 +64,7 @@ void InternalIgniteExplosion(SOLDIERTYPE* owner, INT16 sX, INT16 sY, INT16 sZ, I
 
 void SpreadEffect(INT16 sGridNo, UINT8 ubRadius, UINT16 usItem, SOLDIERTYPE* owner, BOOLEAN fSubsequent, INT8 bLevel, const SMOKEEFFECT* s);
 void SpreadEffectSmoke(const SMOKEEFFECT* s, BOOLEAN subsequent, INT8 level);
+void PerformItemAction(INT16 sGridNo, OBJECTTYPE* pObj);
 
 void DecayBombTimers( void );
 void SetOffBombsByFrequency(SOLDIERTYPE* s, INT8 bFrequency);
