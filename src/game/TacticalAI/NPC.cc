@@ -882,7 +882,9 @@ static UINT8 NPCConsiderReceivingItemFromMerc(UINT8 const ubNPC, UINT8 const ubM
 					if (GetProfile(ubMerc).bSex == FEMALE)
 					{
 						// say quote about not catering to women!
-						return UseQuote(pNPCQuoteInfoArray, ppResultQuoteInfo, pubQuoteNum, 5);
+						TalkingMenuDialogue(14);
+						// go through the list of services after refusing the money
+						return UseQuote(pNPCQuoteInfoArray, ppResultQuoteInfo, pubQuoteNum, 25);
 					}
 
 					switch (o->uiMoneyAmount)
@@ -891,6 +893,7 @@ static UINT8 NPCConsiderReceivingItemFromMerc(UINT8 const ubNPC, UINT8 const ubM
 						case 200: // Carla
 							if (!CheckFact(FACT_CARLA_AVAILABLE, 0)) goto madame_default;
 							gMercProfiles[MADAME].bNPCData += (INT8)(o->uiMoneyAmount / 100);
+							SetFactFalse(FACT_CARLA_AVAILABLE);
 							TriggerNPCRecord(MADAME, 16);
 							break;
 
@@ -898,6 +901,7 @@ static UINT8 NPCConsiderReceivingItemFromMerc(UINT8 const ubNPC, UINT8 const ubM
 						case 1000: // Cindy
 							if (!CheckFact(FACT_CINDY_AVAILABLE, 0)) goto madame_default;
 							gMercProfiles[MADAME].bNPCData += (INT8)(o->uiMoneyAmount / 500);
+							SetFactFalse(FACT_CINDY_AVAILABLE);
 							TriggerNPCRecord(MADAME, 17);
 							break;
 
@@ -905,6 +909,7 @@ static UINT8 NPCConsiderReceivingItemFromMerc(UINT8 const ubNPC, UINT8 const ubM
 						case 600: // Bambi
 							if (!CheckFact(FACT_BAMBI_AVAILABLE, 0)) goto madame_default;
 							gMercProfiles[MADAME].bNPCData += (INT8)(o->uiMoneyAmount / 300);
+							SetFactFalse(FACT_BAMBI_AVAILABLE);
 							TriggerNPCRecord(MADAME, 18);
 							break;
 
