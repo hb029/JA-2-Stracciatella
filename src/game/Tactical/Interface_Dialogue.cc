@@ -2250,15 +2250,19 @@ void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum
 			case NPC_ACTION_TRIGGER_LAYLA_13_14_OR_15:
 				if (CheckFact( FACT_CARLA_AVAILABLE, 0 ))
 				{
-					TriggerNPCRecord(MADAME, 13);
+					TalkingMenuDialogue(20);
 				}
-				else if (CheckFact( FACT_CINDY_AVAILABLE, 0))
+				if (CheckFact( FACT_CINDY_AVAILABLE, 0))
 				{
-					TriggerNPCRecord(MADAME, 14);
+					TalkingMenuDialogue(22);
 				}
-				else if (CheckFact( FACT_BAMBI_AVAILABLE, 0))
+				if (CheckFact( FACT_BAMBI_AVAILABLE, 0))
 				{
-					TriggerNPCRecord(MADAME, 15);
+					TalkingMenuDialogue(24);
+				}
+				if (CheckFact(FACT_MULTIPLE_MERCS_CLOSE, MADAME))
+				{
+					TalkingMenuDialogue(43);
 				}
 				break;
 
