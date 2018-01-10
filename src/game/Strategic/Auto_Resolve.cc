@@ -457,13 +457,16 @@ void EnterAutoResolveMode( UINT8 ubSectorX, UINT8 ubSectorY )
 	switch( gubEnemyEncounterCode )
 	{
 		case ENEMY_ENCOUNTER_CODE:
-			gpAR->ubPlayerDefenceAdvantage = 21; //Skewed to the player's advantage for convenience purposes.
+			gpAR->ubPlayerDefenceAdvantage = 20; // Attack gets an advantage
+			gpAR->ubEnemyDefenceAdvantage = 0;
 			break;
 		case ENEMY_INVASION_CODE:
 			gpAR->ubPlayerDefenceAdvantage = 0;
+			gpAR->ubEnemyDefenceAdvantage = 20; // Attack gets an advantage
 			break;
 		case CREATURE_ATTACK_CODE:
 			gpAR->ubPlayerDefenceAdvantage = 0;
+			gpAR->ubEnemyDefenceAdvantage = 0;
 			break;
 		default:
 			//shouldn't happen
@@ -2677,7 +2680,7 @@ static void CalculateAttackValues(void)
 		pSoldier = pCell->pSoldier;
 		if( !pSoldier->bLife )
 			continue;
-		pCell->usAttack =		pSoldier->bStrength +
+		pCell->usAttack =						pSoldier->bStrength +
 												pSoldier->bDexterity +
 												pSoldier->bWisdom +
 												pSoldier->bMarksmanship +
@@ -2690,8 +2693,8 @@ static void CalculateAttackValues(void)
 			pCell->usAttack = (UINT16)(pCell->usAttack + (1000 - pCell->usAttack) / 4);
 		}
 		usBreathStrengthPercentage = 100 - ( 100 - pCell->pSoldier->bBreathMax ) / 3;
-		pCell->usAttack =		pCell->usAttack * usBreathStrengthPercentage / 100;
-		pCell->usDefence =	pSoldier->bAgility +
+		pCell->usAttack =						pCell->usAttack * usBreathStrengthPercentage / 100;
+		pCell->usDefence =						pSoldier->bAgility +
 												pSoldier->bWisdom +
 												pSoldier->bBreathMax +
 												pSoldier->bMedical +
@@ -2729,13 +2732,13 @@ static void CalculateAttackValues(void)
 	{
 		pCell = &gpCivs[ i ];
 		pSoldier = pCell->pSoldier;
-		pCell->usAttack =		pSoldier->bStrength +
+		pCell->usAttack =						pSoldier->bStrength +
 												pSoldier->bDexterity +
 												pSoldier->bWisdom +
 												pSoldier->bMarksmanship +
 												pSoldier->bMorale;
-		pCell->usAttack =		pCell->usAttack * pSoldier->bBreath / 100;
-		pCell->usDefence =	pSoldier->bAgility +
+		pCell->usAttack =						pCell->usAttack * pSoldier->bBreath / 100;
+		pCell->usDefence =						pSoldier->bAgility +
 												pSoldier->bWisdom +
 												pSoldier->bBreathMax +
 												pSoldier->bMedical +
@@ -2776,13 +2779,13 @@ static void CalculateAttackValues(void)
 	{
 		pCell = &gpEnemies[ i ];
 		pSoldier = pCell->pSoldier;
-		pCell->usAttack =		pSoldier->bStrength +
+		pCell->usAttack =						pSoldier->bStrength +
 												pSoldier->bDexterity +
 												pSoldier->bWisdom +
 												pSoldier->bMarksmanship +
 												pSoldier->bMorale;
-		pCell->usAttack =		pCell->usAttack * pSoldier->bBreath / 100;
-		pCell->usDefence =	pSoldier->bAgility +
+		pCell->usAttack =						pCell->usAttack * pSoldier->bBreath / 100;
+		pCell->usDefence =						pSoldier->bAgility +
 												pSoldier->bWisdom +
 												pSoldier->bBreathMax +
 												pSoldier->bMedical +
