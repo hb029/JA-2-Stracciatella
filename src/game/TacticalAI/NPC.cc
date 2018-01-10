@@ -887,43 +887,56 @@ static UINT8 NPCConsiderReceivingItemFromMerc(UINT8 const ubNPC, UINT8 const ubM
 						return UseQuote(pNPCQuoteInfoArray, ppResultQuoteInfo, pubQuoteNum, 25);
 					}
 
+					SetFactTrue(FACT_PLAYER_PAID_RIGHT_AMOUNT);
+					SetFactTrue(FACT_PLAYER_PAID_FOR_TWO_IN_BROTHEL);
 					switch (o->uiMoneyAmount)
 					{
 						case 100:
+							SetFactFalse(FACT_PLAYER_PAID_FOR_TWO_IN_BROTHEL);
 						case 200: // Carla
 							if (!CheckFact(FACT_CARLA_AVAILABLE, 0)) goto madame_default;
-							gMercProfiles[MADAME].bNPCData += (INT8)(o->uiMoneyAmount / 100);
-							SetFactFalse(FACT_CARLA_AVAILABLE);
 							TriggerNPCRecord(MADAME, 16);
+							SetFactFalse(FACT_CARLA_AVAILABLE);
+							SetFactTrue(FACT_NO_GIRLS_AVAILABLE);
+							gMercProfiles[MADAME].bNPCData += (INT8)(o->uiMoneyAmount / 100);
 							break;
 
 						case 500:
+							SetFactFalse(FACT_PLAYER_PAID_FOR_TWO_IN_BROTHEL);
 						case 1000: // Cindy
 							if (!CheckFact(FACT_CINDY_AVAILABLE, 0)) goto madame_default;
-							gMercProfiles[MADAME].bNPCData += (INT8)(o->uiMoneyAmount / 500);
-							SetFactFalse(FACT_CINDY_AVAILABLE);
 							TriggerNPCRecord(MADAME, 17);
+							SetFactFalse(FACT_CINDY_AVAILABLE);
+							SetFactTrue(FACT_NO_GIRLS_AVAILABLE);
+							gMercProfiles[MADAME].bNPCData += (INT8)(o->uiMoneyAmount / 500);
 							break;
 
 						case 300:
+							SetFactFalse(FACT_PLAYER_PAID_FOR_TWO_IN_BROTHEL);
 						case 600: // Bambi
 							if (!CheckFact(FACT_BAMBI_AVAILABLE, 0)) goto madame_default;
-							gMercProfiles[MADAME].bNPCData += (INT8)(o->uiMoneyAmount / 300);
-							SetFactFalse(FACT_BAMBI_AVAILABLE);
 							TriggerNPCRecord(MADAME, 18);
+							SetFactFalse(FACT_BAMBI_AVAILABLE);
+							SetFactTrue(FACT_NO_GIRLS_AVAILABLE);
+							gMercProfiles[MADAME].bNPCData += (INT8)(o->uiMoneyAmount / 300);
 							break;
 
 						case 400:
+							SetFactFalse(FACT_PLAYER_PAID_FOR_TWO_IN_BROTHEL);
 						case 800: // Maria
 							if (gubQuest[QUEST_RESCUE_MARIA] != QUESTINPROGRESS) goto madame_default;
-							gMercProfiles[MADAME].bNPCData += (INT8)(o->uiMoneyAmount / 400);
 							TriggerNPCRecord(MADAME, 19);
+							SetFactFalse(FACT_BAMBI_AVAILABLE);
+							SetFactTrue(FACT_NO_GIRLS_AVAILABLE);
+							gMercProfiles[MADAME].bNPCData += (INT8)(o->uiMoneyAmount / 400);
 							break;
 
 						default:
 madame_default:
 							// play quotes 39-42 (plus 44 if quest 22 on) plus 43 if >1 PC
 							// and return money
+							SetFactFalse(FACT_PLAYER_PAID_FOR_TWO_IN_BROTHEL);
+							SetFactFalse(FACT_PLAYER_PAID_RIGHT_AMOUNT);
 							return UseQuote(pNPCQuoteInfoArray, ppResultQuoteInfo, pubQuoteNum, 25);
 					}
 				}

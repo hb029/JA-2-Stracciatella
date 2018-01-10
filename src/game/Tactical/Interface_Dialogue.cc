@@ -2246,21 +2246,43 @@ void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum
 				break;
 
 			case NPC_ACTION_TRIGGER_LAYLA_13_14_OR_15:
-				if (CheckFact( FACT_CARLA_AVAILABLE, 0 ))
+				if (CheckFact(FACT_PLAYER_USED_BROTHEL, 0))
 				{
-					TalkingMenuDialogue(20);
+					if (CheckFact(FACT_CARLA_AVAILABLE, 0))
+					{
+						TalkingMenuDialogue(40);
+					}
+					if (CheckFact(FACT_CINDY_AVAILABLE, 0))
+					{
+						TalkingMenuDialogue(41);
+					}
+					if (CheckFact(FACT_BAMBI_AVAILABLE, 0))
+					{
+						TalkingMenuDialogue(42);
+					}
 				}
-				if (CheckFact( FACT_CINDY_AVAILABLE, 0))
+				else
 				{
-					TalkingMenuDialogue(22);
-				}
-				if (CheckFact( FACT_BAMBI_AVAILABLE, 0))
-				{
-					TalkingMenuDialogue(24);
+					if (CheckFact(FACT_CARLA_AVAILABLE, 0))
+					{
+						TalkingMenuDialogue(20);
+					}
+					if (CheckFact(FACT_CINDY_AVAILABLE, 0))
+					{
+						TalkingMenuDialogue(22);
+					}
+					if (CheckFact(FACT_BAMBI_AVAILABLE, 0))
+					{
+						TalkingMenuDialogue(24);
+					}
 				}
 				if (CheckFact(FACT_MULTIPLE_MERCS_CLOSE, MADAME))
 				{
 					TalkingMenuDialogue(43);
+				}
+				if (gubQuest[QUEST_RESCUE_MARIA] == QUESTINPROGRESS)
+				{
+					TalkingMenuDialogue(44);
 				}
 				break;
 
@@ -2498,31 +2520,22 @@ unlock:
 
 			case NPC_ACTION_SET_GIRLS_AVAILABLE:
 
-				// Initially assume none available
-				SetFactTrue( FACT_NO_GIRLS_AVAILABLE );
-				
+				// Is the brothel still busy with the mercs?
+				if (gMercProfiles[MADAME].bNPCData2 > 0)
 				{
-					OBJECTTYPE DoorCloser;
-
-					// close the doors
-					DoorCloser.bActionValue = ACTION_ITEM_CLOSE_DOOR;
-					PerformItemAction(12290, &DoorCloser); // Carla
-					PerformItemAction(13413, &DoorCloser); // Cindy
-					PerformItemAction(11173, &DoorCloser); // Bambi
-					PerformItemAction(10852, &DoorCloser); // Maria
-
-					// lock the doors
-					DoorCloser.bActionValue = ACTION_ITEM_UNLOCK_DOOR;
-					PerformItemAction(12290, &DoorCloser); // Carla
-					PerformItemAction(13413, &DoorCloser); // Cindy
-					PerformItemAction(11173, &DoorCloser); // Bambi
-					PerformItemAction(10852, &DoorCloser); // Maria
-					DoorCloser.bActionValue = ACTION_ITEM_TOGGLE_LOCK;
-					PerformItemAction(12290, &DoorCloser); // Carla
-					PerformItemAction(13413, &DoorCloser); // Cindy
-					PerformItemAction(11173, &DoorCloser); // Bambi
-					PerformItemAction(10852, &DoorCloser); // Maria
+					TalkingMenuDialogue(37);
+					break;
 				}
+				
+				if (gMercProfiles[MADAME].bNPCData > 0)
+				{
+					TalkingMenuDialogue(34);
+					TriggerNPCRecord(BILLY, 5);
+					break;
+				}
+
+				// Initially assume none available
+				SetFactTrue(FACT_NO_GIRLS_AVAILABLE);
 
 				// Carla... available 66% of the time
 				if ( Random( 3 ) )
@@ -2554,6 +2567,28 @@ unlock:
 				{
 					SetFactFalse( FACT_BAMBI_AVAILABLE );
 				}
+
+				OBJECTTYPE DoorCloser;
+
+				// close the doors
+				DoorCloser.bActionValue = ACTION_ITEM_CLOSE_DOOR;
+				PerformItemAction(12290, &DoorCloser);
+				PerformItemAction(13413, &DoorCloser);
+				PerformItemAction(11173, &DoorCloser);
+				PerformItemAction(10852, &DoorCloser);
+
+				DoorCloser.bActionValue = ACTION_ITEM_UNLOCK_DOOR;
+				PerformItemAction(12290, &DoorCloser);
+				PerformItemAction(13413, &DoorCloser);
+				PerformItemAction(11173, &DoorCloser);
+				PerformItemAction(10852, &DoorCloser);
+
+				DoorCloser.bActionValue = ACTION_ITEM_TOGGLE_LOCK;
+				PerformItemAction(12290, &DoorCloser);
+				PerformItemAction(13413, &DoorCloser);
+				PerformItemAction(11173, &DoorCloser);
+				PerformItemAction(10852, &DoorCloser);
+
 				break;
 
 			case NPC_ACTION_SET_DELAY_TILL_GIRLS_AVAILABLE:

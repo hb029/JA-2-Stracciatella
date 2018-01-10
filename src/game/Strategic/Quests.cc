@@ -787,6 +787,7 @@ BOOLEAN CheckFact(Fact const usFact, UINT8 const ubProfileID)
 			break;
 
 		case FACT_PLAYER_PAID_FOR_TWO_IN_BROTHEL:
+			if (!CheckFact(FACT_MULTIPLE_MERCS_CLOSE, MADAME)) gubFact[usFact] = FALSE; break;
 			gubFact[usFact] = (gMercProfiles[ MADAME ].bNPCData > 1);
 			break;
 
@@ -1144,8 +1145,8 @@ void InternalEndQuest( UINT8 ubQuest, INT16 sSectorX, INT16 sSectorY, BOOLEAN fU
 	{
 		// cheap hack to try to prevent Madame Layla from thinking that you are
 		// still in the brothel with Maria...
-		gMercProfiles[ MADAME ].bNPCData = 0;
-		gMercProfiles[ MADAME ].bNPCData2 = 0;
+		gMercProfiles[ MADAME ].bNPCData = 0; // Payment counter
+		gMercProfiles[ MADAME ].bNPCData2 = 0; // Entrance counter
 	}
 }
 
