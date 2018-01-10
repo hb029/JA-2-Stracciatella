@@ -53,6 +53,7 @@
 #include "Items.h"
 #include "Air_Raid.h"
 #include "Strategic_Mines.h"
+#include "Assignments.h"
 
 
 // the delay for a group about to arrive
@@ -1292,6 +1293,9 @@ void GroupArrivedAtSector(GROUP& g, BOOLEAN const check_for_battle, BOOLEAN cons
 				/* ATE: Check if this sector is currently loaded, if so, add them to the
 				 * tactical engine */
 				if (here) UpdateMercInSector(s, x, y, z);
+
+				// Apply fatigue for next hour
+				SetTimeOfAssignmentChangeForMerc(&s);
 			}
 
 			// If there's anybody in the group
