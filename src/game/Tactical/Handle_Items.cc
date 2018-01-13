@@ -2520,8 +2520,7 @@ void SoldierGiveItemFromAnimation( SOLDIERTYPE *pSoldier )
 
 	// OK, disengage buddy
 	pSoldier->uiStatusFlags &= (~SOLDIER_ENGAGEDINACTION );
-	pTSoldier->uiStatusFlags &= (~SOLDIER_ENGAGEDINACTION );
-
+	if (pTSoldier) pTSoldier->uiStatusFlags &= (~SOLDIER_ENGAGEDINACTION );
 }
 
 

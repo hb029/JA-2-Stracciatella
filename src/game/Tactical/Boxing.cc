@@ -64,7 +64,7 @@ void ExitBoxing(void)
 			s->bUnderFire   = 0;
 
 			// if necessary, revive boxer so he can leave ring
-			if (s->bLife > 0 && (s->bLife < OKLIFE || s->bBreath < OKBREATH))
+			if (s->bTeam == OUR_TEAM)
 			{
 				s->bLife = __max(OKLIFE * 2, s->bLife);
 				s->bBleeding = 0;
@@ -73,6 +73,15 @@ void ExitBoxing(void)
 					// deduct -ve BPs to grant some BPs back (properly)
 					DeductPoints(s, 0, -100 * (100 - s->bBreath));
 				}
+				BeginSoldierGetup(s);
+			}
+			else if (s->bLife > 0 && (s->bLife < OKLIFE || s->bBreath < OKBREATH))
+			{
+				// Ressurect survivors 100% for the sector might be loaded until next fight
+				s->bLife = s->bLifeMax;
+				s->bBleeding = 0;
+				s->bBreath = s->bBreathMax;
+				s->sBreathRed = 0;
 				BeginSoldierGetup(s);
 			}
 		}
