@@ -2079,6 +2079,7 @@ void PerformItemAction(INT16 sGridNo, OBJECTTYPE* pObj)
 					if (gMercProfiles[MADAME].bNPCData2 < 0)
 					{
 						gMercProfiles[MADAME].bNPCData2 = 0;
+						gMercProfiles[MADAME].bNPCData = 0;
 						HandleNPCTriggerNPC(MADAME, 34, TRUE, TRIGGER_NPC);
 						SetFactTrue(FACT_PLAYER_FORCED_WAY_INTO_BROTHEL);
 					}
