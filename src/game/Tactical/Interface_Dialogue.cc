@@ -883,7 +883,7 @@ static void TalkPanelBaseRegionClickCallback(MOUSE_REGION* pRegion, INT32 iReaso
 		if (gTalkPanel.face->fTalking)
 		{
 			// Stop speech, cancel
-			InternalShutupaYoFace(gTalkPanel.face, TRUE);
+			InternalShutupaYoFace(gTalkPanel.face, FALSE);
 
 			fLButtonDown = FALSE;
 		}
@@ -4710,7 +4710,7 @@ static void TextRegionClickCallback(MOUSE_REGION* pRegion, INT32 iReason)
 
 	if (iReason & MSYS_CALLBACK_REASON_LBUTTON_UP && fLButtonDown )
 	{
-		InternalShutupaYoFace(gTalkPanel.face, TRUE);
+		InternalShutupaYoFace(gTalkPanel.face, FALSE);
 	}
 	else if (iReason & MSYS_CALLBACK_REASON_LOST_MOUSE )
 	{
