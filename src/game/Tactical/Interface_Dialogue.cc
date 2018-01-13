@@ -2914,6 +2914,10 @@ unlock:
 
 					if (pSoldier2)
 					{
+						// Lock the UI for the handing over, so the target does not run away
+						guiPendingOverrideEvent = LA_BEGINUIOURTURNLOCK;
+						HandleTacticalUI();
+
 						bMoneySlot = FindObjClass( pSoldier, IC_MONEY );
 						bEmptySlot = FindObj( pSoldier, NOTHING );
 
