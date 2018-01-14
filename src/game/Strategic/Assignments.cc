@@ -4328,8 +4328,7 @@ static void RemoveMercMenuBtnCallback(MOUSE_REGION* pRegion, INT32 iReason)
 	INT32 iValue = -1;
 	SOLDIERTYPE * pSoldier = NULL;
 
-
-	pSoldier = GetSelectedAssignSoldier( FALSE );
+	pSoldier = GetSelectedInfoChar();
 
 	iValue = MSYS_GetRegionUserData( pRegion, 0 );
 
