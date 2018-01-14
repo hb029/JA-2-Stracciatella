@@ -229,19 +229,6 @@ void MercArrivesCallback(SOLDIERTYPE& s)
 {
 	UINT32 uiTimeOfPost;
 
-	if (!DidGameJustStart() && g_merc_arrive_sector == START_SECTOR)
-	{
-		// Mercs arriving in start sector. This sector has been deemed as the always
-		// safe sector. Seeing we don't support entry into a hostile sector (except
-		// for the beginning), we will nuke any enemies in this sector first.
-		if (gWorldSectorX != SECTORX(START_SECTOR) ||
-			gWorldSectorY != SECTORY(START_SECTOR) ||
-			gbWorldSectorZ != 0)
-		{
-			EliminateAllEnemies(SECTORX(g_merc_arrive_sector), SECTORY(g_merc_arrive_sector));
-		}
-	}
-
 	// This will update ANY soldiers currently schedules to arrive too
 	CheckForValidArrivalSector( );
 
