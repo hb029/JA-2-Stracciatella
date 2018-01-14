@@ -3583,6 +3583,9 @@ try
 		EndAirRaid();
 	}
 
+	// End the AI pause as time will freeze on unloading sector
+	UnPauseAI();
+
 	EndTacticalBattleForEnemy();
 
 	// ATE: Change cursor to wait cursor for duration of frame.....
