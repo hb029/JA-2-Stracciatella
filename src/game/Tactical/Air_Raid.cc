@@ -219,6 +219,7 @@ BOOLEAN BeginAirRaid( )
 	// First remove scheduled flag...
 	gfAirRaidScheduled = FALSE;
 	gubAirRaidMode = AIR_RAID_PENDING;
+	gbNumDives = 0;
 
 	if (WillAirRaidBeStopped(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY))
 	{
@@ -318,7 +319,6 @@ BOOLEAN BeginAirRaid( )
 
 	guiRaidLastUpdate = GetJA2Clock( );
 
-	gbNumDives = 0;
 	gfAirRaidHasHadTurn = FALSE;
 
 	SOLDIERTYPE& s = GetMan(MAX_NUM_SOLDIERS - 1);
@@ -1450,6 +1450,11 @@ void EndAirRaid( )
 
 			SetTeamStatusGreen(MILITIA_TEAM);
 			SetTeamStatusGreen(CIV_TEAM);
+			gubEnemyEncounterCode = NO_ENCOUNTER_CODE;
+		}
+		else
+		{
+			gubEnemyEncounterCode = ENEMY_INVASION_CODE;
 		}
 	}
 
@@ -1465,7 +1470,6 @@ void EndAirRaid( )
 	gfHaveTBBatton = FALSE;
 	gsNotLocatedYet = FALSE;
 	giNumGridNosMovedThisTurn = 0;
-	gubEnemyEncounterCode = NO_ENCOUNTER_CODE;
 
 	SLOGD(DEBUG_TAG_AIRRAID, "Ending Air Raid." );
 }
@@ -1581,7 +1585,7 @@ void ChopperAttackSector(UINT8 ubSectorX, UINT8 ubSectorY, INT8 bIntensity)
 		SLOGD(DEBUG_TAG_AIRRAID, "ChopperAttackSector: Militia abandoned");
 	}
 
-	while (ubCasualties--)
+	do
 	{
 		// Kill lowly soldiers first
 		if (pSectorInfo->ubNumberOfCivsAtLevel[GREEN_MILITIA] > 0)
@@ -1602,12 +1606,20 @@ void ChopperAttackSector(UINT8 ubSectorX, UINT8 ubSectorY, INT8 bIntensity)
 			StrategicRemoveMilitiaFromSector(ubSectorX, ubSectorY, ELITE_MILITIA, 1);
 			continue;
 		}
-	}
+		break;
+	} while (--ubCasualties);
 
 	if (ubCasualties > 0)
 	{
 		SLOGD(DEBUG_TAG_AIRRAID, "ChopperAttackSector: %d Civilians killed", ubCasualties);
-		DecrementTownLoyalty(bTownId, ubCasualties * LOYALTY_PENALTY_JOEY_KILLED);
+		while (ubCasualties--)
+		{
+			HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
+			HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
+			HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
+			HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
+			HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
+		}
 	}
 }
 

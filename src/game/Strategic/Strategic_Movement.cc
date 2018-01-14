@@ -1861,7 +1861,16 @@ static void InitiateGroupMovementToNextSector(GROUP* pGroup)
 	{
 		UINT8 const sector = SECTOR(pGroup->ubNextX, pGroup->ubNextY);
 		UINT8 const ubTownId = GetTownIdForSector(sector);
-		INT8 const mine = GetMineSectorForTown(ubTownId);
+		BOOLEAN fPlayerMined = FALSE;
+		INT16 const mine = GetMineSectorForTown(ubTownId);
+		if (mine != -1)
+		{
+			INT8 const bMineId = GetMineIndexForSector(STRATEGIC_INDEX_TO_SECTOR_INFO(mine));
+			if (PlayerControlsMine(bMineId) && !StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(sector)].fEnemyControlled)
+			{
+				fPlayerMined = TRUE;
+			}
+		}
 
 		INT8 bIntensity = pGroup->ubGroupSize / 4 + Random(gGameOptions.ubDifficultyLevel);
 		UINT8 ubNumMinsFromCurrentTime = pGroup->uiTraverseTime;
@@ -1876,7 +1885,7 @@ static void InitiateGroupMovementToNextSector(GROUP* pGroup)
 
 		// Attack surface sectors of mining towns so the loyalty impact of air-force terror matters
 		if (pGroup->ubSectorZ == 0 &&
-			PlayerControlsMine(mine))
+			fPlayerMined)
 		{
 			AIR_RAID_DEFINITION	AirRaidDef;
 
@@ -1884,7 +1893,6 @@ static void InitiateGroupMovementToNextSector(GROUP* pGroup)
 			AirRaidDef.sSectorY = pGroup->ubNextY;
 			AirRaidDef.sSectorZ = 0;
 			AirRaidDef.bIntensity = bIntensity;
-			AirRaidDef.uiFlags = AIR_RAID_BEGINNING_GAME;
 			AirRaidDef.ubNumMinsFromCurrentTime = ubNumMinsFromCurrentTime;
 
 			ScheduleAirRaid(&AirRaidDef);

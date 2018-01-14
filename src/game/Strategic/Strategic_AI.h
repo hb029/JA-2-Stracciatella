@@ -71,6 +71,7 @@ enum
 	EAST_GRUMM_DEFENCE,	//The most-industrial town in Arulco (more mine income)
 	WEST_GRUMM_DEFENCE,	//The most-industrial town in Arulco (more mine income)
 	GRUMM_MINE,
+	OMERTA_WELCOME_WAGON,//Small force that greets the player upon arrival in game.
 	BALIME_DEFENCE,			//Rich town, paved roads, close to Meduna (in queen's favor)
 	TIXA_PRISON,				//Prison, well defended, but no point in retaking
 	TIXA_SAMSITE,				//The central-most sam site (important for queen to keep)

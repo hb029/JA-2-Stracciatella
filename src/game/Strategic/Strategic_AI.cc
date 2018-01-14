@@ -706,6 +706,10 @@ void InitStrategicAI()
 			case SANMONA_SMALL:
 				start_pop = 0; // Not appropriate until Kingpin is killed.
 				break;
+
+			case OMERTA_WELCOME_WAGON:
+				start_pop = 0;
+				break;
 		}
 
 		if (start_pop != 0)
