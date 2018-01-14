@@ -787,7 +787,7 @@ void ExecuteOverhead(void)
 						if((pSoldier->ubProfile == DARREN)
 							&& (pSoldier->sFinalDestination == pSoldier->sGridNo)
 							&& (pSoldier->usAnimState == STANDING)
-							&& (pSoldier->ubPendingAction == MERC_GIVEITEM))
+							&& (pSoldier->ubPendingAction != MERC_GIVEITEM))
 						{
 							soldier->handlePendingAction(gTacticalStatus.uiFlags & INCOMBAT);
 						}
