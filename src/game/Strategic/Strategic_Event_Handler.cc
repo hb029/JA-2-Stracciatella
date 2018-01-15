@@ -137,8 +137,10 @@ void BobbyRayPurchaseEventCallback(const UINT8 ubOrderID)
 	{
 		uiChanceOfTheft = 0;
 	}
-	else if (CheckFact(FACT_PABLOS_BRIBED, 0))
+	else if (CheckFact(FACT_PABLO_BRIBED, 0))
 	{
+		SetFactFalse(FACT_PABLOS_BRIBED);
+		
 		// Since Pacos has some money, reduce record of # of shipments since last bribed...
 		ubShipmentsSinceNoBribes /= 2;
 		uiChanceOfTheft = 0;

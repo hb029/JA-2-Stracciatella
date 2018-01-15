@@ -1067,7 +1067,7 @@ BOOLEAN CheckFact(Fact const usFact, UINT8 const ubProfileID)
 			break;
 
 		case FACT_PABLO_BRIBED:
-			gubFact[usFact] = !CheckFact( FACT_PABLOS_BRIBED, ubProfileID );
+			gubFact[usFact] = CheckFact( FACT_PABLOS_BRIBED, ubProfileID ) && (GetWorldDay() <= gMercProfiles[PABLO].bNPCData || gMercProfiles[PABLO].bMercStatus == MERC_IS_DEAD);
 			break;
 
 		case FACT_VEHICLE_PRESENT:

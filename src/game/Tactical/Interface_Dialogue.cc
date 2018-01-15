@@ -2024,6 +2024,9 @@ void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum
 				break;
 			}
 
+			case NPC_ACTION_SET_PABLO_BRIBE_DELAY:
+				gMercProfiles[PABLO].bNPCData = GetWorldDay() + 4;
+
 			case NPC_ACTION_THREATENINGLY_RAISE_GUN:
 			{
 				// Get pointer for NPC
