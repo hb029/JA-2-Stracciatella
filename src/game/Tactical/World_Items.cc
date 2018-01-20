@@ -304,7 +304,7 @@ void LoadWorldItemsFromMap(HWFILE const f)
 		if (!gfEditMode)
 		{
 			// Check for matching item existance modes and only add if there is a match
-			if (wi.usFlags & (gGameOptions.fSciFi ? WORLD_ITEM_SCIFI_ONLY : WORLD_ITEM_REALISTIC_ONLY)) continue;
+			if (wi.usFlags & (gGameOptions.fSciFi ? WORLD_ITEM_REALISTIC_ONLY : WORLD_ITEM_SCIFI_ONLY)) continue;
 
 			if (!gGameOptions.fGunNut)
 			{
@@ -323,7 +323,7 @@ void LoadWorldItemsFromMap(HWFILE const f)
 						o.usItem         = replacement->getItemIndex();
 						o.ubGunShotsLeft = new_ammo;
 				}
-				else if (mag && mag->isInBigGunList())
+				if (mag && mag->isInBigGunList())
 				{
 					const MagazineModel *replacement = GCM->getMagazineByName(mag->getStandardReplacement());
 
