@@ -3788,6 +3788,8 @@ action_punch_pc:
 				{
 					TriggerNPCRecord( KINGPIN, 15 );
 				}
+				guiPendingOverrideEvent = LA_ENDUIOUTURNLOCK;
+				HandleTacticalUI();
 				break;
 
 			case NPC_ACTION_ADD_RAT:
