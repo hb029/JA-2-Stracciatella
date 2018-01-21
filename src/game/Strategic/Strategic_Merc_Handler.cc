@@ -309,8 +309,8 @@ void MercDailyUpdate()
 		// if merc is currently unavailable
 		if (p.uiDayBecomesAvailable > 0)
 		{
-			if (p.uiDayBecomesAvailable-- == 0 &&    // Check to see if the merc has become available
-					p.bMercStatus != MERC_FIRED_AS_A_POW) // if the merc CAN become ready
+			if (--p.uiDayBecomesAvailable == 0 &&		// Check to see if the merc has become available
+				p.bMercStatus != MERC_FIRED_AS_A_POW)	// if the merc CAN become ready
 			{
 				p.bMercStatus = MERC_OK;
 
