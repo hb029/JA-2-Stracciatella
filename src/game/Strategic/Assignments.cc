@@ -6518,10 +6518,9 @@ bool PlayerSoldierTooTiredToTravel(SOLDIERTYPE& s)
 	{ // Asleep, and can't be awakened?
 		if (!CanCharacterBeAwakened(&s, FALSE)) return true;
 	}
-	else
-	{ // If awake, but so tired they can't move/drive anymore
-		if (s.bBreathMax < BREATHMAX_GOTTA_STOP_MOVING) return true;
-	}
+	
+	// If awake, but so tired they can't move/drive anymore
+	if (s.bBreathMax < BREATHMAX_GOTTA_STOP_MOVING) return true;
 
 	return false;
 }
