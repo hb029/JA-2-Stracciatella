@@ -1537,8 +1537,6 @@ BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY)
 
 	if (PreRandom(100) < ubChance)
 	{
-		HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_BATTLE_WON, sSectorX, sSectorY, 0);
-
 		SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: return true");
 		return(TRUE);
 	}
