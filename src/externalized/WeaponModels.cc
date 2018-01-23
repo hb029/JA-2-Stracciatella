@@ -599,6 +599,7 @@ WeaponModel* WeaponModel::deserialize(JsonObjectReader &obj,
 	if(obj.getOptionalBool("thrown"))
 	{
 		wep->usItemClass = IC_THROWN;
+		wep->ubCursor = TOSSCURS;
 	}
 
 	wep->fFlags |= wep->deserializeFlags(obj);
