@@ -1531,12 +1531,12 @@ static void HandleModNone(UINT32 const key, UIEventKind* const new_event)
 
 		case SDLK_END:
 		{
-			SOLDIERTYPE* const sel = GetSelectedMan();
-			if (sel && CheckForMercContMove(sel))
-			{
-				ContinueMercMovement(sel);
-				ErasePath();
-			}
+			//SOLDIERTYPE* const sel = GetSelectedMan();
+			//if (sel && CheckForMercContMove(sel))
+			//{
+			//	ContinueMercMovement(sel);
+			//	ErasePath();
+			//}
 			break;
 		}
 
