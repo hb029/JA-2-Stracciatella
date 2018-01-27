@@ -1406,7 +1406,7 @@ void GroupArrivedAtSector(GROUP& g, BOOLEAN const check_for_battle, BOOLEAN cons
 					GROUP& g = *i;
 					if (!(g.uiFlags & GROUPFLAG_GROUP_ARRIVED_SIMULTANEOUSLY)) continue;
 					--gubNumGroupsArrivedSimultaneously;
-					HandleNonCombatGroupArrival(g, false, false);
+					HandleNonCombatGroupArrival(g, false, true);
 					if (gubNumGroupsArrivedSimultaneously <= 0) break;
 				}
 			}
