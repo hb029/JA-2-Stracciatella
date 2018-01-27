@@ -211,6 +211,7 @@ void ScheduleAirRaid(AIR_RAID_DEFINITION* pAirRaidDef)
 }
 
 void ChopperAttackSector(UINT8 ubSectorX, UINT8 ubSectorY, INT8 bIntensity);
+static void SetTeamStatusRed(INT8 team);
 
 BOOLEAN BeginAirRaid( )
 {
@@ -271,6 +272,9 @@ BOOLEAN BeginAirRaid( )
 	}
 	
 	gfInAirRaid = TRUE;
+	gubAirRaidMode = AIR_RAID_TRYING_TO_START;
+	SetTeamStatusRed(MILITIA_TEAM);
+	SetTeamStatusRed(CIV_TEAM);
 
 	if (gAirRaidDef.sSectorX != gWorldSectorX ||
 		gAirRaidDef.sSectorY != gWorldSectorY ||
@@ -279,7 +283,6 @@ BOOLEAN BeginAirRaid( )
 	{
 		// sector not loaded
 		// Set flag for handling raid....
-		gubAirRaidMode = AIR_RAID_TRYING_TO_START;
 		gfQuoteSaid = TRUE;
 		SayQuoteFromAnyBodyInThisSector(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY,
 							(INT8)gAirRaidDef.sSectorZ, QUOTE_AIR_RAID);
@@ -310,7 +313,6 @@ BOOLEAN BeginAirRaid( )
 	}
 	else
 	{
-		gubAirRaidMode = AIR_RAID_TRYING_TO_START;
 		gfQuoteSaid	= FALSE;
 	}
 
@@ -1424,6 +1426,16 @@ static void SetTeamStatusGreen(INT8 team)
 		if (s->bInSector) s->bAlertStatus = STATUS_GREEN;
 	}
 	gTacticalStatus.Team[team].bAwareOfOpposition = FALSE;
+}
+
+
+static void SetTeamStatusRed(INT8 team)
+{
+	FOR_EACH_IN_TEAM(s, team)
+	{
+		if (s->bInSector) s->bAlertStatus = STATUS_RED;
+	}
+	gTacticalStatus.Team[team].bAwareOfOpposition = TRUE;
 }
 
 
