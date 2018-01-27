@@ -4190,8 +4190,14 @@ static void AssignmentMenuMvtCallBack(MOUSE_REGION* pRegion, INT32 iReason)
 	iValue = MSYS_GetRegionUserData( pRegion, 0 );
 
 
-	//pSoldier = GetSelectedAssignSoldier( FALSE );
-	pSoldier = GetSelectedInfoChar(); // HACK ctd
+	if (guiCurrentScreen == MAP_SCREEN)
+	{
+		pSoldier = GetSelectedInfoChar(); // HACK ctd
+	}
+	else
+	{
+		pSoldier = GetSelectedAssignSoldier(FALSE);
+	}
 
 	if (HandleAssignmentExpansionAndHighLightForAssignMenu(pSoldier))
 	{
