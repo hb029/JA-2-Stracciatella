@@ -237,6 +237,7 @@ BOOLEAN BeginAirRaid( )
 		
 		if (!AreInMeanwhile())
 		{
+			SetGameTimeCompressionLevel(TIME_COMPRESS_X0);
 			DoScreenIndependantMessageBox(TacticalStr[AIR_RAID_TURN_STR], MSG_BOX_FLAG_OK, MapScreenDefaultOkBoxCallback); // HACK0000
 		}
 
@@ -1562,8 +1563,6 @@ void ChopperAttackSector(UINT8 ubSectorX, UINT8 ubSectorY, INT8 bIntensity)
 	// TODO: Balance this effect as soon as the queen uses air-raids
 	UINT8 ubCasualties = Random(bIntensity + 1);
 	UINT8 ubNumMilitia = CountAllMilitiaInSector(ubSectorX, ubSectorY);
-	wchar_t str[256];
-	wchar_t pSectorStr[128];
 	UINT8 const bTownId = GetTownIdForSector(SECTOR(ubSectorX, ubSectorY));
 	SECTORINFO *pSectorInfo = &(SectorInfo[SECTOR(ubSectorX, ubSectorY)]);
 
@@ -1595,7 +1594,8 @@ void ChopperAttackSector(UINT8 ubSectorX, UINT8 ubSectorY, INT8 bIntensity)
 		SLOGD(DEBUG_TAG_AIRRAID, "ChopperAttackSector: Militia abandoned");
 	}
 
-	do
+	UINT8 i;
+	for (i = 0; i < ubCasualties; i++)
 	{
 		// Kill lowly soldiers first
 		if (pSectorInfo->ubNumberOfCivsAtLevel[GREEN_MILITIA] > 0)
@@ -1617,19 +1617,15 @@ void ChopperAttackSector(UINT8 ubSectorX, UINT8 ubSectorY, INT8 bIntensity)
 			continue;
 		}
 		break;
-	} while (--ubCasualties);
+	}
 
-	if (ubCasualties > 0)
+	for (; i < ubCasualties; i++)
 	{
-		SLOGD(DEBUG_TAG_AIRRAID, "ChopperAttackSector: %d Civilians killed", ubCasualties);
-		while (ubCasualties--)
-		{
-			HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
-			HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
-			HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
-			HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
-			HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
-		}
+		HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
+		HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
+		HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
+		HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
+		HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_NATIVE_KILLED, ubSectorX, ubSectorY, 0);
 	}
 }
 
