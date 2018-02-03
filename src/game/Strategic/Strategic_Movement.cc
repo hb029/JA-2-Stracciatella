@@ -1893,6 +1893,7 @@ static void InitiateGroupMovementToNextSector(GROUP* pGroup)
 			AirRaidDef.sSectorY = pGroup->ubNextY;
 			AirRaidDef.sSectorZ = 0;
 			AirRaidDef.bIntensity = bIntensity;
+			AirRaidDef.uiFlags = 0;
 			AirRaidDef.ubNumMinsFromCurrentTime = ubNumMinsFromCurrentTime;
 
 			ScheduleAirRaid(&AirRaidDef);
