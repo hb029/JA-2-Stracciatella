@@ -219,12 +219,15 @@ BOOLEAN BeginAirRaid( )
 
 	// First remove scheduled flag...
 	gfAirRaidScheduled = FALSE;
-	gubAirRaidMode = AIR_RAID_PENDING;
 	gbNumDives = 0;
 
 	if (WillAirRaidBeStopped(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY))
 	{
 		return(FALSE);
+	}
+	else
+	{
+		gubAirRaidMode = AIR_RAID_PENDING;
 	}
 
 	// Set flag for handling raid....
