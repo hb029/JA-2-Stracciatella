@@ -4947,7 +4947,7 @@ static void TeamListDestinationRegionBtnCallBack(MOUSE_REGION* pRegion, INT32 iR
 
 	if (iReason & MSYS_CALLBACK_REASON_RBUTTON_UP)
 	{
-		//CancelPathsOfAllSelectedCharacters();
+		CancelPathsOfAllSelectedCharacters();
 		ResetAllSelectedCharacterModes();
 	}
 }
@@ -7542,6 +7542,9 @@ void CancelPathsOfAllSelectedCharacters()
 				continue;
 			}
 
+			// Report in only at sectors
+			if (pSoldier->fBetweenSectors)
+				continue;
 
 			// cancel the entire path (also clears vehicles for any passengers selected, and handles reversing directions)
 			if( pSoldier->uiStatusFlags & SOLDIER_VEHICLE )

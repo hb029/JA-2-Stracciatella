@@ -1224,8 +1224,8 @@ UINT32 ClearPathAfterThisSectorForCharacter( SOLDIERTYPE *pCharacter, INT16 sX, 
 		// if we're in confirm map move mode, cancel that (before new UI messages are issued)
 		EndConfirmMapMoveMode( );
 
-		//CancelPathsOfAllSelectedCharacters();
-		//return( PATH_CLEARED );
+		CancelPathsOfAllSelectedCharacters();
+		return( PATH_CLEARED );
 	}
 	else	// click not in the current sector
 	{
