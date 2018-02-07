@@ -69,6 +69,7 @@ BOOLEAN gfInAirRaid = FALSE;
 BOOLEAN gfAirRaidScheduled = FALSE;
 UINT8   gubAirRaidMode = AIR_RAID_INACTIVE;
 UINT32  guiSoundSample = NO_SAMPLE;
+UINT32  guiSoundVolume = 0;
 UINT32  guiRaidLastUpdate;
 BOOLEAN gfFadingRaidIn = FALSE;
 BOOLEAN gfQuoteSaid = FALSE;
@@ -136,8 +137,9 @@ struct AIR_RAID_SAVE_STRUCT
 	UINT8   ubFiller[ 32 ]; // XXX HACK000B
 };
 
+
 // END SERIALIZATION
-SOLDIERTYPE		*gpRaidSoldier;
+SOLDIERTYPE *gpRaidSoldier;
 
 
 struct AIR_RAID_DIR
@@ -321,7 +323,7 @@ BOOLEAN BeginAirRaid( )
 	}
 
 	giNumFrames = 0;
-	giNumGridNosMovedThisTurn = 0;
+	guiSoundVolume = 0;
 
 	guiRaidLastUpdate = GetJA2Clock( );
 
@@ -415,10 +417,6 @@ static void TryToStartRaid(void)
 	// Some are:
 
 	// Cannot be in battle ( this is handled by the fact of it begin shceduled in the first place...
-	if ( gTacticalStatus.uiFlags & INCOMBAT )
-	{
-		return;
-	}
 
 	// Cannot be auto-bandaging?
 	if ( gTacticalStatus.fAutoBandageMode )
@@ -440,6 +438,7 @@ static void TryToStartRaid(void)
 
 	// Ok, go...
 	gubAirRaidMode = AIR_RAID_START;
+
 }
 
 
@@ -447,7 +446,7 @@ static void AirRaidStart(void)
 {
 	// Begin ambient sound....
 	gfFadingRaidIn = TRUE;
-	giNumGridNosMovedThisTurn = 0;
+	guiSoundVolume = 0;
 
 	// Setup start time....
 	RESETTIMECOUNTER( giTimerAirRaidQuote, AIR_RAID_SAY_QUOTE_TIME );
@@ -581,7 +580,7 @@ static void AirRaidLookForDive(void)
 	{
 		// Air raid is over....
 		gubAirRaidMode = AIR_RAID_START_END;
-		giNumGridNosMovedThisTurn = 0;
+		guiSoundVolume = 0;
 	}
 }
 
@@ -820,18 +819,18 @@ static void DoDive(void)
 
 				if (GridNoOnVisibleWorldTile((INT16)(GETWORLDINDEXFROMWORLDCOORDS(sStrafeY, sStrafeX))))
 				{
-					if ( gsNotLocatedYet && gTacticalStatus.uiFlags & INCOMBAT )
-					{
-						gsNotLocatedYet = FALSE;
-						LocateGridNo( sGridNo );
-					}
+					//if ( gsNotLocatedYet && !( gTacticalStatus.uiFlags & INCOMBAT ) )
+					//{
+					//	gsNotLocatedYet = FALSE;
+					//	LocateGridNo( sGridNo );
+					//}
 
-					if ( ( gTacticalStatus.uiFlags & INCOMBAT ) )
+					//if ( ( gTacticalStatus.uiFlags & INCOMBAT ) )
 					{
 						// Increase attacker busy...
-						gTacticalStatus.ubAttackBusyCount++;
-						SLOGD(DEBUG_TAG_AIRRAID, "Starting attack AIR RAID ( fire gun ), attack count now %d",
-							gTacticalStatus.ubAttackBusyCount);
+						//gTacticalStatus.ubAttackBusyCount++;
+						//SLOGD(DEBUG_TAG_AIRRAID, "Starting attack AIR RAID ( fire gun ), attack count now %d",
+						//	gTacticalStatus.ubAttackBusyCount);
 
 						// INcrement bullet fired...
 						gpRaidSoldier->bBulletsLeft++;
@@ -870,12 +869,12 @@ static void DoDive(void)
 
 				if (GridNoOnVisibleWorldTile((INT16)(GETWORLDINDEXFROMWORLDCOORDS(sStrafeY, sStrafeX))))
 				{
-					if ( ( gTacticalStatus.uiFlags & INCOMBAT ) )
+					//if ( ( gTacticalStatus.uiFlags & INCOMBAT ) )
 					{
 						// Increase attacker busy...
-						gTacticalStatus.ubAttackBusyCount++;
-						SLOGD(DEBUG_TAG_AIRRAID, "Starting attack AIR RAID ( second one ), attack count now %d",
-							gTacticalStatus.ubAttackBusyCount);
+						//gTacticalStatus.ubAttackBusyCount++;
+						//SLOGD(DEBUG_TAG_AIRRAID, "Starting attack AIR RAID ( second one ), attack count now %d",
+						//	gTacticalStatus.ubAttackBusyCount);
 
 						// INcrement bullet fired...
 						gpRaidSoldier->bBulletsLeft++;
@@ -1002,11 +1001,12 @@ static void DoBombing(void)
 
 					if ( GridNoOnVisibleWorldTile( (INT16)( GETWORLDINDEXFROMWORLDCOORDS( sStrafeY, sStrafeX ) ) ) )
 					{
-						if ( gsNotLocatedYet && gTacticalStatus.uiFlags & INCOMBAT )
-						{
-							gsNotLocatedYet = FALSE;
-							LocateGridNo( sGridNo );
-						}
+						//if ( gsNotLocatedYet && !( gTacticalStatus.uiFlags & INCOMBAT ) )
+						//{
+						//	gsNotLocatedYet = FALSE;
+						//	LocateGridNo( sGridNo );
+						//}
+
 
 						if ( Random( 2 ) )
 						{
@@ -1068,15 +1068,16 @@ void HandleAirRaid( )
 
 			if (gfFadingRaidIn)
 			{
-				iVol = giNumGridNosMovedThisTurn;
+				iVol = guiSoundVolume;
 				if (iVol >= HIGHVOLUME)
 				{
+					giNumGridNosMovedThisTurn = 0;
 					gfFadingRaidIn = FALSE;
 				}
 			}
 			else if (gfFadingRaidOut)
 			{
-				iVol = HIGHVOLUME - giNumGridNosMovedThisTurn;
+				iVol = HIGHVOLUME - guiSoundVolume;
 				if (iVol <= 0)
 				{
 					gfFadingRaidOut = FALSE;
@@ -1117,7 +1118,7 @@ void HandleAirRaid( )
 			SLOGD(DEBUG_TAG_AIRRAID, "HandleAirRaid: SAM just taken over");
 			if (gfFadingRaidIn)
 			{
-				giNumGridNosMovedThisTurn = HIGHVOLUME - giNumGridNosMovedThisTurn;
+				guiSoundVolume = HIGHVOLUME - guiSoundVolume;
 			}
 			gfFadingRaidIn = FALSE;
 			gfFadingRaidOut = TRUE;
@@ -1133,7 +1134,7 @@ void HandleAirRaid( )
 
 			if ((gfFadingRaidIn || gfFadingRaidOut) && (giNumFrames % 10) == 0)
 			{
-				giNumGridNosMovedThisTurn++;
+				guiSoundVolume++;
 			}
 
 			switch( gubAirRaidMode )
@@ -1160,7 +1161,7 @@ void HandleAirRaid( )
 
 				case AIR_RAID_END:
 
-					EndAirRaid();
+					EndAirRaid( );
 					break;
 
 				case AIR_RAID_BEGIN_DIVE:
@@ -1223,17 +1224,13 @@ void HandleAirRaid( )
 
 		if ( ( gTacticalStatus.uiFlags & INCOMBAT ) )
 		{
-			// Do we have the batton?
-			if ( gfHaveTBBatton )
+			// Are we through with attacker busy count?
+			if ( gTacticalStatus.ubAttackBusyCount == 0 )
 			{
-				// Are we through with attacker busy count?
-				if ( gTacticalStatus.ubAttackBusyCount == 0 )
-				{
-					// Relinquish control....
-					gfAirRaidHasHadTurn = TRUE;
-					gfHaveTBBatton = FALSE;
-					BeginTeamTurn( gubBeginTeamTurn );
-				}
+				// Relinquish control....
+				gfAirRaidHasHadTurn = TRUE;
+				gfHaveTBBatton = FALSE;
+				BeginTeamTurn( gubBeginTeamTurn );
 			}
 		}
 	}
@@ -1312,7 +1309,9 @@ void SaveAirRaidInfoToSaveGameFile(HWFILE const hFile)
 	sAirRaidSaveStruct.fInAirRaid = gfInAirRaid;
 	sAirRaidSaveStruct.fAirRaidScheduled = gfAirRaidScheduled;
 	sAirRaidSaveStruct.ubAirRaidMode = gubAirRaidMode;
-	sAirRaidSaveStruct.uiSoundSample = guiSoundSample;
+	// HACK: The sound engine is not save-persistent so this id is invalid
+	//sAirRaidSaveStruct.uiSoundSample = guiSoundSample;
+	sAirRaidSaveStruct.uiSoundSample = guiSoundVolume;
 	sAirRaidSaveStruct.uiRaidLastUpdate = guiRaidLastUpdate;
 	sAirRaidSaveStruct.fFadingRaidIn = gfFadingRaidIn;
 	sAirRaidSaveStruct.fQuoteSaid = gfQuoteSaid;
@@ -1379,6 +1378,7 @@ void LoadAirRaidInfoFromSaveGameFile(HWFILE const hFile)
 		SoundStop(guiSoundSample);
 		guiSoundSample = NO_SAMPLE;
 	}
+	guiSoundVolume = sAirRaidSaveStruct.uiSoundSample;
 	guiRaidLastUpdate = sAirRaidSaveStruct.uiRaidLastUpdate;
 	gfFadingRaidIn = sAirRaidSaveStruct.fFadingRaidIn;
 	gfQuoteSaid = sAirRaidSaveStruct.fQuoteSaid;
@@ -1473,6 +1473,14 @@ void EndAirRaid( )
 			gubEnemyEncounterCode = ENEMY_INVASION_CODE;
 		}
 	}
+	else
+	{
+		// Free up attacker...
+		FreeUpAttacker(gpRaidSoldier);
+		SLOGD(DEBUG_TAG_AIRRAID,
+			"Tried to free up attacker AIR RAID NO DIVE, attack count now %d",
+			gTacticalStatus.ubAttackBusyCount);
+	}
 
 	// Reset the globals of this "class"
 	gfInAirRaid = FALSE;
@@ -1485,7 +1493,7 @@ void EndAirRaid( )
 	gubBeginTeamTurn = 0;
 	gfHaveTBBatton = FALSE;
 	gsNotLocatedYet = FALSE;
-	giNumGridNosMovedThisTurn = 0;
+	guiSoundVolume = 0;
 
 	SLOGD(DEBUG_TAG_AIRRAID, "Ending Air Raid." );
 }
