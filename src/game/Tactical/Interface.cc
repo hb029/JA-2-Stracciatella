@@ -1832,7 +1832,7 @@ static void CreateTopMessage(void)
 			msg = g_langRes->Message[STR_INTERRUPT];
 			break;
 		case AIR_RAID_TURN_MESSAGE:
-			msg = TacticalStr[AIR_RAID_TURN_MESSAGE];
+			msg = TacticalStr[AIR_RAID_TURN_STR];
 			break;
 		case PLAYER_TURN_MESSAGE:
 			msg = TeamTurnString[OUR_TEAM];
