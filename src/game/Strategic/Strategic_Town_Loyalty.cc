@@ -642,6 +642,8 @@ void RemoveRandomItemsInSector(INT16 const sSectorX, INT16 const sSectorY, INT16
 			if (!wi->fExists)                          continue;
 			if (wi->bVisible != VISIBLE)               continue;
 			if (!(wi->usFlags & WORLD_ITEM_REACHABLE)) continue;
+			if (wi->o.ubOwnerCivGroup != NON_CIV_GROUP) continue;
+			if (wi->o.ubOwnerProfile != NO_PROFILE) continue;
 			if (Random(100) >= ubChance)               continue;
 
 			// remove
@@ -665,6 +667,8 @@ void RemoveRandomItemsInSector(INT16 const sSectorX, INT16 const sSectorY, INT16
 		{
 			// note, can't do reachable test here because we'd have to do a path call
 			if (wi->bVisible != VISIBLE) continue;
+			if (wi->o.ubOwnerCivGroup != NON_CIV_GROUP) continue;
+			if (wi->o.ubOwnerProfile != NO_PROFILE) continue;
 			if (Random(100) >= ubChance) continue;
 
 			SLOGD(DEBUG_TAG_LOYALTY, "%ls stolen in %ls!", ItemNames[wi->o.usItem], wSectorName);
