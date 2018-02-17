@@ -756,7 +756,6 @@ void ReduceLoyaltyForRebelsBetrayed(void)
 		}
 		else
 		{
-
 			// loyalty in other places is also strongly affected by this falling out with rebels, but this is not permanent
 			SetTownLoyalty(bTownId, (UINT8) (gTownLoyalty[ bTownId ].ubRating / 3));
 		}

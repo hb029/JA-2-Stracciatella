@@ -829,6 +829,7 @@ void HandleEarlyMorningEvents( void )
 						break;
 				}
 			}
+			gMercProfiles[ DEVIN ].bNPCData = 0;
 		}
 	}
 
@@ -927,7 +928,6 @@ void HandleEarlyMorningEvents( void )
 			{
 				RemoveObjectFromSoldierProfile( CARMEN, (UINT8) cnt );
 			}
-
 		}
 	}
 	else
@@ -968,8 +968,8 @@ void HandleEarlyMorningEvents( void )
 		SetFactFalse( FACT_DAVE_HAS_GAS );
 	}
 
-	// If the hospital is not loaded, check the supplies
-	if ( gWorldSectorX != HOSPITAL_SECTOR_X || gWorldSectorY != HOSPITAL_SECTOR_Y || gbWorldSectorZ != HOSPITAL_SECTOR_Z )
+	// If the hospital is loaded and has not been unloaded since stealing, check the supplies
+	if ( gWorldSectorX == HOSPITAL_SECTOR_X || gWorldSectorY == HOSPITAL_SECTOR_Y || gbWorldSectorZ == HOSPITAL_SECTOR_Z )
 	{
 		CheckForMissingHospitalSupplies();
 	}
