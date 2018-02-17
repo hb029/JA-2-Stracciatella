@@ -4634,6 +4634,9 @@ void DecayPublicOpplist(INT8 bTeam)
 
 	// decay watched locs as well
 	DecayWatchedLocs( bTeam );
+
+	// Turn off the muzzle flashes
+	TurnOffTeamsMuzzleFlashes( bTeam );
 }
 
 // bit of a misnomer; this is now decay all opplists
