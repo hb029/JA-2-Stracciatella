@@ -22,6 +22,7 @@
 #include "Queen_Command.h"
 #include "Tactical_Save.h"
 #include "MapScreen.h"
+#include "Town_Militia.h"
 
 #include "ContentManager.h"
 #include "GameInstance.h"
@@ -89,7 +90,9 @@ void HourlyLooseItemsFromSectorInventory()
 		{
 			SECTORINFO& s = SectorInfo[SECTOR(x, y)];
 			if (!GetSectorFlagStatus(x, y, 0, SF_ALREADY_VISITED)) continue;
-			
+			if (PlayerMercsInSector(x, y, 0)) continue;
+			if (CountAllMilitiaInSector(x, y)) continue;
+
 			if (s.fSurfaceWasEverPlayerControlled &&
 				GetWorldTotalSeconds() - s.uiTimeLastPlayerLiberated > NUM_SEC_IN_HOUR)
 			{
