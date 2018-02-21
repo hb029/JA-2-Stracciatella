@@ -180,8 +180,8 @@ void EnvironmentController( BOOLEAN fCheckForLights )
 	// do none of this stuff in the basement or caves
 	if( gfBasement || gfCaves )
 	{
-		guiEnvWeather	&= (~WEATHER_FORECAST_THUNDERSHOWERS );
-		guiEnvWeather	&= (~WEATHER_FORECAST_SHOWERS );
+		//guiEnvWeather	&= (~WEATHER_FORECAST_THUNDERSHOWERS );
+		//guiEnvWeather	&= (~WEATHER_FORECAST_SHOWERS );
 
 		if ( guiRainLoop != NO_SAMPLE )
 		{
