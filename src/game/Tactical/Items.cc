@@ -1809,13 +1809,17 @@ BOOLEAN EmptyWeaponMagazine( OBJECTTYPE * pWeapon, OBJECTTYPE *pAmmo )
 {
 	CHECKF( pAmmo != NULL );
 
+	const ItemModel *item = GCM->getItem(pWeapon->usItem);
+	const WeaponModel *weapon = item->asWeapon();
+	const MagazineModel * old_mag = GCM->getMagazineByItemIndex(pWeapon->usGunAmmoItem);
+
 	if ( pWeapon->ubGunShotsLeft > 0 )
 	{
 		// start by erasing ammo item, just in case...
 		DeleteObj( pAmmo );
 
 		pAmmo->ubShotsLeft[0] = pWeapon->ubGunShotsLeft;
-		pAmmo->usItem = pWeapon->usGunAmmoItem;
+		pAmmo->usItem = FindReplacementMagazine(weapon->calibre, weapon->ubMagSize, old_mag->ammoType->index);
 		pAmmo->ubNumberOfObjects = 1;
 
 		pWeapon->ubGunShotsLeft = 0;
