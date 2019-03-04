@@ -5681,7 +5681,7 @@ static SOLDIERTYPE* InternalReduceAttackBusyCount(SOLDIERTYPE* const pSoldier, c
 			// if soldier and target were not both players and target was not under fire before...
 			if ( ( pSoldier->bTeam != OUR_TEAM || pTarget->bTeam != OUR_TEAM ) )
 			{
-				if (pTarget->bOppList[ pSoldier->ubID ] != SEEN_CURRENTLY )
+				//if (pTarget->bOppList[ pSoldier->ubID ] != SEEN_CURRENTLY )
 				{
 					NoticeUnseenAttacker( pSoldier, pTarget, 0 );
 				}
