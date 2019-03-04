@@ -1673,18 +1673,6 @@ INT16 MinAPsToThrow(SOLDIERTYPE const& s, GridNo gridno, bool const add_turning_
 {
 	INT32 ap = AP_MIN_AIM_ATTACK;
 
-	// Get this man's maximum possible action points (ignoring carryovers)
-	INT32 const full_ap = CalcActionPoints(&s);
-
-	// Make sure the guy's actually got a throwable item in his hand
-	UINT16 const in_hand = s.inv[HANDPOS].usItem;
-	if (GCM->getItem(in_hand)->getItemClass() != IC_GRENADE)
-	{
-		SLOGI(DEBUG_TAG_POINTS, "MinAPsToThrow - Called when in-hand item is %s",
-			GCM->getItem(in_hand)->getInternalName().c_str());
-		return full_ap;
-	}
-
 	if (gridno != NOWHERE)
 	{
 		SOLDIERTYPE const* const tgt = FindSoldier(gridno, FIND_SOLDIER_GRIDNO);
@@ -1697,6 +1685,9 @@ INT16 MinAPsToThrow(SOLDIERTYPE const& s, GridNo gridno, bool const add_turning_
 	ap += GetAPsToChangeStance(&s, ANIM_STAND);
 
 	// Calculate default top & bottom of the magic "aiming" formula)
+
+	// Get this man's maximum possible action points (ignoring carryovers)
+	INT32 const full_ap = CalcActionPoints(&s);
 
 	// The 2 times is here only to around rounding off using integer math later
 	INT32 const top = 2 * full_ap;
