@@ -134,7 +134,7 @@ static void CreatePlayerAttitude(void)
 		}
 	}
 
-	INT32 iDiceValue = Random(iNumAttitudesWithHighestHits + 1); // XXX TODO0008
+	INT32 iDiceValue = Random(iNumAttitudesWithHighestHits);
 
 	// find attitude
 	INT32 iCounter2 = 0;

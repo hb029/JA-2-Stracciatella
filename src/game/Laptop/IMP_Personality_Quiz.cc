@@ -490,7 +490,7 @@ static void CompileQuestionsInStatsAndWhatNot(void)
 	switch (iQuizAnswerList[8])
 	{
 		case 0: AddAPersonalityToPersonalityList(FORGETFUL); break;
-		case 1: break;
+		case 1: break; // none
 		case 2: AddAnAttitudeToAttitudeList(ATT_PESSIMIST);  break;
 		case 3: AddAPersonalityToPersonalityList(NERVOUS);   break;
 	}
@@ -544,14 +544,12 @@ static void CompileQuestionsInStatsAndWhatNot(void)
 	{
 		case 0: AddSkillToSkillList(THROWING);             break;
 		case 1: AddSkillToSkillList(AMBIDEXT);             break;
-		// XXX TODO0006 cases 2 and 3 probably interchanged
-		case 3: break; // none
 		case 2: AddAnAttitudeToAttitudeList(ATT_ARROGANT); break;
+		case 3: break; // none
 	}
 
 	switch (iQuizAnswerList[15])
 	{
-		// XXX TODO0006 this question has no effect
 		case 0: break; // none !
 		case 1: break; // none !
 		case 2: break; // none !
