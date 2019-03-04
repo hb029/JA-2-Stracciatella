@@ -93,8 +93,8 @@ void HandleMilitiaPromotions()
 			{
 				++gbRegToElitePromotions;
 			}
-		}
 
-		s.ubMilitiaKills = 0;
+			s.ubMilitiaKills = 0;
+		}
 	}
 }
