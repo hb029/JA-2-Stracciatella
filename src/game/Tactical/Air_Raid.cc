@@ -281,6 +281,12 @@ BOOLEAN BeginAirRaid( )
 	gubAirRaidMode = AIR_RAID_TRYING_TO_START;
 	SetTeamStatusRed(MILITIA_TEAM);
 	SetTeamStatusRed(CIV_TEAM);
+	
+	// Set orders
+	FOR_EACH_IN_TEAM(s, MILITIA_TEAM)
+	{
+		if (s->bInSector) s->bOrders = SEEKENEMY;
+	}
 
 	if (gAirRaidDef.sSectorX != gWorldSectorX ||
 		gAirRaidDef.sSectorY != gWorldSectorY ||
