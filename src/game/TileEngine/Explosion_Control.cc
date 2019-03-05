@@ -1829,7 +1829,8 @@ static void TogglePressureActionItemsInGridNo(INT16 sGridNo)
 
 static void DelayedBillyTriggerToBlockOnExit(void)
 {
-	if (WhoIsThere2(gsTempActionGridNo, 0) == NULL)
+	if (WhoIsThere2(gsTempActionGridNo, 0) == NULL
+		&& gMercProfiles[MADAME].bNPCData <= 0)
 	{
 		TriggerNPCRecord( BILLY, 6 );
 	}
@@ -2042,7 +2043,7 @@ void PerformItemAction(INT16 sGridNo, OBJECTTYPE* pObj)
 							if ( CheckFact( FACT_PLAYER_FORCED_WAY_INTO_BROTHEL, 0 ) )
 							{
 								// player already did this once!
-								HandleNPCTriggerNPC(MADAME, 35, TRUE, TRIGGER_NPC);
+								TriggerNPCRecord(MADAME, 35);
 								return;
 							}
 							else
