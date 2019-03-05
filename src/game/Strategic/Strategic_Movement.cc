@@ -1872,17 +1872,6 @@ static void InitiateGroupMovementToNextSector(GROUP* pGroup)
 			}
 		}
 
-		INT8 bIntensity = pGroup->ubGroupSize / 4 + Random(gGameOptions.ubDifficultyLevel);
-		UINT8 ubNumMinsFromCurrentTime = pGroup->uiTraverseTime;
-		if (ubNumMinsFromCurrentTime > bIntensity / 2)
-		{
-			ubNumMinsFromCurrentTime -= bIntensity / 2; // Count two dives per minute
-		}
-		else
-		{
-			ubNumMinsFromCurrentTime = 1; // Go in with friendly fire risk
-		}
-
 		// Attack surface sectors of mining towns so the loyalty impact of air-force terror matters
 		if (pGroup->ubSectorZ == 0 &&
 			fPlayerMined)
@@ -1892,11 +1881,11 @@ static void InitiateGroupMovementToNextSector(GROUP* pGroup)
 			AirRaidDef.sSectorX = pGroup->ubNextX;
 			AirRaidDef.sSectorY = pGroup->ubNextY;
 			AirRaidDef.sSectorZ = 0;
-			AirRaidDef.bIntensity = bIntensity;
+			AirRaidDef.bIntensity = pGroup->ubGroupSize / 4 + Random(gGameOptions.ubDifficultyLevel);
 			AirRaidDef.uiFlags = 0;
-			AirRaidDef.ubNumMinsFromCurrentTime = ubNumMinsFromCurrentTime;
+			AirRaidDef.ubNumMinsFromCurrentTime = pGroup->uiTraverseTime - 1;
 
-			ScheduleAirRaid(&AirRaidDef);
+ 			ScheduleAirRaid(&AirRaidDef);
 		}
 	}
 }
