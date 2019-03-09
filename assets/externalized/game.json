@@ -64,8 +64,8 @@
       "better_aiming_choice": false,
       "go_prone_more_often": false
     },
-    "threshold_cth_head": 67,
-    "threshold_cth_legs": 67,
+    "threshold_cth_head": 33,
+    "threshold_cth_legs": 33,
 
     //  How much variation should there be in elite soldier xp level?
     //  vanilla_setting: 6, 10
@@ -95,7 +95,7 @@
     //  Min/max chance to hit and headshot damage multiplier.
     //  vanilla_setting: 1, 99, 1.5, 0.5
     "chance_to_hit_minimum": 1,
-    "chance_to_hit_maximum": 99,
+    "chance_to_hit_maximum": 67,
     "tactical_head_damage_multiplier": 1.5,
     "tactical_legs_damage_multiplier": 0.5,
 
