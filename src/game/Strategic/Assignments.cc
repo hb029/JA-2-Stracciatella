@@ -879,6 +879,10 @@ static JoinSquadResult CanCharacterSquad(SOLDIERTYPE const& s, INT8 const squad_
 	{
 		return CHARACTER_CANT_JOIN_SQUAD_SQUAD_MOVING;
 	}
+	else if (s.fBetweenSectors)
+	{
+		return CHARACTER_CANT_JOIN_SQUAD_SQUAD_MOVING;
+	}
 	else if (DoesVehicleExistInSquad(squad_no))
 	{
 		return CHARACTER_CANT_JOIN_SQUAD_VEHICLE;
