@@ -2249,8 +2249,8 @@ void InitRenderParams(UINT8 ubRestrictionID)
 	FromCellToScreenCoordinates(gCenterWorldX,           gCenterWorldY,           &gsCX,  &gsCY);
 
 	// Adjust for interface height tabbing!
-	gsTLY += ROOF_LEVEL_HEIGHT;
-	gsTRY += ROOF_LEVEL_HEIGHT;
+	gsTLY += ROOF_LEVEL_HEIGHT / 2;
+	gsTRY += ROOF_LEVEL_HEIGHT / 2;
 	gsCY  += ROOF_LEVEL_HEIGHT / 2;
 
 	SLOGD(DEBUG_TAG_RENDERWORLD, "World Screen Width %d Height %d", gsTRX - gsTLX, gsBRY - gsTRY);
@@ -2420,7 +2420,7 @@ static BOOLEAN ApplyScrolling(INT16 sTempRenderCenterX, INT16 sTempRenderCenterY
 	{
 		// Make sure it's a multiple of 5
 		gsRenderCenterX = sTempRenderCenterX / CELL_X_SIZE * CELL_X_SIZE + CELL_X_SIZE / 2;
-		gsRenderCenterY = sTempRenderCenterY / CELL_X_SIZE * CELL_Y_SIZE + CELL_Y_SIZE / 2;
+		gsRenderCenterY = sTempRenderCenterY / CELL_Y_SIZE * CELL_Y_SIZE + CELL_Y_SIZE / 2;
 
 		gsTopLeftWorldX = sTopLeftWorldX - gsTLX;
 		gsTopLeftWorldY = sTopLeftWorldY - gsTLY;
