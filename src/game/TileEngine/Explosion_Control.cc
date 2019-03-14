@@ -961,7 +961,7 @@ BOOLEAN DishOutGasDamage(SOLDIERTYPE* const pSoldier, EXPLOSIVETYPE const* const
 			DoMercBattleSound(pSoldier, BATTLE_SOUND_HIT1);
 		}
 
-		if (owner != NULL && owner->bTeam == OUR_TEAM && pSoldier->bTeam != OUR_TEAM && pSoldier->bTeam != MILITIA_TEAM)
+		if (owner != NULL && owner->bTeam == OUR_TEAM && pSoldier->bTeam != OUR_TEAM && pSoldier->bTeam != MILITIA_TEAM && pSoldier->bTeam != CIV_TEAM)
 		{
 			ProcessImplicationsOfPCAttack(owner, pSoldier, REASON_EXPLOSION);
 		}
