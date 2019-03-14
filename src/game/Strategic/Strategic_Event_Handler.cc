@@ -969,7 +969,7 @@ void HandleEarlyMorningEvents( void )
 	}
 
 	// If the hospital is loaded and has not been unloaded since stealing, check the supplies
-	if ( gWorldSectorX == HOSPITAL_SECTOR_X || gWorldSectorY == HOSPITAL_SECTOR_Y || gbWorldSectorZ == HOSPITAL_SECTOR_Z )
+	if ( gWorldSectorX == HOSPITAL_SECTOR_X && gWorldSectorY == HOSPITAL_SECTOR_Y && gbWorldSectorZ == HOSPITAL_SECTOR_Z )
 	{
 		CheckForMissingHospitalSupplies();
 	}
