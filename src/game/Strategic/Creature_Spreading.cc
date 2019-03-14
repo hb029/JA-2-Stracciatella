@@ -1111,6 +1111,7 @@ BOOLEAN PrepareCreaturesForBattle()
 			break;
 		case OUTER_MINE:
 		case MINE_EXIT:
+		case FEEDING_GROUNDS:
 			fQueen = FALSE;
 			ubLarvaePercentage = 0;
 			ubInfantPercentage = 0;
