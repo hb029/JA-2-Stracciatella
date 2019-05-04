@@ -187,7 +187,7 @@ BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY);
 void ScheduleAirRaid(AIR_RAID_DEFINITION* pAirRaidDef)
 {
 	// Make sure only one is cheduled...
-	if ( gfAirRaidScheduled )
+	if ( gfAirRaidScheduled && gAirRaidDef.ubNumMinsFromCurrentTime > 0)
 	{
 		return;
 	}
@@ -453,6 +453,11 @@ static void AirRaidStart(void)
 	// Begin ambient sound....
 	gfFadingRaidIn = TRUE;
 	guiSoundVolume = 0;
+	if (guiSoundSample != NO_SAMPLE)
+	{
+		SoundStop(guiSoundSample);
+		guiSoundSample = NO_SAMPLE;
+	}
 
 	// Setup start time....
 	RESETTIMECOUNTER( giTimerAirRaidQuote, AIR_RAID_SAY_QUOTE_TIME );
@@ -1276,7 +1281,7 @@ BOOLEAN HandleAirRaidEndTurn( UINT8 ubTeam )
 	gfHaveTBBatton = TRUE;
 
 	// ATE: Even if we have an attacker busy problem.. init to 0 now
-	//gTacticalStatus.ubAttackBusyCount = 0;
+	gTacticalStatus.ubAttackBusyCount = 0;
 
 	// Increment attacker bust count....
 	gTacticalStatus.ubAttackBusyCount++;
