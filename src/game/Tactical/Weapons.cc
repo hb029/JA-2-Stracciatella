@@ -1689,7 +1689,10 @@ void StructureHit(BULLET* const pBullet, const INT16 sXPos, const INT16 sYPos, c
 	{
 		// AGILITY GAIN: Opponent "dodged" a bullet shot at him (it missed)
 		SOLDIERTYPE* const opp = attacker->opponent;
-		if (opp != NULL) AgilityForEnemyMissingPlayer(attacker, opp, 5);
+		if (opp != NULL && GCM->getWeapon(usWeaponIndex)->ubWeaponClass != SHOTGUNCLASS)
+		{
+			AgilityForEnemyMissingPlayer(attacker, opp, 5);
+		}
 	}
 
 	const BOOLEAN fHitSameStructureAsBefore = (usStructureID == pBullet->usLastStructureHit);
