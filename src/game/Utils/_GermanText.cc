@@ -3127,7 +3127,7 @@ static const wchar_t *s_ger_gzCreditNameFunny[gzCreditNameFunny_SIZE]=
 
 static const wchar_t *s_ger_sRepairsDoneString[sRepairsDoneString_SIZE] =
 {
-	L"%ls hat  seine eigenen Gegenstände repariert",
+	L"%ls hat seine eigenen Gegenstände repariert",
 	L"%ls hat die Waffen und Rüstungen aller Teammitglieder repariert",
 	L"%ls hat die aktivierten Gegenstände aller Teammitglieder repariert",
 	L"%ls hat die mitgeführten Gegenstände aller Teammitglieder repariert",
