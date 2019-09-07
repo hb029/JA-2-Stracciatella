@@ -89,6 +89,7 @@ void StartPlayerTeamTurn( BOOLEAN fDoBattleSnd, BOOLEAN fEnteringCombatMode )
 
 	InitPlayerUIBar( FALSE );
 
+
 	// Are we in combat already?
 	if ( gTacticalStatus.uiFlags & INCOMBAT )
 	{
@@ -317,6 +318,7 @@ void BeginTeamTurn( UINT8 ubTeam )
 			continue;
 		}
 
+
 		BeginLoggingForBleedMeToos( TRUE );
 
 		// decay team's public opplist
@@ -337,6 +339,8 @@ void BeginTeamTurn( UINT8 ubTeam )
 		}
 
 		BeginLoggingForBleedMeToos( FALSE );
+
+
 
 		if (ubTeam == OUR_TEAM )
 		{
@@ -895,7 +899,7 @@ BOOLEAN StandardInterruptConditionsMet(const SOLDIERTYPE* const pSoldier, const 
 	UINT8 ubMinPtsNeeded;
 	INT8  bDir;
 
-	if (gTacticalStatus.uiFlags & INCOMBAT && !(gubSightFlags & SIGHT_INTERRUPT))
+	if ((gTacticalStatus.uiFlags & INCOMBAT) && !(gubSightFlags & SIGHT_INTERRUPT))
 	{
 		return( FALSE );
 	}

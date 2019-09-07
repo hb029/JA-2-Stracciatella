@@ -42,6 +42,8 @@
 //#define PATHAI_SKIPLIST_DEBUG
 
 #ifdef PATHAI_VISIBLE_DEBUG
+#include "JAScreens.h"
+#include "RenderWorld.h"
 #include "Video.h"
 
 extern INT16 gsCoverValue[WORLD_MAX];
@@ -58,14 +60,14 @@ UINT8 gubGlobalPathFlags = 0;
 UINT8 gubBuildingInfoToSet;
 
 // ABSOLUTE maximums
-#define ABSMAX_SKIPLIST_LEVEL			5
-#define ABSMAX_TRAIL_TREE			(16384)
-#define ABSMAX_PATHQ				(512)
+#define ABSMAX_SKIPLIST_LEVEL			6
+#define ABSMAX_TRAIL_TREE			(65536)
+#define ABSMAX_PATHQ				(1024)
 
 // STANDARD maximums... configurable!
-#define MAX_SKIPLIST_LEVEL			5
-#define MAX_TRAIL_TREE				(4096)
-#define MAX_PATHQ				(512)
+#define MAX_SKIPLIST_LEVEL			6
+#define MAX_TRAIL_TREE				(16384)
+#define MAX_PATHQ				(1024)
 
 INT32 iMaxSkipListLevel = MAX_SKIPLIST_LEVEL;
 INT32 iMaxTrailTree = MAX_TRAIL_TREE;
@@ -115,14 +117,17 @@ static INT32  queRequests;
 static INT32  iSkipListSize;
 static INT32  iClosedListSize;
 static INT8   bSkipListLevel;
-static INT32  iSkipListLevelLimit[8] = {0, 4, 16, 64, 256, 1024, 4192, 16384 };
+static INT32  iSkipListLevelLimit[9] = {0, 4, 16, 64, 256, 1024, 4096, 16384, 65536};
 
-#define ESTIMATE0				((dx>dy) ?       (dx)      :       (dy))
-#define ESTIMATE1				((dx<dy) ? ((dx*14)/10+dy) : ((dy*14)/10+dx) )
-#define ESTIMATE2				FLATCOST*( (dx<dy) ? ((dx*14)/10+dy) : ((dy*14)/10+dx) )
-#define ESTIMATEn				((int)(FLATCOST*sqrt(dx*dx+dy*dy)))
-#define ESTIMATEC				( ( (dx<dy) ? (TRAVELCOST_BUMPY * (dx * 14 + dy * 10) / 10) : ( TRAVELCOST_BUMPY * (dy * 14 + dx * 10) / 10 ) ) )
-//#define ESTIMATEC 				(((dx<dy) ? ( (TRAVELCOST_FLAT * dx * 14) / 10 + dy) : (TRAVELCOST_FLAT * dy * 14 ) / 10 + dx) ) )
+// The estimated cost must never exceed the real cost, otherwise you lose the
+// guarantee that you're getting the least-cost path from start to goal. (issue #375)
+#define LOWESTCOST				(EASYWATERCOST)
+
+#define ESTIMATE0				( (dx>dy) ?       (dx)      :       (dy) )
+#define ESTIMATE1				( (dx<dy) ? (dx+(dy*10)/14) : (dy+(dx*10)/14) )
+#define ESTIMATE2				LOWESTCOST*( (dx<dy) ? (dx+(dy*10)/14) : (dy+(dx*10)/14) )
+#define ESTIMATEn				((int)(LOWESTCOST*sqrt(dx*dx+dy*dy)))
+#define ESTIMATEC				( (dx<dy) ? (LOWESTCOST * (dx * 14 + dy * 10) / 14) : (LOWESTCOST * (dy * 14 + dx * 10) / 14) )
 #define ESTIMATE				ESTIMATEC
 
 #define MAXCOST				(9990)
@@ -423,9 +428,9 @@ void ShutDownPathAI( void )
 static void ReconfigurePathAI(INT32 iNewMaxSkipListLevel, INT32 iNewMaxTrailTree, INT32 iNewMaxPathQ)
 {
 	// make sure the specified parameters are reasonable
-	iNewMaxSkipListLevel = __max( iNewMaxSkipListLevel, ABSMAX_SKIPLIST_LEVEL );
-	iNewMaxTrailTree = __max( iNewMaxTrailTree, ABSMAX_TRAIL_TREE );
-	iNewMaxPathQ = __max( iNewMaxPathQ, ABSMAX_PATHQ );
+	iNewMaxSkipListLevel = __max( 0, __min( iNewMaxSkipListLevel, ABSMAX_SKIPLIST_LEVEL ) );
+	iNewMaxTrailTree = __max( 0, __min( iNewMaxTrailTree, ABSMAX_TRAIL_TREE ) );
+	iNewMaxPathQ = __max( 0, __min( iNewMaxPathQ, ABSMAX_PATHQ ) );
 	// assign them
 	iMaxSkipListLevel = iNewMaxSkipListLevel;
 	iMaxTrailTree = iNewMaxTrailTree;
@@ -546,7 +551,7 @@ INT32 FindBestPath(SOLDIERTYPE* s, INT16 sDestination, INT8 ubLevel, INT16 usMov
 		fFlags |= gubGlobalPathFlags;
 	}
 
-	fTurnBased = gTacticalStatus.uiFlags & INCOMBAT;
+	fTurnBased = (gTacticalStatus.uiFlags & INCOMBAT);
 
 	fPathingForPlayer = ( (s->bTeam == OUR_TEAM) && (!gTacticalStatus.fAutoBandageMode) && !(s->uiStatusFlags & SOLDIER_PCUNDERAICONTROL) );
 	fNonFenceJumper = !( IS_MERC_BODY_TYPE( s ) );
@@ -1849,7 +1854,7 @@ ENDOFLOOP:
 
 			z=_z;
 
-			for (ubCnt=0; z != 0; ubCnt++)
+			for (ubCnt=0; z != 0 && ubCnt < lengthof(guiPathingData); ubCnt++)
 			{
 				guiPathingData[ ubCnt ] = trailTree[z].stepDir;
 
@@ -2276,7 +2281,7 @@ INT16 PlotPath(SOLDIERTYPE* const pSold, const INT16 sDestGridno, const INT8 bCo
 
 			// THIS NEXT SECTION ONLY NEEDS TO HAPPEN FOR CURSOR UI FEEDBACK, NOT ACTUAL COSTING
 
-			if (bPlot && gTacticalStatus.uiFlags & INCOMBAT ) // OR USER OPTION ON... ***)
+			if (bPlot && (gTacticalStatus.uiFlags & INCOMBAT)) // OR USER OPTION ON... ***)
 			{
 				// ATE; TODO: Put stuff in here to allow for fact of costs other than movement ( jump fence, open door )
 
@@ -2302,11 +2307,10 @@ INT16 PlotPath(SOLDIERTYPE* const pSold, const INT16 sDestGridno, const INT8 bCo
 			}
 
 
-			//if ( gTacticalStatus.uiFlags & TURNBASED && (gTacticalStatus.uiFlags & INCOMBAT) ) // OR USER OPTION "show paths" ON... ***
+			//if (gTacticalStatus.uiFlags & INCOMBAT) // OR USER OPTION "show paths" ON... ***
 			{
-				if (bPlot && iCnt < iLastGrid - 1)
+				if (bPlot && iCnt < iLastGrid - 1 && giPlotCnt < lengthof(guiPlottedPath))
 				{
-					Assert(giPlotCnt < lengthof(guiPlottedPath)); // XXX TODO001C
 					guiPlottedPath[giPlotCnt++] = sTempGrid;
 
 					// we need a footstep graphic ENTERING the next tile
@@ -2362,7 +2366,7 @@ INT16 PlotPath(SOLDIERTYPE* const pSold, const INT16 sDestGridno, const INT8 bCo
 					usTileIndex = GetTileIndexFromTypeSubIndex(FOOTPRINTS, usTileNum);
 
 					// Adjust based on what mode we are in...
-					if ( !(gTacticalStatus.uiFlags & INCOMBAT ) )
+					if (!(gTacticalStatus.uiFlags & INCOMBAT))
 					{
 						// find out which color we're using
 						usTileIndex += sFootOrder[ 4 ];

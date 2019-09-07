@@ -208,8 +208,7 @@ static UICursorID HandleActivatedTargetCursor(SOLDIERTYPE* const s, GridNo const
 		}
 	}
 
-	if (!(gTacticalStatus.uiFlags & INCOMBAT) &&
-		COUNTERDONE(TARGETREFINE))
+	if (!(gTacticalStatus.uiFlags & INCOMBAT) && COUNTERDONE(TARGETREFINE))
 	{
 		RESETCOUNTER(TARGETREFINE);
 
@@ -598,8 +597,7 @@ static UICursorID HandleKnifeCursor(SOLDIERTYPE* const s, GridNo const map_pos, 
 			if (!EnoughPoints(s, ap_costs, 0, FALSE)) enough_points = false;
 		}
 
-		if (!(gTacticalStatus.uiFlags & INCOMBAT) &&
-			COUNTERDONE(NONGUNTARGETREFINE))
+		if (!(gTacticalStatus.uiFlags & INCOMBAT) && COUNTERDONE(NONGUNTARGETREFINE))
 		{
 			RESETCOUNTER(NONGUNTARGETREFINE);
 
@@ -675,8 +673,7 @@ static UICursorID HandlePunchCursor(SOLDIERTYPE* const s, GridNo const map_pos, 
 		INT16 const ap_costs   = CalcTotalAPsToAttack(s, map_pos, TRUE, future_aim / 2);
 		if (!EnoughPoints(s, ap_costs, 0, FALSE)) enough_points = false;
 
-		if (!(gTacticalStatus.uiFlags & INCOMBAT) &&
-			COUNTERDONE(NONGUNTARGETREFINE))
+		if (!(gTacticalStatus.uiFlags & INCOMBAT) && COUNTERDONE(NONGUNTARGETREFINE))
 		{
 			RESETCOUNTER(NONGUNTARGETREFINE);
 

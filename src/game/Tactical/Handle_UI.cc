@@ -443,7 +443,7 @@ ScreenID HandleTacticalUI(void)
 
 		// SWITCH ON INPUT GATHERING, DEPENDING ON MODE
 		// IF WE ARE NOT IN COMBAT OR IN REALTIME COMBAT
-		if ( !( gTacticalStatus.uiFlags & INCOMBAT ) )
+		if (!(gTacticalStatus.uiFlags & INCOMBAT))
 		{
 			// FROM MOUSE POSITION
 			GetRTMousePositionInput( &uiNewEvent );
@@ -583,7 +583,7 @@ ScreenID HandleTacticalUI(void)
 	}
 
 	// Donot display APs if not in combat
-	if ( !(gTacticalStatus.uiFlags & INCOMBAT ) )
+	if (!(gTacticalStatus.uiFlags & INCOMBAT))
 	{
 		gfUIDisplayActionPoints = FALSE;
 	}
@@ -2184,7 +2184,7 @@ static void UIHandleMercAttack(SOLDIERTYPE* pSoldier, SOLDIERTYPE* pTargetSoldie
 	}
 
 
-	if ( !( gTacticalStatus.uiFlags & INCOMBAT ) )
+	if (!(gTacticalStatus.uiFlags & INCOMBAT))
 	{
 		HandleUICursorRTFeedback( pSoldier );
 	}
@@ -2250,7 +2250,7 @@ static ScreenID UIHandleAEndAction(UI_EVENT* pUIEvent)
 	SOLDIERTYPE* const sel = GetSelectedMan();
 	if (sel != NULL)
 	{
-		if (!( gTacticalStatus.uiFlags & INCOMBAT ) )
+		if (!(gTacticalStatus.uiFlags & INCOMBAT))
 		{
 			if ( gUITargetReady )
 			{
@@ -2763,7 +2763,7 @@ void UIHandleSoldierStanceChange(SOLDIERTYPE* s, INT8 bNewStance)
 	}
 
 	// IF turn-based - adjust stance now!
-	if ( ( gTacticalStatus.uiFlags & INCOMBAT ) )
+	if (gTacticalStatus.uiFlags & INCOMBAT)
 	{
 		s->fTurningFromPronePosition = FALSE;
 
@@ -2780,7 +2780,7 @@ void UIHandleSoldierStanceChange(SOLDIERTYPE* s, INT8 bNewStance)
 	}
 
 	// If realtime- change walking animation!
-	if ( !( gTacticalStatus.uiFlags & INCOMBAT ) )
+	if (!(gTacticalStatus.uiFlags & INCOMBAT))
 	{
 
 		// If we are stationary, do something else!
@@ -2978,8 +2978,7 @@ BOOLEAN HandleUIMovementCursor(SOLDIERTYPE* const pSoldier, MouseMoveState const
 			// ONLY IF GFPLOT NEW MOVEMENT IS FALSE!
 			if ( !gfPlotNewMovement )
 			{
-				if ( gsCurrentActionPoints < 0 ||
-					!(gTacticalStatus.uiFlags & INCOMBAT ) )
+				if (gsCurrentActionPoints < 0 || !(gTacticalStatus.uiFlags & INCOMBAT))
 				{
 					gfUIDisplayActionPoints = FALSE;
 				}
@@ -3051,7 +3050,7 @@ static INT8 DrawUIMovementPath(SOLDIERTYPE* const pSoldier, UINT16 usMapPos, Mov
 	INT8 bReturnCode = 0;
 	BOOLEAN fPlot;
 
-	if (gTacticalStatus.uiFlags & INCOMBAT || _KeyDown( SHIFT ))
+	if ((gTacticalStatus.uiFlags & INCOMBAT) || _KeyDown( SHIFT ))
 	{
 		fPlot = PLOT;
 	}
@@ -3594,7 +3593,7 @@ static void SetMovementModeCursor(const SOLDIERTYPE* pSoldier)
 		}
 	}
 
-	if ( !( gTacticalStatus.uiFlags & INCOMBAT ) )
+	if (!(gTacticalStatus.uiFlags & INCOMBAT))
 	{
 		if ( gfUIAllMoveOn )
 		{
@@ -3679,7 +3678,7 @@ static void SetConfirmMovementModeCursor(SOLDIERTYPE* pSoldier, BOOLEAN fFromMov
 		}
 	}
 
-	if ( !( gTacticalStatus.uiFlags & INCOMBAT ) )
+	if (!(gTacticalStatus.uiFlags & INCOMBAT))
 	{
 		if ( gfUIAllMoveOn )
 		{
@@ -4753,7 +4752,7 @@ void SetUIBusy(const SOLDIERTYPE* const s)
 
 void UnSetUIBusy(const SOLDIERTYPE* const s)
 {
-	if (gTacticalStatus.uiFlags & INCOMBAT && (gTacticalStatus.ubCurrentTeam == OUR_TEAM ))
+	if ((gTacticalStatus.uiFlags & INCOMBAT) && (gTacticalStatus.ubCurrentTeam == OUR_TEAM ))
 	{
 		if ( !gTacticalStatus.fUnLockUIAfterHiddenInterrupt )
 		{

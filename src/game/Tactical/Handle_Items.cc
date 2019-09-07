@@ -420,8 +420,7 @@ ItemHandleResult HandleItem(SOLDIERTYPE* const s, INT16 usGridNo, const INT8 bLe
 		}
 
 		// If in turn based - refresh aim to first level
-		if (fFromUI &&
-			gTacticalStatus.uiFlags & INCOMBAT)
+		if (fFromUI && (gTacticalStatus.uiFlags & INCOMBAT))
 		{
 			s->bShownAimTime = REFINE_AIM_1;
 

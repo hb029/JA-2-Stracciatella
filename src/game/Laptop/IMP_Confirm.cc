@@ -275,7 +275,7 @@ static void GiveItemsToPC(UINT8 ubProfileId)
 
 	MERCPROFILESTRUCT& p = GetProfile(ubProfileId);
 
-	for(const ItemModel *item : GCM->getIMPPolicy()->getInventory())
+	for (const ItemModel *item : GCM->getIMPPolicy()->getInventory())
 	{
 		MakeProfileInvItemAnySlot(p, item->getItemIndex(), 100, 1);
 	}
@@ -287,14 +287,14 @@ static void GiveItemsToPC(UINT8 ubProfileId)
 
 	if (p.bMarksmanship >= 80)
 	{
-		for(const ItemModel *item : GCM->getIMPPolicy()->getGoodShooterItems())
+		for (const ItemModel *item : GCM->getIMPPolicy()->getGoodShooterItems())
 		{
 			MakeProfileInvItemAnySlot(p, item->getItemIndex(), 100, 1);
 		}
 	}
 	else
 	{
-		for(const ItemModel *item : GCM->getIMPPolicy()->getNormalShooterItems())
+		for (const ItemModel *item : GCM->getIMPPolicy()->getNormalShooterItems())
 		{
 			MakeProfileInvItemAnySlot(p, item->getItemIndex(), 100, 1);
 		}

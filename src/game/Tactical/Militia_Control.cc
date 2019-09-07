@@ -80,7 +80,6 @@ void HandleMilitiaPromotions()
 				continue;
 			}
 			++gbMilitiaPromotions;
-
 			if (promotions == 2)
 			{
 				++gbGreenToElitePromotions;

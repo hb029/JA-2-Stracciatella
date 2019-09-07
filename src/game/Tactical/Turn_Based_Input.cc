@@ -1133,7 +1133,7 @@ void GetPolledKeyboardInput(UIEventKind* puiNewEvent)
 	}
 
 	// Check realtime input!
-	if ( !( gTacticalStatus.uiFlags & INCOMBAT ) )
+	if (!(gTacticalStatus.uiFlags & INCOMBAT))
 	{
 		//if (_KeyDown(SDLK_CAPSLOCK)) //&& !fShifted)
 		//{
@@ -1342,7 +1342,7 @@ static void HandleModNone(UINT32 const key, UIEventKind* const new_event)
 
 		case 'd':
 			// End turn only if in combat and it is the player's turn
-			if (gTacticalStatus.uiFlags & INCOMBAT &&
+			if ((gTacticalStatus.uiFlags & INCOMBAT) &&
 				gTacticalStatus.ubCurrentTeam == OUR_TEAM &&
 				// Nothing in hand and the Done button for whichever panel we're in must be enabled
 				!gpItemPointer &&

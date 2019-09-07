@@ -408,6 +408,7 @@ void InitOverhead()
 
 	TacticalStatusType& t = gTacticalStatus;
 	memset(&t, 0, sizeof(TacticalStatusType));
+	t.uiFlags                 = 0x000000004; // TURNBASED, for save game compatibility
 	t.sSlideTarget            = NOWHERE;
 	t.uiTimeOfLastInput       = GetJA2Clock();
 	t.uiTimeSinceDemoOn       = GetJA2Clock();
@@ -5563,7 +5564,7 @@ static SOLDIERTYPE* InternalReduceAttackBusyCount(SOLDIERTYPE* const pSoldier, c
 		}
 	}
 
-	//if ((gTacticalStatus.uiFlags & TURNBASED) && (gTacticalStatus.uiFlags & INCOMBAT))
+	//if (gTacticalStatus.uiFlags & INCOMBAT)
 	//{
 
 	if ( gTacticalStatus.ubAttackBusyCount == 0 )

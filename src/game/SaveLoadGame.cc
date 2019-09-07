@@ -442,7 +442,7 @@ BOOLEAN SaveGame(UINT8 const ubSaveGameID, wchar_t const* GameDesc)
 
 	SaveGameSettings();
 
-	// Display a screen message that the save was succesful
+	// Display a screen message that the save was succesful (unless we are in Dead is Dead Mode to prevent message spamming)
 	if (ubSaveGameID != SAVE__END_TURN_NUM && gGameOptions.ubGameSaveMode != DIF_DEAD_IS_DEAD)
 	{
 		ScreenMsg(FONT_MCOLOR_WHITE, MSG_INTERFACE, pMessageStrings[MSG_SAVESUCCESS]);
@@ -1175,6 +1175,7 @@ static void SaveSoldierStructure(HWFILE const f)
 
 		// Save the soldier structure
 		BYTE data[2328];
+		memset(data, 0, 2328);
 		InjectSoldierType(data, &s);
 		writer(f, data, sizeof(data));
 

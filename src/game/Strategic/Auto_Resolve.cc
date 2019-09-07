@@ -68,7 +68,6 @@
 #include "Debug.h"
 #include "UILayout.h"
 #include "WeaponModels.h"
-#include "slog/slog.h"
 #include "Easings.h"
 #include "ContentManager.h"
 #include "GameInstance.h"

@@ -39,6 +39,7 @@
 #include "slog/slog.h"
 
 UINT16* gpZBuffer = NULL;
+UINT16  gZBufferPitch = 0;
 
 static INT16 gsCurrentGlowFrame     = 0;
 static INT16 gsCurrentItemGlowFrame = 0;
@@ -59,7 +60,6 @@ enum RenderTilesFlags
 	TILES_MARKED                    = 0x10000000,
 	TILES_OBSCURED                  = 0x01000000
 };
-ENUM_BITSET(RenderTilesFlags)
 
 
 #define MAX_RENDERED_ITEMS 2
@@ -135,16 +135,12 @@ BOOLEAN gfIgnoreScrollDueToCenterAdjust = FALSE;
 // GLOBAL SCROLLING PARAMS
 INT16 gCenterWorldX;
 INT16 gCenterWorldY;
-INT16 gsTLX;                            /**< Top left corner of the current map in screen coordinates. */
-INT16 gsTLY;                            /**< Top left corner of the current map in screen coordinates. */
-INT16 gsTRX;                            /**< Top right corner of the current map in screen coordinates. */
-INT16 gsTRY;                            /**< Top right corner of the current map in screen coordinates. */
-INT16 gsBLX;                            /**< Bottom left corner of the current map in screen coordinates. */
-INT16 gsBLY;                            /**< Bottom left corner of the current map in screen coordinates. */
-INT16 gsBRX;                            /**< Bottom right corner of the current map in screen coordinates. */
-INT16 gsBRY;                            /**< Bottom right corner of the current map in screen coordinates. */
-INT16 gsCX;                             /**< Center of the map in screen coordinates (seems to be always 0). */
-INT16 gsCY;                             /**< Center of the map in screen coordinates (seems to be always 1625). */
+INT16 gsLeftX;      // Left edge of the current map in screen coordinates.
+INT16 gsTopY;       // Top edge of the current map in screen coordinates.
+INT16 gsRightX;     // Right edge of the current map in screen coordinates.
+INT16 gsBottomY;    // Bottom edge of the current map in screen coordinates.
+INT16 gsCX;         // Center of the map in screen coordinates (seems to be always 0).
+INT16 gsCY;         // Center of the map in screen coordinates (seems to be always 1625).
 double gdScaleX;
 double gdScaleY;
 
@@ -155,8 +151,6 @@ bool g_scroll_inertia = false;
 
 
 // GLOBALS FOR CALCULATING STARTING PARAMETERS
-static INT16 gsStartPointX_W;
-static INT16 gsStartPointY_W;
 static INT16 gsStartPointX_S;
 static INT16 gsStartPointY_S;
 static INT16 gsStartPointX_M;
@@ -164,8 +158,9 @@ static INT16 gsStartPointY_M;
 static INT16 gsEndXS;
 static INT16 gsEndYS;
 // LARGER OFFSET VERSION FOR GIVEN LAYERS
-static INT16 gsLStartPointX_W;
-static INT16 gsLStartPointY_W;
+// NOTE: Larger viewport offset values are used for static world surface rendering. That surface is blitted
+//       during scrolling to speed up rendering and make scrolling smoother.
+// TODO: maxrd2 drop all of these when SDL blitting is done
 static INT16 gsLStartPointX_S;
 static INT16 gsLStartPointY_S;
 static INT16 gsLStartPointX_M;
@@ -335,7 +330,7 @@ static inline INT16 GetMapXYWorldY(INT32 WorldCellX, INT32 WorldCellY)
 	INT16 RDistToCenterX = WorldCellX * CELL_X_SIZE - gCenterWorldX;
 	INT16 RDistToCenterY = WorldCellY * CELL_Y_SIZE - gCenterWorldY;
 	INT16 RScreenCenterY = RDistToCenterX + RDistToCenterY;
-	return RScreenCenterY + gsCY - gsTLY;
+	return RScreenCenterY + gsCY - gsTopY;
 }
 
 
@@ -2242,23 +2237,20 @@ void InitRenderParams(UINT8 ubRestrictionID)
 	gCenterWorldY = CELL_X_SIZE * WORLD_COLS / 2;
 
 	// Convert Bounding box into screen coords
-	FromCellToScreenCoordinates(gTopLeftWorldLimitX,     gTopLeftWorldLimitY,     &gsTLX, &gsTLY);
-	FromCellToScreenCoordinates(gTopRightWorldLimitX,    gTopRightWorldLimitY,    &gsTRX, &gsTRY);
-	FromCellToScreenCoordinates(gBottomLeftWorldLimitX,  gBottomLeftWorldLimitY,  &gsBLX, &gsBLY);
-	FromCellToScreenCoordinates(gBottomRightWorldLimitX, gBottomRightWorldLimitY, &gsBRX, &gsBRY);
+	FromCellToScreenCoordinates(gTopLeftWorldLimitX,     gTopLeftWorldLimitY,     &gsLeftX, &gsTopY);
+	FromCellToScreenCoordinates(gBottomRightWorldLimitX, gBottomRightWorldLimitY, &gsRightX, &gsBottomY);
 	FromCellToScreenCoordinates(gCenterWorldX,           gCenterWorldY,           &gsCX,  &gsCY);
 
 	// Adjust for interface height tabbing!
-	gsTLY += ROOF_LEVEL_HEIGHT / 2;
-	gsTRY += ROOF_LEVEL_HEIGHT / 2;
+	gsTopY += ROOF_LEVEL_HEIGHT;
 	gsCY  += ROOF_LEVEL_HEIGHT / 2;
 
-	SLOGD(DEBUG_TAG_RENDERWORLD, "World Screen Width %d Height %d", gsTRX - gsTLX, gsBRY - gsTRY);
+	SLOGD(DEBUG_TAG_RENDERWORLD, "World Screen Width %d Height %d", gsRightX - gsLeftX, gsBottomY - gsTopY);
 
 	// Determine scale factors
 	// First scale world screen coords for VIEWPORT ratio
-	const double dWorldX = gsTRX - gsTLX;
-	const double dWorldY = gsBRY - gsTRY;
+	const double dWorldX = gsRightX - gsLeftX;
+	const double dWorldY = gsBottomY - gsTopY;
 
 	gdScaleX = (double)RADAR_WINDOW_WIDTH  / dWorldX;
 	gdScaleY = (double)RADAR_WINDOW_HEIGHT / dWorldY;
@@ -2280,8 +2272,6 @@ void InitRenderParams(UINT8 ubRestrictionID)
 static BOOLEAN ApplyScrolling(INT16 sTempRenderCenterX, INT16 sTempRenderCenterY, BOOLEAN fForceAdjust, BOOLEAN fCheckOnly,
 				ScrollType scrollType)
 {
-	// printf("~ %4d, %4d\n", sTempRenderCenterX, sTempRenderCenterY);
-
 	// Make sure it's a multiple of 5
 	sTempRenderCenterX = sTempRenderCenterX / CELL_X_SIZE * CELL_X_SIZE + CELL_X_SIZE / 2;
 	sTempRenderCenterY = sTempRenderCenterY / CELL_X_SIZE * CELL_Y_SIZE + CELL_Y_SIZE / 2;
@@ -2299,32 +2289,23 @@ static BOOLEAN ApplyScrolling(INT16 sTempRenderCenterX, INT16 sTempRenderCenterY
 	const INT16 sY_S = g_ui.m_tacticalMapCenterY;
 
 	// Get corners in screen coords
-	// TOP LEFT
 	const INT16 sTopLeftWorldX = sScreenCenterX - sX_S;
 	const INT16 sTopLeftWorldY = sScreenCenterY - sY_S;
-
-	const INT16 sTopRightWorldX = sScreenCenterX + sX_S;
-	// const INT16 sTopRightWorldY = sScreenCenterY - sY_S;
-
-	// const INT16 sBottomLeftWorldX = sScreenCenterX - sX_S;
-	const INT16 sBottomLeftWorldY = sScreenCenterY + sY_S;
 
 	const INT16 sBottomRightWorldX = sScreenCenterX + sX_S;
 	const INT16 sBottomRightWorldY = sScreenCenterY + sY_S;
 
-#define TILE_SIZE 10
-
 	// Checking if screen shows areas outside of the map
-	BOOLEAN fOutLeft   = (gsTLX > sTopLeftWorldX);
-	BOOLEAN fOutRight  = (gsTRX < sTopRightWorldX);
-	BOOLEAN fOutTop    = (gsTLY >= sTopLeftWorldY);            /* top of the screen is above top of the map */
-	BOOLEAN fOutBottom = (gsBLY < sBottomLeftWorldY);          /* bottom of the screen is below bottom if the map */
+	const BOOLEAN fOutLeft   = (gsLeftX + SCROLL_LEFT_PADDING > sTopLeftWorldX);
+	const BOOLEAN fOutRight  = (gsRightX + SCROLL_RIGHT_PADDING < sBottomRightWorldX);
+	const BOOLEAN fOutTop    = (gsTopY + SCROLL_TOP_PADDING >= sTopLeftWorldY);            /* top of the screen is above top of the map */
+	const BOOLEAN fOutBottom = (gsBottomY + SCROLL_BOTTOM_PADDING < sBottomRightWorldY);          /* bottom of the screen is below bottom if the map */
 
-	int mapHeight = gsBLY - gsTLY;
-	int screenHeight = gsVIEWPORT_END_Y - gsVIEWPORT_START_Y;
+	const int mapHeight = (gsBottomY + SCROLL_BOTTOM_PADDING) - (gsTopY + SCROLL_TOP_PADDING);
+	const int screenHeight = gsVIEWPORT_END_Y - gsVIEWPORT_START_Y;
 
-	int mapWidth = gsTRX - gsTLX;
-	int screenWidth = gsVIEWPORT_END_X - gsVIEWPORT_START_X;
+	const int mapWidth = (gsRightX + SCROLL_RIGHT_PADDING) - (gsLeftX + SCROLL_LEFT_PADDING);
+	const int screenWidth = gsVIEWPORT_END_X - gsVIEWPORT_START_X;
 
 	BOOLEAN fScrollGood = FALSE;
 
@@ -2375,29 +2356,29 @@ static BOOLEAN ApplyScrolling(INT16 sTempRenderCenterX, INT16 sTempRenderCenterY
 			if (screenHeight > mapHeight)
 			{
 				// printf("screen height is bigger than map height\n");
-				newScreenCenterY = gsCY;
+				newScreenCenterY = gsCY + (SCROLL_TOP_PADDING + SCROLL_BOTTOM_PADDING) / 2;
 			}
 			else if (fOutTop)
 			{
-				newScreenCenterY = gsTLY + sY_S;
+				newScreenCenterY = gsTopY + SCROLL_TOP_PADDING + sY_S;
 			}
 			else if (fOutBottom)
 			{
-				newScreenCenterY = gsBLY - sY_S - 50;
+				newScreenCenterY = gsBottomY + SCROLL_BOTTOM_PADDING - sY_S;
 			}
 
 			if (screenWidth > mapWidth)
 			{
 				// printf("screen width is bigger than map width\n");
-				newScreenCenterX = gsCX;
+				newScreenCenterX = gsCX + (SCROLL_LEFT_PADDING + SCROLL_RIGHT_PADDING) / 2;
 			}
 			else if (fOutLeft)
 			{
-				newScreenCenterX = gsTLX + sX_S;
+				newScreenCenterX = gsLeftX + SCROLL_LEFT_PADDING + sX_S;
 			}
 			else if (fOutRight)
 			{
-				newScreenCenterX = gsTRX - sX_S;
+				newScreenCenterX = gsRightX + SCROLL_RIGHT_PADDING - sX_S;
 			}
 
 			INT16 sTempPosX_W;
@@ -2420,13 +2401,13 @@ static BOOLEAN ApplyScrolling(INT16 sTempRenderCenterX, INT16 sTempRenderCenterY
 	{
 		// Make sure it's a multiple of 5
 		gsRenderCenterX = sTempRenderCenterX / CELL_X_SIZE * CELL_X_SIZE + CELL_X_SIZE / 2;
-		gsRenderCenterY = sTempRenderCenterY / CELL_Y_SIZE * CELL_Y_SIZE + CELL_Y_SIZE / 2;
+		gsRenderCenterY = sTempRenderCenterY / CELL_X_SIZE * CELL_Y_SIZE + CELL_Y_SIZE / 2;
 
-		gsTopLeftWorldX = sTopLeftWorldX - gsTLX;
-		gsTopLeftWorldY = sTopLeftWorldY - gsTLY;
+		gsTopLeftWorldX = sTopLeftWorldX - gsLeftX;
+		gsTopLeftWorldY = sTopLeftWorldY - gsTopY;
 
-		gsBottomRightWorldX = sBottomRightWorldX - gsTLX;
-		gsBottomRightWorldY = sBottomRightWorldY - gsTLY;
+		gsBottomRightWorldX = sBottomRightWorldX - gsLeftX;
+		gsBottomRightWorldY = sBottomRightWorldY - gsTopY;
 
 		SetPositionSndsVolumeAndPanning();
 	}
@@ -4212,16 +4193,12 @@ static void CalcRenderParameters(INT16 sLeft, INT16 sTop, INT16 sRight, INT16 sB
 	gsStartPointX_S = g_ui.m_tacticalMapCenterX - (sLeft - VIEWPORT_XOFFSET_S);
 	gsStartPointY_S = g_ui.m_tacticalMapCenterY - (sTop  - VIEWPORT_YOFFSET_S);
 
-
 	// b) Convert these distances into world distances
 	FromScreenToCellCoordinates(gsStartPointX_S, gsStartPointY_S, &sTempPosX_W, &sTempPosY_W);
 
 	// c) World start point is Render center minus this distance
-	gsStartPointX_W = sRenderCenterX_W - sTempPosX_W;
-	gsStartPointY_W = sRenderCenterY_W - sTempPosY_W;
-
-	// NOTE: Increase X map value by 1 tile to offset where on screen we are...
-	if (gsStartPointX_W > 0) gsStartPointX_W += CELL_X_SIZE;
+	const INT16 sStartPointX_W = sRenderCenterX_W - sTempPosX_W + CELL_X_SIZE;
+	const INT16 sStartPointY_W = sRenderCenterY_W - sTempPosY_W;
 
 	// d) screen start point is screen distances minus screen center
 	gsStartPointX_S = sLeft - VIEWPORT_XOFFSET_S;
@@ -4229,48 +4206,37 @@ static void CalcRenderParameters(INT16 sLeft, INT16 sTop, INT16 sRight, INT16 sB
 
 	// STEP FOUR - Determine Start block
 	// a) Find start block
-	gsStartPointX_M = gsStartPointX_W / CELL_X_SIZE;
-	gsStartPointY_M = gsStartPointY_W / CELL_Y_SIZE;
+	gsStartPointX_M = floor(DOUBLE(sStartPointX_W) / DOUBLE(CELL_X_SIZE));
+	gsStartPointY_M = floor(DOUBLE(sStartPointY_W) / DOUBLE(CELL_Y_SIZE));
 
-	// STEP 5 - Determine Deltas for center and find screen values
-	//Make sure these coordinates are multiples of scroll steps
-	const INT16 sOffsetX_W = ABS(gsStartPointX_W) - ABS(gsStartPointX_M * CELL_X_SIZE);
-	const INT16 sOffsetY_W = ABS(gsStartPointY_W) - ABS(gsStartPointY_M * CELL_Y_SIZE);
+	// STEP 5 - Determine offsets for tile center and convert to screen values
+	// Make sure these coordinates are multiples of scroll steps
+	const INT16 sOffsetX_W = sStartPointX_W - gsStartPointX_M * CELL_X_SIZE;
+	const INT16 sOffsetY_W = sStartPointY_W - gsStartPointY_M * CELL_Y_SIZE;
 
 	INT16 sOffsetX_S;
 	INT16 sOffsetY_S;
 	FromCellToScreenCoordinates(sOffsetX_W, sOffsetY_W, &sOffsetX_S, &sOffsetY_S);
 
-	if (gsStartPointY_W < 0)
-	{
-		gsStartPointY_S += 0;
-	}
-	else
-	{
-		gsStartPointY_S -= sOffsetY_S;
-	}
 	gsStartPointX_S -= sOffsetX_S;
+	gsStartPointY_S -= sOffsetY_S;
 
 	/////////////////////////////////////////
 	//ATE: CALCULATE LARGER OFFSET VALUES
 	gsLEndXS = sRight  + LARGER_VIEWPORT_XOFFSET_S;
 	gsLEndYS = sBottom + LARGER_VIEWPORT_YOFFSET_S;
 
-		// STEP THREE - determine starting point in world coords
+	// STEP THREE - determine starting point in world coords
 	// a) Determine where in screen coords to start rendering
 	gsLStartPointX_S = g_ui.m_tacticalMapCenterX - (sLeft - LARGER_VIEWPORT_XOFFSET_S);
 	gsLStartPointY_S = g_ui.m_tacticalMapCenterY - (sTop  - LARGER_VIEWPORT_YOFFSET_S);
-
 
 	// b) Convert these distances into world distances
 	FromScreenToCellCoordinates(gsLStartPointX_S, gsLStartPointY_S, &sTempPosX_W, &sTempPosY_W);
 
 	// c) World start point is Render center minus this distance
-	gsLStartPointX_W = sRenderCenterX_W - sTempPosX_W;
-	gsLStartPointY_W = sRenderCenterY_W - sTempPosY_W;
-
-	// NOTE: Increase X map value by 1 tile to offset where on screen we are...
-	if (gsLStartPointX_W > 0) gsLStartPointX_W += CELL_X_SIZE;
+	const INT16 sLStartPointX_W = sRenderCenterX_W - sTempPosX_W + CELL_X_SIZE;
+	const INT16 sLStartPointY_W = sRenderCenterY_W - sTempPosY_W;
 
 	// d) screen start point is screen distances minus screen center
 	gsLStartPointX_S = sLeft - LARGER_VIEWPORT_XOFFSET_S;
@@ -4278,21 +4244,12 @@ static void CalcRenderParameters(INT16 sLeft, INT16 sTop, INT16 sRight, INT16 sB
 
 	// STEP FOUR - Determine Start block
 	// a) Find start block
-	gsLStartPointX_M = gsLStartPointX_W / CELL_X_SIZE;
-	gsLStartPointY_M = gsLStartPointY_W / CELL_Y_SIZE;
+	gsLStartPointX_M = floor(DOUBLE(sLStartPointX_W) / DOUBLE(CELL_X_SIZE));
+	gsLStartPointY_M = floor(DOUBLE(sLStartPointY_W) / DOUBLE(CELL_Y_SIZE));
 
-	// Adjust starting screen coordinates
+	// STEP 5 - Adjust screen coordinates to tile center, so it matches small viewport
 	gsLStartPointX_S -= sOffsetX_S;
-
-	if (gsLStartPointY_W < 0)
-	{
-		gsLStartPointY_S +=  0;
-		gsLStartPointX_S -= 20;
-	}
-	else
-	{
-		gsLStartPointY_S -= sOffsetY_S;
-	}
+	gsLStartPointY_S -= sOffsetY_S;
 }
 
 

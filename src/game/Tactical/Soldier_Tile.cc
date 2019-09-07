@@ -290,7 +290,7 @@ BOOLEAN HandleNextTile( SOLDIERTYPE *pSoldier, INT8 bDirection, INT16 sGridNo, I
 	INT16 bOverTerrainType;
 
 	// Check for blocking if in realtime
-	///if ( ( gTacticalStatus.uiFlags & REALTIME ) || !( gTacticalStatus.uiFlags & INCOMBAT ) )
+	///if (!(gTacticalStatus.uiFlags & INCOMBAT))
 
 	// ATE: If not on visible tile, return clear ( for path out of map )
 	if ( !GridNoOnVisibleWorldTile( sGridNo ) )
@@ -356,7 +356,7 @@ BOOLEAN HandleNextTile( SOLDIERTYPE *pSoldier, INT8 bDirection, INT16 sGridNo, I
 		else
 		{
 			// Mark this tile as reserverd ( until we get there! )
-			if ( !(gTacticalStatus.uiFlags & INCOMBAT) )
+			if (!(gTacticalStatus.uiFlags & INCOMBAT))
 			{
 				MarkMovementReserved(*pSoldier, sGridNo);
 			}

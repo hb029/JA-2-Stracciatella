@@ -37,14 +37,13 @@ static BOOLEAN gfDontRestartSong   = FALSE;
 
 
 static BOOLEAN MusicFadeIn(void);
-static BOOLEAN MusicStop(void);
+static void MusicStop(void);
 static void MusicStopCallback(void* pData);
 
 
 void MusicPlay(const UTF8String* pFilename)
 {
-	if(fMusicPlaying)
-		MusicStop();
+	MusicStop();
 
 	uiMusicHandle = SoundPlayStreamedFile(pFilename->getUTF8(), 0, 64, 1, MusicStopCallback, NULL);
 
@@ -111,21 +110,24 @@ UINT32 MusicGetVolume(void)
 
 
 //		Stops the currently playing music.
-//
-//	Returns:	TRUE if the music was stopped, FALSE if an error occurred
-static BOOLEAN MusicStop(void)
+static void MusicStop(void)
 {
+	//SLOGD("Music Stop %d %d %d", fMusicPlaying, uiMusicHandle, gubMusicMode);
+	if(!fMusicPlaying)
+	{
+		return;
+	}
+
 	if(uiMusicHandle!=NO_SAMPLE)
 	{
-		SLOGD(DEBUG_TAG_MUSICCTL, "Music Stop %d %d", uiMusicHandle, gubMusicMode);
-
 		SoundStop(uiMusicHandle);
-		fMusicPlaying	= FALSE;
 		uiMusicHandle = NO_SAMPLE;
-		return(TRUE);
 	}
-	SLOGE(DEBUG_TAG_MUSICCTL,  "Music Stop %d %d", uiMusicHandle, gubMusicMode);
-	return(FALSE);
+	else if(!gfMusicEnded)
+	{
+		//SLOGW("expected either music data or the end of the music (mode=%d, handle=%d, ended=%d)", gubMusicMode, uiMusicHandle, gfMusicEnded);
+	}
+	fMusicPlaying = FALSE;
 }
 
 
@@ -306,6 +308,8 @@ static void StartMusicBasedOnMode(void)
 				next = MUSIC_TACTICAL_CREATURE_BATTLE;
 			}
 			break;
+		default: // ignore other modes
+			break;
 	}
 
 	switch (gubMusicMode) {
@@ -318,6 +322,8 @@ static void StartMusicBasedOnMode(void)
 			break;
 		case MUSIC_TACTICAL_DEFEAT:
 			gbDeathSongCount++;
+			break;
+		default: // ignore other modes
 			break;
 	}
 

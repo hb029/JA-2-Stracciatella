@@ -1183,7 +1183,7 @@ BOOLEAN AdjustToNextAnimationFrame( SOLDIERTYPE *pSoldier )
 				case 477:
 
 					// CODE: Locate to target ( if an AI guy.. )
-					if ( gTacticalStatus.uiFlags & INCOMBAT )
+					if (gTacticalStatus.uiFlags & INCOMBAT)
 					{
 						if ( pSoldier->bTeam != OUR_TEAM )
 						{
@@ -3107,9 +3107,10 @@ static void CheckForAndHandleSoldierIncompacitated(SOLDIERTYPE* pSoldier)
 	}
 
 	// Randomly fall back or forward, if we are in the standing hit animation
+	// FIX civs do not have FALLFORWARD_FROMHIT_CROUCH so they must fall from a standing position when cowering (issue #157)
 	UINT16 state;
 	if ( pSoldier->usAnimState == GENERIC_HIT_STAND || pSoldier->usAnimState == STANDING_BURST_HIT ||
-		pSoldier->usAnimState == RIFLE_STAND_HIT )
+		pSoldier->usAnimState == RIFLE_STAND_HIT || pSoldier->usAnimState == CIV_COWER_HIT )
 	{
 		INT8    bTestDirection = pSoldier->bDirection;
 		BOOLEAN fForceDirection = FALSE;
