@@ -631,7 +631,7 @@ static void AddVisibleToSoldierToEachGridNo(void)
 
 			else
 			{
-				SLOGE(DEBUG_TAG_ASSERTS, "AddVisibleToSoldierToEachGridNo: invalid VisibleToSoldier");
+				SLOGA("AddVisibleToSoldierToEachGridNo: invalid VisibleToSoldier");
 			}
 		}
 	}
@@ -684,7 +684,7 @@ void RemoveVisibleGridNoAtSelectedGridNo()
 
 			else
 			{
-				SLOGE(DEBUG_TAG_ASSERTS, "RemoveVisibleGridNoAtSelectedGridNo: invalid VisibleToSoldier");
+				SLOGA("RemoveVisibleGridNoAtSelectedGridNo: invalid VisibleToSoldier");
 			}
 		}
 	}

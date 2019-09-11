@@ -64,7 +64,7 @@
 #include "Campaign_Types.h"
 #include "GameSettings.h"
 #include "Game_Event_Hook.h"
-#include "slog/slog.h"
+#include "Logger.h"
 
 #define ARE_IN_FADE_IN( )		( gfFadeIn || gfFadeInitialized )
 
@@ -511,7 +511,7 @@ ScreenID MainGameScreenHandle(void)
 	}
 	else if (gfIntendOnEnteringEditor && GameState::getInstance()->isEditorMode())
 	{
-		SLOGI(DEBUG_TAG_GAMESCREEN, "Aborting normal game mode and entering editor mode...");
+		SLOGI("Aborting normal game mode and entering editor mode...");
 		SetPendingNewScreen(NO_PENDING_SCREEN);
 		return EDIT_SCREEN;
 	}

@@ -111,4 +111,3 @@ protected:
 	/** Append UTF32 encoded data to the string. */
 	void append(const uint32_t *utf32Encoded);
 };
-

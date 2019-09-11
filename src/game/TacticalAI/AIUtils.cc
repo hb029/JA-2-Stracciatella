@@ -1854,7 +1854,7 @@ INT8 CalcMorale(SOLDIERTYPE *pSoldier)
 		(pSoldier->bAttitude == BRAVESOLO || pSoldier->bAttitude == BRAVEAID))
 		bMoraleCategory = MORALE_WORRIED;
 
-	SLOGD(DEBUG_TAG_AI, "Morale = %d (category %d), iOurTotalThreat %d, iTheirTotalThreat %d",
+	SLOGD("Morale = %d (category %d), iOurTotalThreat %d, iTheirTotalThreat %d",
 				sMorale, bMoraleCategory, iOurTotalThreat, iTheirTotalThreat);
 
 	return(bMoraleCategory);

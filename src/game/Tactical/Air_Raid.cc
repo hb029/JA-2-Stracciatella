@@ -45,7 +45,7 @@
 #include "GameInstance.h"
 #include "WeaponModels.h"
 
-#include "slog/slog.h"
+#include "Logger.h"
 
 #define SCRIPT_DELAY				10
 #define AIR_RAID_SAY_QUOTE_TIME		3000
@@ -194,13 +194,13 @@ void ScheduleAirRaid(AIR_RAID_DEFINITION* pAirRaidDef)
 
 	if (!StrategicMap[(AIRPORT_X + (MAP_WORLD_X * AIRPORT_Y))].fEnemyControlled && !StrategicMap[(AIRPORT2_X + (MAP_WORLD_X * AIRPORT2_Y))].fEnemyControlled)
 	{
-		SLOGD(DEBUG_TAG_AIRRAID, "ScheduleAirRaid: enemy has no more airports");
+		SLOGD("ScheduleAirRaid: enemy has no more airports");
 		return;
 	}
 
 	if (pAirRaidDef->bIntensity < 2)
 	{
-		SLOGD(DEBUG_TAG_AIRRAID, "ScheduleAirRaid: intensity is less than 2");
+		SLOGD("ScheduleAirRaid: intensity is less than 2");
 		return;
 	}
 
@@ -351,7 +351,7 @@ BOOLEAN BeginAirRaid( )
 	// Determine how many dives this one will be....
 	gbMaxDives = gAirRaidDef.bIntensity;
 
-	SLOGD(DEBUG_TAG_AIRRAID, "Begin Air Raid." );
+	SLOGD("Begin Air Raid." );
 
 	return(TRUE);
 }
@@ -579,8 +579,7 @@ static void AirRaidLookForDive(void)
 			{
 				// Free up attacker...
 				FreeUpAttacker(gpRaidSoldier);
-				SLOGD(DEBUG_TAG_AIRRAID,
-					"Tried to free up attacker AIR RAID NO DIVE, attack count now %d",
+				SLOGD("Tried to free up attacker AIR RAID NO DIVE, attack count now %d",
 					gTacticalStatus.ubAttackBusyCount);
 			}
 		}
@@ -667,8 +666,7 @@ static void BeginDive()
 
 	// Increment attacker bust count....
 	gTacticalStatus.ubAttackBusyCount++;
-	SLOGD(DEBUG_TAG_AIRRAID, "Starting attack BEGIN DIVE %d",
-		gTacticalStatus.ubAttackBusyCount);
+	SLOGD("Starting attack BEGIN DIVE %d", gTacticalStatus.ubAttackBusyCount);
 
 	// Pick location...
 	gsDiveTargetLocation = PickLocationNearAnyMercInSector( );
@@ -840,7 +838,7 @@ static void DoDive(void)
 					{
 						// Increase attacker busy...
 						//gTacticalStatus.ubAttackBusyCount++;
-						//SLOGD(DEBUG_TAG_AIRRAID, "Starting attack AIR RAID ( fire gun ), attack count now %d",
+						//SLOGD("Starting attack AIR RAID ( fire gun ), attack count now %d",
 						//	gTacticalStatus.ubAttackBusyCount);
 
 						// INcrement bullet fired...
@@ -884,7 +882,7 @@ static void DoDive(void)
 					{
 						// Increase attacker busy...
 						//gTacticalStatus.ubAttackBusyCount++;
-						//SLOGD(DEBUG_TAG_AIRRAID, "Starting attack AIR RAID ( second one ), attack count now %d",
+						//SLOGD("Starting attack AIR RAID ( second one ), attack count now %d",
 						//	gTacticalStatus.ubAttackBusyCount);
 
 						// INcrement bullet fired...
@@ -914,7 +912,7 @@ static void DoDive(void)
 				{
 					// Free up attacker...
 					FreeUpAttacker(gpRaidSoldier);
-					SLOGD(DEBUG_TAG_AIRRAID, "Tried to free up attacker AIR RAID DIVE DONE FOR THIS TURN, attack count now %d",
+					SLOGD("Tried to free up attacker AIR RAID DIVE DONE FOR THIS TURN, attack count now %d",
 						gTacticalStatus.ubAttackBusyCount);
 				}
 			}
@@ -1036,8 +1034,7 @@ static void DoBombing(void)
 							fLocate = TRUE;
 							// Increase attacker busy...
 							gTacticalStatus.ubAttackBusyCount++;
-							SLOGD(DEBUG_TAG_AIRRAID,
-								"Starting attack AIR RAID (bombs away), attack count now %d",
+							SLOGD("Starting attack AIR RAID (bombs away), attack count now %d",
 								gTacticalStatus.ubAttackBusyCount);
 						}
 
@@ -1053,8 +1050,7 @@ static void DoBombing(void)
 					{
 						// Free up attacker...
 						FreeUpAttacker(gpRaidSoldier);
-						SLOGD(DEBUG_TAG_AIRRAID,
-							"Tried to free up attacker AIR RAID BOMB ATTACK DONE FOR THIS TURN, attack count now %d",
+						SLOGD("Tried to free up attacker AIR RAID BOMB ATTACK DONE FOR THIS TURN, attack count now %d",
 							gTacticalStatus.ubAttackBusyCount);
 					}
 				}
@@ -1126,7 +1122,7 @@ void HandleAirRaid( )
 
 		if (WillAirRaidBeStopped(gAirRaidDef.sSectorX, gAirRaidDef.sSectorY))
 		{
-			SLOGD(DEBUG_TAG_AIRRAID, "HandleAirRaid: SAM just taken over");
+			SLOGD("HandleAirRaid: SAM just taken over");
 			if (gfFadingRaidIn)
 			{
 				guiSoundVolume = HIGHVOLUME - guiSoundVolume;
@@ -1198,8 +1194,7 @@ void HandleAirRaid( )
 					{
 						// Free up attacker...
 						FreeUpAttacker(gpRaidSoldier);
-						SLOGD(DEBUG_TAG_AIRRAID,
-							"Tried to free up attacker AIR RAID ENDING DIVE, attack count now %d",
+						SLOGD("Tried to free up attacker AIR RAID ENDING DIVE, attack count now %d",
 							gTacticalStatus.ubAttackBusyCount);
 					}
 
@@ -1215,8 +1210,7 @@ void HandleAirRaid( )
 					{
 						// Free up attacker...
 						FreeUpAttacker(gpRaidSoldier);
-						SLOGD(DEBUG_TAG_AIRRAID,
-							"Tried to free up attacker AIR RAID ENDING DIVE, attack count now %d",
+						SLOGD("Tried to free up attacker AIR RAID ENDING DIVE, attack count now %d",
 							gTacticalStatus.ubAttackBusyCount);
 					}
 
@@ -1285,8 +1279,7 @@ BOOLEAN HandleAirRaidEndTurn( UINT8 ubTeam )
 
 	// Increment attacker bust count....
 	gTacticalStatus.ubAttackBusyCount++;
-	SLOGD(DEBUG_TAG_AIRRAID, "Starting attack AIR RAID, attack count now %d",
-		gTacticalStatus.ubAttackBusyCount);
+	SLOGD("Starting attack AIR RAID, attack count now %d", gTacticalStatus.ubAttackBusyCount);
 
 	AddTopMessage(AIR_RAID_TURN_MESSAGE);
 
@@ -1488,8 +1481,7 @@ void EndAirRaid( )
 	{
 		// Free up attacker...
 		FreeUpAttacker(gpRaidSoldier);
-		SLOGD(DEBUG_TAG_AIRRAID,
-			"Tried to free up attacker AIR RAID NO DIVE, attack count now %d",
+		SLOGD("Tried to free up attacker AIR RAID NO DIVE, attack count now %d",
 			gTacticalStatus.ubAttackBusyCount);
 	}
 
@@ -1506,7 +1498,7 @@ void EndAirRaid( )
 	gsNotLocatedYet = FALSE;
 	guiSoundVolume = 0;
 
-	SLOGD(DEBUG_TAG_AIRRAID, "Ending Air Raid." );
+	SLOGD("Ending Air Raid." );
 }
 
 BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY)
@@ -1517,17 +1509,17 @@ BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY)
 
 	if (IsItRaining())
 	{
-		SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: it is raining");
+		SLOGD("WillAirRaidBeStopped: it is raining");
 		return(TRUE);
 	}
 
 	if (NightTime())
 	{
-		SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: it is night");
+		SLOGD("WillAirRaidBeStopped: it is night");
 		return(TRUE);
 	}
 
-	SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: enemy air controlled = %d", StrategicMap[CALCULATE_STRATEGIC_INDEX(sSectorX, sSectorY)].fEnemyAirControlled);
+	SLOGD("WillAirRaidBeStopped: enemy air controlled = %d", StrategicMap[CALCULATE_STRATEGIC_INDEX(sSectorX, sSectorY)].fEnemyAirControlled);
 
 	// if enemy controls this SAM site, then it can't stop an air raid
 	if (StrategicMap[CALCULATE_STRATEGIC_INDEX(sSectorX, sSectorY)].fEnemyAirControlled == TRUE)
@@ -1537,14 +1529,14 @@ BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY)
 
 	if (!StrategicMap[(AIRPORT_X + (MAP_WORLD_X * AIRPORT_Y))].fEnemyControlled && !StrategicMap[(AIRPORT2_X + (MAP_WORLD_X * AIRPORT2_Y))].fEnemyControlled)
 	{
-		SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: enemy has no more airports");
+		SLOGD("WillAirRaidBeStopped: enemy has no more airports");
 		return(TRUE);
 	}
 
 	// which SAM controls this sector?
 	ubSamNumber = ubSAMControlledSectors[sSectorY][sSectorX];
 
-	SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: SAM number = %d", ubSamNumber);
+	SLOGD("WillAirRaidBeStopped: SAM number = %d", ubSamNumber);
 
 	// if none of them
 	if (ubSamNumber == 0)
@@ -1557,7 +1549,7 @@ BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY)
 	bSAMCondition = StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(pSamList[ubSamNumber - 1])].bSAMCondition;
 
 	// if it's too busted to work, then it can't stop an air raid
-	SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: SAM condition = %d", bSAMCondition);
+	SLOGD("WillAirRaidBeStopped: SAM condition = %d", bSAMCondition);
 	if (bSAMCondition < MIN_CONDITION_FOR_SAM_SITE_TO_WORK)
 	{
 		// no problem, SAM site not working
@@ -1572,11 +1564,11 @@ BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY)
 
 	if (PreRandom(100) < ubChance)
 	{
-		SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: return true");
+		SLOGD("WillAirRaidBeStopped: return true");
 		return(TRUE);
 	}
 
-	SLOGD(DEBUG_TAG_AIRRAID, "WillAirRaidBeStopped: return false");
+	SLOGD("WillAirRaidBeStopped: return false");
 	return(FALSE);
 }
 
@@ -1613,7 +1605,7 @@ void ChopperAttackSector(UINT8 ubSectorX, UINT8 ubSectorY, INT8 bIntensity)
 	if (ubNumMilitia > 0)
 	{
 		HandleGlobalLoyaltyEvent(GLOBAL_LOYALTY_ABANDON_MILITIA, ubSectorX, ubSectorY, 0);
-		SLOGD(DEBUG_TAG_AIRRAID, "ChopperAttackSector: Militia abandoned");
+		SLOGD("ChopperAttackSector: Militia abandoned");
 	}
 
 	UINT8 i;

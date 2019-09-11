@@ -53,4 +53,5 @@ extern INT8 SectorTemperature( UINT32 uiTime, INT16 sSectorX, INT16 sSectorY, IN
 
 extern void UpdateTemperature( UINT8 ubTemperatureCode );
 
+
 #endif

@@ -133,7 +133,7 @@ static CREATURE_DIRECTIVE* NewDirective(UINT8 ubSectorID, UINT8 ubSectorZ, UINT8
 	curr->pLevel = FindUnderGroundSector( ubSectorX, ubSectorY, ubSectorZ );
 	if( !curr->pLevel )
 	{
-		SLOGE(DEBUG_TAG_ASSERTS, "Could not find underground sector node (%c%db_%d) that should exist.",
+		SLOGA("Could not find underground sector node (%c%db_%d) that should exist.",
 			ubSectorY + 'A' - 1, ubSectorX, ubSectorZ);
 		return 0;
 	}
@@ -454,7 +454,7 @@ static BOOLEAN PlaceNewCreature(CREATURE_DIRECTIVE* node, INT32 iDistance)
 					iAbsoluteMaxPopulation = 10;
 					break;
 				default:
-					SLOGE(DEBUG_TAG_ASSERTS, "PlaceNewCreature: invalid habitat type");
+					SLOGA("PlaceNewCreature: invalid habitat type");
 					return FALSE;
 			}
 
@@ -646,7 +646,7 @@ static void ChooseTownSectorToAttack(UINT8 ubSectorID, BOOLEAN fOverrideTest)
 					ubSectorID = SEC_H13;
 				break;
 			default:
-				SLOGE(DEBUG_TAG_ASSERTS, "ChooseTownSectorToAttack: invalid SectorID");
+				SLOGA("ChooseTownSectorToAttack: invalid SectorID");
 				return;
 		}
 	}
@@ -934,7 +934,7 @@ BOOLEAN MineClearOfMonsters( UINT8 ubMineIndex )
 				break;
 
 			default:
-				SLOGE(DEBUG_TAG_SMAP, "Attempting to check if mine is clear but mine index is invalid (%d).", ubMineIndex );
+				SLOGE("Attempting to check if mine is clear but mine index is invalid (%d).", ubMineIndex );
 				break;
 		}
 	}
@@ -964,7 +964,7 @@ void DetermineCreatureTownComposition(UINT8 ubNumCreatures,
 	ubAdultFemalePercentage += ubAdultMalePercentage;
 	if( ubAdultFemalePercentage != 100 )
 	{
-		SLOGE(DEBUG_TAG_ASSERTS, "Percentage for adding creatures don't add up to 100." );
+		SLOGA("Percentage for adding creatures don't add up to 100." );
 	}
 	//Second step is to determine the breakdown of the creatures randomly.
 	i = ubNumCreatures;
@@ -1121,7 +1121,7 @@ BOOLEAN PrepareCreaturesForBattle()
 			ubAdultFemalePercentage = 20;
 			break;
 		default:
-			SLOGE(DEBUG_TAG_SMAP, "Invalid creature habitat ID of %d for PrepareCreaturesForBattle.  Ignoring...", ubCreatureHabitat );
+			SLOGE("Invalid creature habitat ID of %d for PrepareCreaturesForBattle.  Ignoring...", ubCreatureHabitat );
 			return FALSE;
 	}
 
@@ -1137,7 +1137,7 @@ BOOLEAN PrepareCreaturesForBattle()
 	ubAdultFemalePercentage += ubAdultMalePercentage;
 	if( ubAdultFemalePercentage != 100 )
 	{
-		SLOGE(DEBUG_TAG_ASSERTS, "Percentage for adding creatures don't add up to 100." );
+		SLOGA("Percentage for adding creatures don't add up to 100." );
 	}
 	//Second step is to determine the breakdown of the creatures randomly.
 	i = ubNumCreatures;
@@ -1164,7 +1164,7 @@ BOOLEAN PrepareCreaturesForBattle()
 		pUndergroundSector = FindUnderGroundSector( gWorldSectorX, gWorldSectorY, gbWorldSectorZ );
 		if( !pUndergroundSector )
 		{ //No info?!!!!!
-			SLOGE(DEBUG_TAG_ASSERTS, "Please report underground sector you are in or going to and send save if possible." );
+			SLOGA("Please report underground sector you are in or going to and send save if possible." );
 			return FALSE;
 		}
 		pUndergroundSector->ubCreaturesInBattle = pUndergroundSector->ubNumCreatures;
@@ -1287,7 +1287,7 @@ void LoadCreatureDirectives(HWFILE const hFile, UINT32 const uiSavedGameVersion)
 		case 3:		InitLairAlma();			break;
 		case 4:		InitLairGrumm();		break;
 		default:
-			SLOGE(DEBUG_TAG_SMAP, "Invalid restoration of creature lair ID of %d.  Save game potentially hosed.", giLairID );
+			SLOGE("Invalid restoration of creature lair ID of %d.  Save game potentially hosed.", giLairID );
 			break;
 	}
 }

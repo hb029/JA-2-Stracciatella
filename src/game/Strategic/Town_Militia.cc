@@ -251,12 +251,12 @@ UINT8 CheckOneMilitiaForPromotion(INT16 const x, INT16 const y, UINT8 &current_r
 	// since the awarding is potentially significantly delayed, make sure they
 	// weren't all promoted already by regular training or killed;
 	// if we can't find them, we try higher ranks and make sure the caller follows up
-	SECTORINFO & si = SectorInfo[SECTOR(x, y)];
+	SECTORINFO& si = SectorInfo[SECTOR(x, y)];
 	while (si.ubNumberOfCivsAtLevel[current_rank] == 0) {
 		if (current_rank == ELITE_MILITIA) return 0;
 		current_rank++;
 	}
-	
+
 	UINT8 n_promotions = 0;
 	switch (current_rank)
 	{
@@ -308,7 +308,7 @@ static void HandleMilitiaDefections(INT16 sMapX, INT16 sMapY)
 					uiChanceToDefect = 90;
 					break;
 				default:
-					SLOGE(DEBUG_TAG_ASSERTS, "HandleMilitiaDefections: invalid Rank");
+					SLOGA("HandleMilitiaDefections: invalid Rank");
 					return;
 			}
 

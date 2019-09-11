@@ -3,6 +3,7 @@
 
 #include <SDL_video.h>
 #include "Types.h"
+#include "stracciatella.h"
 
 
 #define VIDEO_NO_CURSOR 0xFFFF
@@ -10,8 +11,10 @@
 
 extern SDL_Window* g_game_window;
 
+using VideoScaleQuality = ScalingQuality;
+
 void         VideoSetFullScreen(BOOLEAN enable);
-void         InitializeVideoManager(void);
+void         InitializeVideoManager(VideoScaleQuality quality);
 void         ShutdownVideoManager(void);
 void         SuspendVideoManager(void);
 void         InvalidateRegion(INT32 iLeft, INT32 iTop, INT32 iRight, INT32 iBottom);
@@ -19,6 +22,8 @@ void         InvalidateScreen(void);
 void         GetPrimaryRGBDistributionMasks(UINT32* RedBitMask, UINT32* GreenBitMask, UINT32* BlueBitMask);
 void         EndFrameBufferRender(void);
 void         PrintScreen(void);
+
+void VideoSetBrightness(float brightness);
 
 /* Toggle between fullscreen and window mode after initialising the video
  * manager */

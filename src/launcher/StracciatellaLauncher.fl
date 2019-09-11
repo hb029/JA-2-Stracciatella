@@ -1,85 +1,172 @@
 # data file for the Fltk User Interface Designer (fluid)
-version 1.0304
-header_name {.h}
-code_name {.cxx}
+version 1.0303 
+header_name {.h} 
+code_name {.cc}
 class StracciatellaLauncher {open
 } {
   Function {StracciatellaLauncher()} {open
   } {
     Fl_Window stracciatellaLauncher {
       label {JA2 Stracciatella Launcher} open
-      xywh {719 235 455 290} type Double visible
+      xywh {540 551 465 325} type Double resizable size_range {465 325 0 0} visible
     } {
-      Fl_Group {} {open
-        xywh {-1 0 456 290}
+      Fl_Tabs {} {open
+        xywh {0 0 465 300} align 9 resizable
       } {
-        Fl_Group {} {open
-          xywh {5 10 440 65} align 20
+        Fl_Group {} {
+          label {@> Play  } open
+          xywh {0 50 465 250} labelcolor 24
         } {
-          Fl_Input dataDirectoryInput {
-            label {JA2 Data Directory:} selected
-            xywh {145 10 270 25} align 132
+          Fl_Button editorButton {
+            label {Start Map Editor}
+            xywh {130 120 200 25}
           }
-          Fl_Input_Choice gameVersionInput {
-            label {Game Version:} open
-            xywh {145 47 300 25}
-          } {}
-          Fl_Button browseJa2DirectoryButton {
-            label {...}
-            xywh {420 10 25 25}
+          Fl_Button playButton {
+            label {Play Ja2 Stracciatella}
+            xywh {130 155 200 55}
           }
         }
-        Fl_Group {} {open
-          xywh {0 105 250 175}
+        Fl_Group {} {
+          label {@filenew Data }
+          xywh {0 50 465 250} labelcolor 24 hide
         } {
-          Fl_Check_Button fullscreenCheckbox {
-            label Fullscreen
-            xywh {20 241 100 20} down_box DOWN_BOX
+          Fl_Group {} {
+            xywh {10 60 445 50}
+          } {
+            Fl_Input gameDirectoryInput {
+              label {JA2 Game Directory:}
+              xywh {20 75 385 25} align 5 resizable
+            }
+            Fl_Button browseJa2DirectoryButton {
+              label {@fileopen}
+              tooltip {Choose JA2 game directory.} xywh {415 75 30 25}
+            }
           }
           Fl_Group {} {
-            label Resolution open
-            xywh {10 114 240 120} box THIN_DOWN_FRAME
+            xywh {10 110 445 50}
           } {
-            Fl_Round_Button predefinedResolutionButton {
-              label {Predefined:}
-              xywh {20 124 100 20} down_box ROUND_DOWN_BOX
-            }
-            Fl_Round_Button customResolutionButton {
-              label {Custom:}
-              xywh {20 174 80 20} down_box ROUND_DOWN_BOX
-            }
-            Fl_Input_Choice predefinedResolutionInput {open
-              xywh {40 144 180 25}
+            Fl_Choice gameVersionInput {
+              label {Game Version:} open
+              xywh {20 125 385 25} down_box BORDER_BOX align 5 resizable
             } {}
-            Fl_Value_Input customResolutionXInput {
-              xywh {40 194 80 25} minimum 640 maximum 0 value 640
+            Fl_Button guessVersionButton {
+              label {@search}
+              tooltip {Guess Game Version} xywh {415 125 30 25}
             }
-            Fl_Value_Input customResolutionYInput {
-              xywh {140 194 80 25} minimum 480 maximum 0 value 480
+          }
+          Fl_Group {} {
+            xywh {10 160 445 105}
+          } {
+            Fl_Check_Browser modsCheckBrowser {
+              label {Mods:}
+              xywh {20 175 315 80} align 5
+            }
+            Fl_Menu_Button addModMenuButton {
+              label Add
+              xywh {345 175 100 20}
+            } {}
+            Fl_Button moveDownModsButton {
+              label {Move down}
+              xywh {345 215 100 20}
+            }
+            Fl_Button moveUpModsButton {
+              label {Move up}
+              xywh {345 195 100 20}
+            }
+            Fl_Button removeModsButton {
+              label Remove
+              xywh {345 235 100 20}
+            }
+          }
+          Fl_Group {} {
+            label resizable
+            xywh {10 265 445 25} labeltype NO_LABEL align 17 resizable
+          } {}
+        }
+        Fl_Group {} {
+          label {@menu Settings }
+          xywh {0 50 465 250} labelcolor 24 hide
+        } {
+          Fl_Group {} {
+            xywh {10 60 445 50}
+          } {
+            Fl_Output gameSettingsOutput {
+              label {Game Settings:}
+              xywh {20 75 425 25} align 5 resizable
+            }
+          }
+          Fl_Group {} {
+            xywh {10 110 445 50}
+          } {
+            Fl_Choice scalingModeChoice {
+              label {Scaling Mode:} open
+              xywh {20 125 425 25} down_box BORDER_BOX align 5 resizable
+            } {}
+          }
+          Fl_Group {} {
+            xywh {10 160 445 50}
+          } {
+            Fl_Value_Input resolutionXInput {
+              label {Resolution:}
+              xywh {20 175 75 25} align 5 minimum 640 maximum 0 value 640
             }
             Fl_Box {} {
               label x
-              xywh {120 194 20 25}
+              xywh {95 175 20 25}
+            }
+            Fl_Value_Input resolutionYInput {
+              xywh {115 175 75 25} labeltype NO_LABEL align 5 minimum 480 maximum 0 value 480
+            }
+            Fl_Menu_Button predefinedResolutionMenuButton {
+              label Predefined open
+              xywh {210 175 110 25}
+            } {}
+            Fl_Group {} {
+              label resizable open
+              xywh {415 170 30 30} labeltype NO_LABEL align 17 resizable
+            } {}
+            Fl_Box invalidResolutionLabel {
+              label {invalid!}
+              tooltip {the resolution must be at least 640x480, the original game resolution} xywh {340 175 65 25} labelfont 1 labelcolor 1 align 20
             }
           }
-          Fl_Check_Button playSoundsCheckbox {
-            label {Play Sounds}
-            xywh {20 261 130 19} down_box DOWN_BOX value 1
+          Fl_Group {} {
+            xywh {10 210 445 50}
+          } {
+            Fl_Check_Button fullscreenCheckbox {
+              label Fullscreen
+              xywh {20 220 95 15} down_box DOWN_BOX
+            }
+            Fl_Check_Button playSoundsCheckbox {
+              label {Play Sounds}
+              xywh {20 240 109 15} down_box DOWN_BOX value 1
+            }
+            Fl_Group {} {
+              label resizable open
+              xywh {415 220 30 30} labeltype NO_LABEL align 17 resizable
+            } {}
           }
+          Fl_Group {} {
+            label resizable open
+            xywh {10 260 445 30} labeltype NO_LABEL align 17 resizable
+          } {}
         }
-        Fl_Group {} {open
-          xywh {260 105 185 175}
-        } {
-          Fl_Button playButton {
-            label {Play Ja2 Stracciatella}
-            xywh {260 225 185 55}
-          }
-          Fl_Button editorButton {
-            label {Start Map Editor}
-            xywh {260 190 185 25}
-          }
+      }
+      Fl_Group {} {open
+        xywh {0 300 465 25}
+      } {
+        Fl_Output ja2JsonPathOutput {
+          tooltip {Path to stracciatella engine options} xywh {0 300 405 25} color 49 align 20 resizable
+        }
+        Fl_Button ja2JsonReloadBtn {
+          label {@reload}
+          tooltip {Reload stracciatella engine options} xywh {405 300 30 25} box THIN_UP_BOX labelcolor 8
+        }
+        Fl_Button ja2JsonSaveBtn {
+          label {@filesave}
+          tooltip {Save stracciatella engine options} xywh {435 300 30 25} box THIN_UP_BOX labelcolor 8
         }
       }
     }
   }
-}
+} 

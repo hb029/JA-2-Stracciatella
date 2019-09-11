@@ -1765,7 +1765,7 @@ void EnterShopKeeperInterfaceScreen( UINT8 ubArmsDealer )
 
 	if( gbSelectedArmsDealerID == -1 )
 	{
-		SLOGW(DEBUG_TAG_INTERFACE, "Failed to find Arms Dealer ID From Merc ID #%d", ubArmsDealer );
+		SLOGW("Failed to find Arms Dealer ID From Merc ID #%d", ubArmsDealer );
 		gfSKIScreenExit = TRUE;
 	}
 
@@ -3430,7 +3430,7 @@ static void MoveAllArmsDealersItemsInOfferAreaToPlayersOfferArea(void)
 
 			//Remove the items from the Shopkeepers Offer area
 			if( !RemoveItemFromArmsDealerOfferArea( (UINT8)uiCnt, FALSE ) )//a->bSlotIdInOtherLocation
-				SLOGE(DEBUG_TAG_ASSERTS, "MoveAllArmsDealersItemsInOfferAreaToPlayersOfferArea: problem removing an item from dealers offer area");
+				SLOGA("MoveAllArmsDealersItemsInOfferAreaToPlayersOfferArea: problem removing an item from dealers offer area");
 
 			Assert(!a->fActive);
 		}
@@ -3538,7 +3538,7 @@ void BeginSkiItemPointer( UINT8 ubSource, INT8 bSlotNum, BOOLEAN fOfferToDealerF
 	{
 		case ARMS_DEALER_INVENTORY:
 			//Should never get in here
-			SLOGE(DEBUG_TAG_ASSERTS, "BeginSkiItemPointer: invalid Source");
+			SLOGA("BeginSkiItemPointer: invalid Source");
 			return;
 
 		case ARMS_DEALER_OFFER_AREA:
@@ -3826,7 +3826,7 @@ static INT8 AddInventoryToSkiLocation(const INVENTORY_IN_SLOT* pInv, UINT8 ubSpo
 		case ARMS_DEALER_INVENTORY:
 		case PLAYERS_INVENTORY:
 			// not used this way
-			SLOGE(DEBUG_TAG_ASSERTS, "AddInventoryToSkiLocation: invalid Where");
+			SLOGA("AddInventoryToSkiLocation: invalid Where");
 			return( bSlotAddedTo );
 
 		case ARMS_DEALER_OFFER_AREA:
@@ -4724,7 +4724,7 @@ static void EvaluateItemAddedToPlayersOfferArea(INT8 bSlotID, BOOLEAN fFirstOne)
 				}
 				else
 				{
-					SLOGW(DEBUG_TAG_INTERFACE, "Failed to add repair item to ArmsDealerOfferArea.");
+					SLOGW("Failed to add repair item to ArmsDealerOfferArea.");
 					return;
 				}
 			}
@@ -4824,7 +4824,7 @@ static void EvaluateItemAddedToPlayersOfferArea(INT8 bSlotID, BOOLEAN fFirstOne)
 				break;
 
 			default:
-				SLOGW(DEBUG_TAG_INTERFACE, "Invalid evaluation result of %d.", uiEvalResult );
+				SLOGW("Invalid evaluation result of %d.", uiEvalResult );
 				break;
 		}
 
@@ -5112,7 +5112,7 @@ static void InitShopKeeperItemDescBox(OBJECTTYPE* pObject, UINT8 ubPocket, UINT8
 		break;
 
 		default:
-			SLOGE(DEBUG_TAG_ASSERTS, "InitShopKeeperItemDescBox: invalid FromLocation");
+			SLOGA("InitShopKeeperItemDescBox: invalid FromLocation");
 			return;
 	}
 
@@ -5368,6 +5368,7 @@ static void SplitComplexObjectIntoSubObjects(OBJECTTYPE* pComplexObject)
 
 		// advance to next available subobject
 		pNextObj = &gSubObject[ ++ubNextFreeSlot ];
+
 
 		// if it's a gun
 		if ( GCM->getItem(pComplexObject->usItem)->getItemClass() == IC_GUN )
@@ -6220,6 +6221,7 @@ static UINT32 EvaluateInvSlot(INVENTORY_IN_SLOT* pInvSlot)
 	{
 		dPriceModifier = ArmsDealerInfo[gbSelectedArmsDealerID].u.price.buy;
 	}
+
 
 	// Calculate dealer's buying price for the item
 	uiBuyingPrice = CalcShopKeeperItemPrice( DEALER_BUYING, FALSE, pInvSlot->sItemIndex, dPriceModifier, &( pInvSlot->ItemObject ) );

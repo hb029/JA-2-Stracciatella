@@ -86,7 +86,7 @@
 #include "Files.h"
 #include "UILayout.h"
 #include "GameRes.h"
-#include "slog/slog.h"
+#include "Logger.h"
 #include "ContentManager.h"
 #include "GameInstance.h"
 #include "Action_Items.h"
@@ -277,7 +277,7 @@ static void InternalInitiateConversation(SOLDIERTYPE* const pDestSoldier, SOLDIE
 		{
 			gTacticalStatus.uiFlags &= (~ENGAGED_IN_CONV);
 		}
-		SLOGD(DEBUG_TAG_INTERFACE, "Cannot initiate conversation menu.. check for face file for ID: %d.", pDestSoldier->ubProfile );
+		SLOGD("Cannot initiate conversation menu.. check for face file for ID: %d.", pDestSoldier->ubProfile );
 		throw;
 	}
 
@@ -2156,7 +2156,7 @@ void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum
 				// Vince or Willis asks about payment? for medical attention
 				if (ubTargetNPC != gpDestSoldier->ubProfile)
 				{
-					SLOGE(DEBUG_TAG_INTERFACE, "Inconsistency between HandleNPCDoAction and target profile IDs" );
+					SLOGE("Inconsistency between HandleNPCDoAction and target profile IDs" );
 				}
 				else
 				{
@@ -4088,7 +4088,7 @@ add_log:
 				}
 				break;
 			default:
-				SLOGW(DEBUG_TAG_INTERFACE, "No code support for NPC action %d", usActionCode );
+				SLOGW("No code support for NPC action %d", usActionCode );
 				break;
 		}
 	}

@@ -6,26 +6,35 @@
 
 class Launcher : public StracciatellaLauncher {
 public:
-	Launcher(std::string exePath, engine_options_t* engine_options);
+	Launcher(int argc, char* argv[]);
+	~Launcher();
 
+	void loadJa2Json();
 	void show();
 	void initializeInputsFromDefaults();
 	int writeJsonFile();
 private:
+	int argc;
+	char** argv;
 	std::string exePath;
-	std::string helpString;
-	std::vector< std::pair<int, int> > predefinedResolutions;
-	engine_options_t* engine_options;
+	EngineOptions* engine_options;
 
 	void populateChoices();
-	void enablePredefinedResolutions();
-	void enableCustomResolutions();
 	void startExecutable(bool asEditor);
-	static void openDataDirectorySelector(Fl_Widget *btn, void *userdata);
-	static void enablePredefinedResolutionSelection(Fl_Widget* btn, void* userdata);
-	static void enableCustomResolutionSelection(Fl_Widget* btn, void* userdata);
+	bool resolutionIsInvalid();
+	void update(bool changed, Fl_Widget *widget);
+	static void openGameDirectorySelector(Fl_Widget *btn, void *userdata);
 	static void startGame(Fl_Widget* btn, void* userdata);
 	static void startEditor(Fl_Widget* btn, void* userdata);
+	static void guessVersion(Fl_Widget* btn, void* userdata);
+	static void setPredefinedResolution(Fl_Widget* btn, void* userdata);
+	static void widgetChanged(Fl_Widget* widget, void* userdata);
+	static void reloadJa2Json(Fl_Widget* widget, void* userdata);
+	static void saveJa2Json(Fl_Widget* widget, void* userdata);
+	static void addMod(Fl_Widget* widget, void* userdata);
+	static void moveUpMods(Fl_Widget* widget, void* userdata);
+	static void moveDownMods(Fl_Widget* widget, void* userdata);
+	static void removeMods(Fl_Widget* widget, void* userdata);
 };
 
 #endif //JA2_LAUNCHER_H_H

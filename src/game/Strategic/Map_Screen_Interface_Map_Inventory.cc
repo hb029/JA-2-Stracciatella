@@ -1471,7 +1471,7 @@ static void CheckGridNoOfItemsInMapScreenMapInventory(void)
 
 	if( uiNumFlagsNotSet > 0 )
 	{
-		SLOGD(DEBUG_TAG_SMAP, "Item with invalid gridno doesnt have flag set: %d", uiNumFlagsNotSet );
+		SLOGD("Item with invalid gridno doesnt have flag set: %d", uiNumFlagsNotSet );
 	}
 }
 

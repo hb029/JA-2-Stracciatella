@@ -32,7 +32,7 @@
 #include "MagazineModel.h"
 #include "WeaponModels.h"
 
-#include "slog/slog.h"
+#include "Logger.h"
 
 INT16 TerrainActionPoints(const SOLDIERTYPE* const pSoldier, const INT16 sGridno, const INT8 bDir, const INT8 bLevel)
 {
@@ -101,7 +101,7 @@ INT16 TerrainActionPoints(const SOLDIERTYPE* const pSoldier, const INT16 sGridno
 			return( 0 );
 
 		default:
-			SLOGD(DEBUG_TAG_POINTS,
+			SLOGD(
 				"Calc AP: Unrecongnized MP type %d in %d, direction %d",
 				sSwitchValue, sGridno, bDir);
 			break;
@@ -307,7 +307,7 @@ INT16 ActionPointCost(const SOLDIERTYPE* const pSoldier, const INT16 sGridNo, co
 			default:
 
 				// Invalid movement mode
-				SLOGW(DEBUG_TAG_POINTS,
+				SLOGW(
 					"Invalid movement mode %d used in ActionPointCost",
 					usMovementMode);
 				sPoints = 1;
@@ -381,7 +381,7 @@ INT16 EstimateActionPointCost( SOLDIERTYPE *pSoldier, INT16 sGridNo, INT8 bDir, 
 			default:
 
 				// Invalid movement mode
-				SLOGW(DEBUG_TAG_POINTS,
+				SLOGW(
 					"Invalid movement mode %d used in EstimateActionPointCost",
 					usMovementMode);
 				sPoints = 1;
@@ -518,7 +518,7 @@ void DeductPoints( SOLDIERTYPE *pSoldier, INT16 sAPCost, INT16 sBPCost )
 
 	pSoldier->bActionPoints = (INT8)sNewAP;
 
-	SLOGD(DEBUG_TAG_POINTS, "Deduct Points (%d at %d) %d %d",
+	SLOGD("Deduct Points (%d at %d) %d %d",
 				pSoldier->ubID, pSoldier->sGridNo, sAPCost, sBPCost);
 
 	if ( AM_A_ROBOT( pSoldier ) )
@@ -833,7 +833,7 @@ static INT16 GetBreathPerAP(SOLDIERTYPE* pSoldier, UINT16 usAnimState)
 
 	if ( !fAnimTypeFound )
 	{
-		SLOGD(DEBUG_TAG_POINTS, "Unknown end-of-turn breath anim: %hs",
+		SLOGD("Unknown end-of-turn breath anim: %hs",
 			gAnimControl[usAnimState].zAnimStr);
 	}
 

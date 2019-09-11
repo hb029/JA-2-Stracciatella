@@ -11,7 +11,7 @@ static void readListOfItems(rapidjson::Value &value, std::vector<const ItemModel
 {
 	std::vector<std::string> strings;
 	JsonUtility::parseListStrings(value, strings);
-	for(const std::string &str : strings)
+	for (const std::string &str : strings)
 	{
 		items.push_back(itemSystem->getItemByName(str));
 	}
