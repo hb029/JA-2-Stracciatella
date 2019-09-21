@@ -686,6 +686,12 @@ static void PrintStatWithDelta(UINT idx, INT8 stat, INT8 delta)
 		FindFontRightCoordinates(pers_stat_delta_x, 0, 30, 0, sString, PERS_FONT, &sX, &sY);
 		MPrint(sX, y, sString);
 	}
+	else if (delta < 0)
+	{
+		swprintf(sString, lengthof(sString), L"( %-d )", delta);
+		FindFontRightCoordinates(pers_stat_delta_x, 0, 30, 0, sString, PERS_FONT, &sX, &sY);
+		MPrint(sX, y, sString);
+	}
 	swprintf(sString, lengthof(sString), L"%d", stat);
 	mprintf(pers_stat_x, y, L"%ls:", str_stat_list[idx]);
 	FindFontRightCoordinates(pers_stat_x, 0, TEXT_BOX_WIDTH - 20, 0, sString, PERS_FONT, &sX, &sY);
@@ -721,6 +727,12 @@ static void DisplayCharStats(SOLDIERTYPE const& s)
 		if (p.bLifeDelta > 0)
 		{
 			swprintf(sString, lengthof(sString), L"( %+d )", p.bLifeDelta);
+			FindFontRightCoordinates(pers_stat_delta_x, 0, 30, 0, sString, PERS_FONT, &sX, &sY);
+			MPrint(sX, STD_SCREEN_Y + pers_stat_y[0], sString);
+		}
+		else if (p.bLifeDelta < 0)
+		{
+			swprintf(sString, lengthof(sString), L"( %-d )", p.bLifeDelta);
 			FindFontRightCoordinates(pers_stat_delta_x, 0, 30, 0, sString, PERS_FONT, &sX, &sY);
 			MPrint(sX, STD_SCREEN_Y + pers_stat_y[0], sString);
 		}

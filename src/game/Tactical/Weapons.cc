@@ -3073,6 +3073,7 @@ INT32 BulletImpact( SOLDIERTYPE *pFirer, SOLDIERTYPE * pTarget, UINT8 ubHitLocat
 							if (pTarget->ubProfile != NO_PROFILE)
 							{
 								gMercProfiles[ pTarget->ubProfile ].bWisdom = pTarget->bWisdom;
+								gMercProfiles[pTarget->ubProfile].bWisdomDelta -= bStatLoss;
 							}
 
 
@@ -3111,6 +3112,7 @@ INT32 BulletImpact( SOLDIERTYPE *pFirer, SOLDIERTYPE * pTarget, UINT8 ubHitLocat
 								if (pTarget->ubProfile != NO_PROFILE)
 								{
 									gMercProfiles[ pTarget->ubProfile ].bDexterity = pTarget->bDexterity;
+									gMercProfiles[pTarget->ubProfile].bDexterityDelta -= bStatLoss;
 								}
 
 								if (pTarget->name[0] && pTarget->bVisible == TRUE)
@@ -3143,6 +3145,7 @@ INT32 BulletImpact( SOLDIERTYPE *pFirer, SOLDIERTYPE * pTarget, UINT8 ubHitLocat
 								if (pTarget->ubProfile != NO_PROFILE)
 								{
 									gMercProfiles[ pTarget->ubProfile ].bStrength = pTarget->bStrength;
+									gMercProfiles[pTarget->ubProfile].bStrengthDelta -= bStatLoss;
 								}
 
 								if (pTarget->name[0] && pTarget->bVisible == TRUE)
@@ -3175,6 +3178,7 @@ INT32 BulletImpact( SOLDIERTYPE *pFirer, SOLDIERTYPE * pTarget, UINT8 ubHitLocat
 							if (pTarget->ubProfile != NO_PROFILE)
 							{
 								gMercProfiles[ pTarget->ubProfile ].bAgility = pTarget->bAgility;
+								gMercProfiles[pTarget->ubProfile].bAgilityDelta -= bStatLoss;
 							}
 
 							if (pTarget->name[0] && pTarget->bVisible == TRUE)
