@@ -1056,7 +1056,7 @@ BOOLEAN StandardInterruptConditionsMet(const SOLDIERTYPE* const pSoldier, const 
 			// if pSoldier already saw the opponent last "look" or at least this turn
 			if ((bOldOppList == SEEN_CURRENTLY) || (bOldOppList == SEEN_THIS_TURN))
 			{
-				//return(FALSE);     // no interrupt is possible
+				return(FALSE);     // no interrupt is possible
 			}
 
 			// if the soldier is behind him and not very close, forget it
