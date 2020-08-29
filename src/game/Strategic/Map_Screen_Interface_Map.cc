@@ -598,6 +598,7 @@ static void ShowItemsOnMap(void);
 static void ShowSAMSitesOnStrategicMap();
 static void ShowTeamAndVehicles();
 static void ShowTownText(void);
+static BOOLEAN CanMercsScoutThisSector(INT16 sSectorX, INT16 sSectorY, INT8 bSectorZ);
 
 
 void DrawMap(void)
@@ -641,7 +642,9 @@ void DrawMap(void)
 				Assert(ubSamNumber <= NUMBER_OF_SAMS);
 
 
-				if (!GetSectorFlagStatus(cnt, cnt2, iCurrentMapSectorZ, SF_ALREADY_VISITED))
+				//if (!GetSectorFlagStatus(cnt, cnt2, iCurrentMapSectorZ, SF_ALREADY_VISITED))
+				if ((!CanNearbyMilitiaScoutThisSector(cnt, cnt2) && !CanMercsScoutThisSector(cnt, cnt2, iCurrentMapSectorZ) && fShowTeamFlag)
+					||(!GetSectorFlagStatus(cnt, cnt2, iCurrentMapSectorZ, SF_ALREADY_VISITED) && fShowItemsFlag))
 				{
 					INT32 color = MAP_SHADE_BLACK;
 					if (fShowAircraftFlag)
@@ -4534,9 +4537,6 @@ void ClearAnySectorsFlashingNumberOfEnemies()
 }
 
 
-static BOOLEAN CanMercsScoutThisSector(INT16 sSectorX, INT16 sSectorY, INT8 bSectorZ);
-
-
 UINT32 WhatPlayerKnowsAboutEnemiesInSector( INT16 sSectorX, INT16 sSectorY )
 {
 	UINT32 uiSectorFlags = SectorInfo[ SECTOR( sSectorX, sSectorY ) ].uiFlags;
@@ -4567,7 +4567,13 @@ UINT32 WhatPlayerKnowsAboutEnemiesInSector( INT16 sSectorX, INT16 sSectorY )
 	if (GetSectorFlagStatus(sSectorX, sSectorY, 0, SF_ALREADY_VISITED))
 	{
 		// then he always knows about any enemy presence for the remainder of the game, but not exact numbers
-		return KNOWS_THEYRE_THERE;
+		//return KNOWS_THEYRE_THERE;
+
+		if (NumStationaryEnemiesInSector(sSectorX, sSectorY) > 0)
+		{
+			// inside a garrison - hide their # (show question mark) to match what the PBI is showing
+			return KNOWS_THEYRE_THERE;
+		}
 	}
 
 	// if Skyrider noticed the enemis in the sector recently
@@ -4625,6 +4631,17 @@ static BOOLEAN CanMercsScoutThisSector(INT16 sSectorX, INT16 sSectorY, INT8 bSec
 		if( ( pSoldier->sSectorX == sSectorX ) && ( pSoldier->sSectorY == sSectorY ) && ( pSoldier->bSectorZ == bSectorZ ) )
 		{
 			return( TRUE );
+		}
+
+		// is it in the open to see?
+		INT16 const scout_range = 25;
+		if (
+			((sSectorX - pSoldier->sSectorX)*(sSectorX - pSoldier->sSectorX) + 
+				(sSectorY - pSoldier->sSectorY)*(sSectorY - pSoldier->sSectorY))*100 
+			<= scout_range * scout_range &&
+			bSectorZ == 0)
+		{
+			return(TRUE);
 		}
 	}
 

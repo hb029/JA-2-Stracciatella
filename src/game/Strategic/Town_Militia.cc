@@ -622,7 +622,7 @@ void HandleMilitiaStatusInCurrentMapBeforeLoadingNewMap( void )
 
 bool CanNearbyMilitiaScoutThisSector(INT16 const sec_x, INT16 const sec_y)
 {
-	INT16 const scout_range = 1;
+	INT16 const scout_range = 25;
 	INT16 const xstart      = sec_x >      scout_range ? sec_x - scout_range :  1;
 	INT16 const ystart      = sec_y >      scout_range ? sec_y - scout_range :  1;
 	INT16 const xend        = sec_x < 16 - scout_range ? sec_x + scout_range : 16;
@@ -631,8 +631,11 @@ bool CanNearbyMilitiaScoutThisSector(INT16 const sec_x, INT16 const sec_y)
 	{
 		for (INT16 x = xstart; x <= xend; ++x)
 		{
-			UINT8 (&n_milita)[MAX_MILITIA_LEVELS] = SectorInfo[SECTOR(x, y)].ubNumberOfCivsAtLevel;
-			if (n_milita[GREEN_MILITIA] + n_milita[REGULAR_MILITIA] + n_milita[ELITE_MILITIA] != 0) return true;
+			if (((x - sec_x)*(x - sec_x) + (y - sec_y)*(y - sec_y))*100 <= scout_range * scout_range)
+			{
+				UINT8(&n_milita)[MAX_MILITIA_LEVELS] = SectorInfo[SECTOR(x, y)].ubNumberOfCivsAtLevel;
+				if (n_milita[GREEN_MILITIA] + n_milita[REGULAR_MILITIA] + n_milita[ELITE_MILITIA] != 0) return true;
+			}
 		}
 	}
 	return false;
