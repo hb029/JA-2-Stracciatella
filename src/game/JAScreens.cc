@@ -41,6 +41,11 @@
 #include "UILayout.h"
 #include "Timer.h"
 #include "Logger.h"
+#include "WordWrap.h"
+
+#include <string_theory/format>
+#include <string_theory/string>
+
 
 #define MAX_DEBUG_PAGES 4
 
@@ -92,10 +97,10 @@ void DisplayFrameRate( )
 	if ( gbFPSDisplay == SHOW_FULL_FPS )
 	{
 		// FRAME RATE
-		SetVideoOverlayTextF(g_fps_overlay, L"FPS: %ld", __min(uiFPS, 1000));
+		SetVideoOverlayText(g_fps_overlay, ST::format("FPS: {}", __min(uiFPS, 1000)));
 
 		// TIMER COUNTER
-		SetVideoOverlayTextF(g_counter_period_overlay, L"Game Loop Time: %ld", __min(giTimerDiag, 1000));
+		SetVideoOverlayText(g_counter_period_overlay, ST::format("Game Loop Time: {}", __min(giTimerDiag, 1000)));
 	}
 }
 
@@ -106,15 +111,14 @@ ScreenID ErrorScreenHandle(void)
 
 	// Create string
 	SetFontAttributes(LARGEFONT1, FONT_MCOLOR_LTGRAY);
-	MPrint(50, 200, L"RUNTIME ERROR");
-	MPrint(50, 225, L"PRESS <ESC> TO EXIT");
+	MPrint(50, 200, "RUNTIME ERROR");
+	MPrint(50, 225, "PRESS <ESC> TO EXIT");
 
-	SetFontAttributes(FONT12ARIAL, FONT_YELLOW);
-	mprintf(50, 255, L"%hs", gubErrorText);
+	DisplayWrappedString(50, 255, MAP_SCREEN_WIDTH - 50, 5, FONT12ARIAL, FONT_YELLOW, gubErrorText, 0, 0);
 
 	if ( !fFirstTime )
 	{
-		SLOGE("Runtime Error: %s ", gubErrorText );
+		SLOGE(ST::format("Runtime Error: {} ", gubErrorText));
 		fFirstTime = TRUE;
 	}
 
@@ -263,7 +267,7 @@ static void PalEditRenderHook(void)
 }
 
 
-static void CyclePaletteReplacement(SOLDIERTYPE& s, PaletteRepID pal)
+static void CyclePaletteReplacement(SOLDIERTYPE& s, ST::string& pal)
 {
 	UINT8 ubPaletteRep = GetPaletteRepIndexFromID(pal);
 	const UINT8 ubType = gpPalRep[ubPaletteRep].ubType;
@@ -280,7 +284,7 @@ static void CyclePaletteReplacement(SOLDIERTYPE& s, PaletteRepID pal)
 	const UINT8 ubEndRep = ubStartRep + gubpNumReplacementsPerRange[ubType];
 
 	if (ubPaletteRep == ubEndRep) ubPaletteRep = ubStartRep;
-	SET_PALETTEREP_ID(pal, gpPalRep[ubPaletteRep].ID);
+	pal = gpPalRep[ubPaletteRep].ID;
 
 	CreateSoldierPalettes(s);
 }
@@ -407,25 +411,25 @@ void SetDebugRenderHook( RENDER_HOOK pDebugRenderOverride, INT8 ubPage )
 
 static void DefaultDebugPage1(void)
 {
-	MPageHeader(L"DEBUG PAGE ONE");
+	MPageHeader("DEBUG PAGE ONE");
 }
 
 
 static void DefaultDebugPage2(void)
 {
-	MPageHeader(L"DEBUG PAGE TWO");
+	MPageHeader("DEBUG PAGE TWO");
 }
 
 
 static void DefaultDebugPage3(void)
 {
-	MPageHeader(L"DEBUG PAGE THREE");
+	MPageHeader("DEBUG PAGE THREE");
 }
 
 
 static void DefaultDebugPage4(void)
 {
-	MPageHeader(L"DEBUG PAGE FOUR");
+	MPageHeader("DEBUG PAGE FOUR");
 }
 
 

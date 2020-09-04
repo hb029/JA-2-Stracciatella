@@ -14,6 +14,8 @@
 #include "WorldMan.h"
 #include "Logger.h"
 
+#include <algorithm>
+
 #define ROOF_LOCATION_CHANCE 8
 
 UINT8						gubBuildingInfo[ WORLD_MAX ];
@@ -59,13 +61,13 @@ static BUILDING* GenerateBuilding(INT16 sDesiredSpot)
 	}
 
 	// set up fake soldier for location testing
-	memset( &FakeSoldier, 0, sizeof( SOLDIERTYPE ) );
+	FakeSoldier = SOLDIERTYPE{};
 	FakeSoldier.sGridNo = sDesiredSpot;
 	FakeSoldier.bLevel = 1;
 	FakeSoldier.bTeam = 1;
 
 #ifdef ROOF_DEBUG
-	memset( gsCoverValue, 0x7F, sizeof( INT16 ) * WORLD_MAX );
+	std::fill_n(gsCoverValue, WORLD_MAX, 0x7F7F);
 #endif
 
 	// Set reachable
@@ -186,6 +188,12 @@ static BUILDING* GenerateBuilding(INT16 sDesiredSpot)
 
 		SLOGD("Roof code visits %d", sCurrGridNo);
 #endif
+		if (sCurrGridNo == sPrevGridNo)
+		{
+			// not progressing, we are just repeating the same gridNo
+			SLOGW(ST::format("Dead loop detected in GenerateBuilding. This may indicate a problem with the current map. Probably reached edge of map. (starting GridNo:{})", sStartGridNo));
+			break;
+		}
 
 		if (sCurrGridNo == sStartGridNo)
 		{
@@ -372,8 +380,8 @@ BUILDING * FindBuilding( INT16 sGridNo )
 void GenerateBuildings( void )
 {
 	// init building structures and variables
-	memset( &gubBuildingInfo, 0, WORLD_MAX * sizeof( UINT8 ) );
-	memset( &gBuildings, 0, MAX_BUILDINGS * sizeof( BUILDING ) );
+	std::fill_n(gubBuildingInfo, WORLD_MAX, 0);
+	std::fill_n(gBuildings, MAX_BUILDINGS, BUILDING{});
 	gubNumberOfBuildings = 0;
 
 	if ( (gbWorldSectorZ > 0) || gfEditMode)

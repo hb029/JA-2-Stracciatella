@@ -39,6 +39,7 @@
 #include "OppList.h"
 #include "Directories.h"
 #include "Meanwhile.h"
+#include "SamSiteModel.h"
 
 #include "CalibreModel.h"
 #include "ContentManager.h"
@@ -267,7 +268,7 @@ BOOLEAN BeginAirRaid( )
 			InitPreBattleInterface(&gChopperGroup, TRUE);
 			InterruptTime();
 			PauseGame();
-			LockPauseState(LOCK_PAUSE_02);
+			LockPauseState(LOCK_PAUSE_PREBATTLE);
 		}
 	}
 
@@ -336,7 +337,7 @@ BOOLEAN BeginAirRaid( )
 	gfAirRaidHasHadTurn = FALSE;
 
 	SOLDIERTYPE& s = GetMan(MAX_NUM_SOLDIERS - 1);
-	memset(&s, 0, sizeof(s));
+	s = SOLDIERTYPE{};
 	s.bLevel				= 0;
 	s.bTeam					= 1;
 	s.bSide					= 1;
@@ -702,6 +703,7 @@ static void BeginDive()
 
 	gsNumGridNosMoved = 0;
 	gsNotLocatedYet = TRUE;
+
 }
 
 
@@ -1534,7 +1536,7 @@ BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY)
 	}
 
 	// which SAM controls this sector?
-	ubSamNumber = ubSAMControlledSectors[sSectorY][sSectorX];
+	ubSamNumber = GCM->getControllingSamSite(SECTOR(sSectorX, sSectorY));
 
 	SLOGD("WillAirRaidBeStopped: SAM number = %d", ubSamNumber);
 
@@ -1545,8 +1547,9 @@ BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY)
 	}
 
 	// get the condition of that SAM site (NOTE: SAM #s are 1-4, but indexes are 0-3!!!)
+	auto samList = GCM->getSamSites();
 	Assert(ubSamNumber <= NUMBER_OF_SAMS);
-	bSAMCondition = StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(pSamList[ubSamNumber - 1])].bSAMCondition;
+	bSAMCondition = StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(samList[ubSamNumber - 1]->sectorId)].bSAMCondition;
 
 	// if it's too busted to work, then it can't stop an air raid
 	SLOGD("WillAirRaidBeStopped: SAM condition = %d", bSAMCondition);
@@ -1648,8 +1651,8 @@ void ChopperAttackSector(UINT8 ubSectorX, UINT8 ubSectorY, INT8 bIntensity)
 
 TEST(AirRaid, asserts)
 {
-	EXPECT_EQ(sizeof(AIR_RAID_SAVE_STRUCT), 132);
-	EXPECT_EQ(sizeof(AIR_RAID_DEFINITION), 24);
+	EXPECT_EQ(sizeof(AIR_RAID_SAVE_STRUCT), 132u);
+	EXPECT_EQ(sizeof(AIR_RAID_DEFINITION), 24u);
 }
 
 #endif

@@ -1,11 +1,13 @@
-#include <stdexcept>
-
 #include "Debug.h"
 #include "FileMan.h"
 #include "LoadSaveData.h"
 #include "LoadSaveMercProfile.h"
 #include "Tactical_Save.h"
-#include "UTF8String.h"
+
+#include <string_theory/string>
+
+#include <stdexcept>
+
 
 /** Calculates soldier profile checksum. */
 UINT32 SoldierProfileChecksum(MERCPROFILESTRUCT const& p)
@@ -36,29 +38,25 @@ UINT32 SoldierProfileChecksum(MERCPROFILESTRUCT const& p)
 void ExtractMercProfile(BYTE const* const Src, MERCPROFILESTRUCT& p, bool stracLinuxFormat, UINT32 *checksum,
 			const IEncodingCorrector *fixer)
 {
-	const BYTE* S = Src;
+	DataReader S{Src};
 
 	if(stracLinuxFormat)
 	{
-		DataReader reader(S);
-		reader.readUTF32(p.zName,     NAME_LENGTH);
-		reader.readUTF32(p.zNickname, NICKNAME_LENGTH);
-		S += reader.getConsumed();
+		p.zName = S.readUTF32(NAME_LENGTH);
+		p.zNickname = S.readUTF32(NICKNAME_LENGTH);
 	}
 	else
 	{
-		DataReader reader(S);
-		reader.readUTF16(p.zName,     NAME_LENGTH,          fixer);
-		reader.readUTF16(p.zNickname, NICKNAME_LENGTH,      fixer);
-		S += reader.getConsumed();
+		p.zName = S.readUTF16(NAME_LENGTH, fixer);
+		p.zNickname = S.readUTF16(NICKNAME_LENGTH, fixer);
 	}
 
 	EXTR_SKIP(S, 28)
 	EXTR_U8(S, p.ubFaceIndex)
-	EXTR_STR(S, p.PANTS, lengthof(p.PANTS))
-	EXTR_STR(S, p.VEST, lengthof(p.VEST))
-	EXTR_STR(S, p.SKIN, lengthof(p.SKIN))
-	EXTR_STR(S, p.HAIR, lengthof(p.HAIR))
+	p.PANTS = S.readUTF8(PaletteRepID_LENGTH, ST::substitute_invalid);
+	p.VEST = S.readUTF8(PaletteRepID_LENGTH, ST::substitute_invalid);
+	p.SKIN = S.readUTF8(PaletteRepID_LENGTH, ST::substitute_invalid);
+	p.HAIR = S.readUTF8(PaletteRepID_LENGTH, ST::substitute_invalid);
 	EXTR_I8(S, p.bSex)
 	EXTR_I8(S, p.bArmourAttractiveness)
 	EXTR_U8(S, p.ubMiscFlags2)
@@ -211,11 +209,11 @@ void ExtractMercProfile(BYTE const* const Src, MERCPROFILESTRUCT& p, bool stracL
 	EXTR_SKIP(S, 4)
 	if(stracLinuxFormat)
 	{
-		Assert(S == Src + MERC_PROFILE_SIZE_STRAC_LINUX);
+		Assert(S.getConsumed() == MERC_PROFILE_SIZE_STRAC_LINUX);
 	}
 	else
 	{
-		Assert(S == Src + MERC_PROFILE_SIZE);
+		Assert(S.getConsumed() == MERC_PROFILE_SIZE);
 	}
 }
 
@@ -252,20 +250,16 @@ void ExtractImpProfileFromFile(SGPFile *hFile, INT32 *iProfileId, INT32 *iPortra
 
 void InjectMercProfile(BYTE* const Dst, MERCPROFILESTRUCT const& p)
 {
-	BYTE* D = Dst;
+	DataWriter D(Dst);
 
-	{
-		DataWriter writer(D);
-		writer.writeStringAsUTF16(p.zName, lengthof(p.zName));
-		writer.writeStringAsUTF16(p.zNickname, lengthof(p.zNickname));
-		D += writer.getConsumed();
-	}
+	D.writeUTF16(p.zName, NAME_LENGTH);
+	D.writeUTF16(p.zNickname, NICKNAME_LENGTH);
 	INJ_SKIP(D, 28)
 	INJ_U8(D, p.ubFaceIndex)
-	INJ_STR(D, p.PANTS, lengthof(p.PANTS))
-	INJ_STR(D, p.VEST, lengthof(p.VEST))
-	INJ_STR(D, p.SKIN, lengthof(p.SKIN))
-	INJ_STR(D, p.HAIR, lengthof(p.HAIR))
+	D.writeUTF8(p.PANTS, PaletteRepID_LENGTH);
+	D.writeUTF8(p.VEST, PaletteRepID_LENGTH);
+	D.writeUTF8(p.SKIN, PaletteRepID_LENGTH);
+	D.writeUTF8(p.HAIR, PaletteRepID_LENGTH);
 	INJ_I8(D, p.bSex)
 	INJ_I8(D, p.bArmourAttractiveness)
 	INJ_U8(D, p.ubMiscFlags2)
@@ -417,7 +411,7 @@ void InjectMercProfile(BYTE* const Dst, MERCPROFILESTRUCT const& p)
 	INJ_I32(D, p.iMercMercContractLength)
 	INJ_U32(D, p.uiTotalCostToDate)
 	INJ_SKIP(D, 4)
-	Assert(D == Dst + 716);
+	Assert(D.getConsumed() == 716);
 }
 
 
@@ -435,7 +429,7 @@ void InjectMercProfileIntoFile(HWFILE const f, MERCPROFILESTRUCT const& p)
 * @param profiles Array for storing profile data */
 void LoadRawMercProfiles(HWFILE const f, int numProfiles, MERCPROFILESTRUCT *profiles, const IEncodingCorrector *fixer)
 {
-	for (UINT32 i = 0; i != numProfiles; ++i)
+	for (int i = 0; i != numProfiles; ++i)
 	{
 		BYTE data[MERC_PROFILE_SIZE];
 		JA2EncryptedFileRead(f, data, sizeof(data));

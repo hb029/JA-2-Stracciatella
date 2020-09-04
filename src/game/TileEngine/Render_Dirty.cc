@@ -18,6 +18,7 @@
 
 #include "Logger.h"
 
+
 #define BACKGROUND_BUFFERS 500
 
 
@@ -153,13 +154,13 @@ BACKGROUND_SAVE* RegisterBackgroundRect(BackgroundFlags const uiFlags, INT16 sLe
 	sBottom -= uiBottomSkip;
 
 	BACKGROUND_SAVE* const b = GetFreeBackgroundBuffer();
-	memset(b, 0, sizeof(*b));
+	*b = BACKGROUND_SAVE{};
 
 	const UINT32 uiBufSize = (sRight - sLeft) * (sBottom - sTop);
 	if (uiBufSize == 0) return NO_BGND_RECT;
 
-	if (uiFlags & BGND_FLAG_SAVERECT) b->pSaveArea  = MALLOCN(UINT16, uiBufSize);
-	if (uiFlags & BGND_FLAG_SAVE_Z)   b->pZSaveArea = MALLOCN(UINT16, uiBufSize);
+	if (uiFlags & BGND_FLAG_SAVERECT) b->pSaveArea  = new UINT16[uiBufSize]{};
+	if (uiFlags & BGND_FLAG_SAVE_Z)   b->pZSaveArea = new UINT16[uiBufSize]{};
 
 	b->fFreeMemory = TRUE;
 	b->fAllocated  = TRUE;
@@ -232,8 +233,8 @@ void EmptyBackgroundRects(void)
 
 			if (!b->fAllocated && b->fFreeMemory)
 			{
-				if (b->pSaveArea  != NULL) MemFree(b->pSaveArea);
-				if (b->pZSaveArea != NULL) MemFree(b->pZSaveArea);
+				if (b->pSaveArea  != NULL) delete[] b->pSaveArea;
+				if (b->pZSaveArea != NULL) delete[] b->pZSaveArea;
 
 				b->fAllocated  = FALSE;
 				b->fFreeMemory = FALSE;
@@ -246,8 +247,8 @@ void EmptyBackgroundRects(void)
 		{
 			if (b->fFreeMemory)
 			{
-				if (b->pSaveArea != NULL)  MemFree(b->pSaveArea);
-				if (b->pZSaveArea != NULL) MemFree(b->pZSaveArea);
+				if (b->pSaveArea != NULL)  delete[] b->pSaveArea;
+				if (b->pZSaveArea != NULL) delete[] b->pZSaveArea;
 			}
 
 			b->fAllocated     = FALSE;
@@ -310,8 +311,8 @@ static void FreeBackgroundRectNow(BACKGROUND_SAVE* const b)
 {
 	if (b->fFreeMemory)
 	{
-		if (b->pSaveArea)  MemFree(b->pSaveArea);
-		if (b->pZSaveArea) MemFree(b->pZSaveArea);
+		if (b->pSaveArea)  delete[] b->pSaveArea;
+		if (b->pZSaveArea) delete[] b->pZSaveArea;
 	}
 
 	b->fAllocated  = FALSE;
@@ -386,9 +387,9 @@ void RestoreExternBackgroundRectGivenID(const BACKGROUND_SAVE* const b)
 	* for a given call to gprintf. Note that this must be called before the
 	* backgrounds are saved, and before the actual call to gprintf that writes to
 	* the video buffer. */
-static void GDirty(INT16 const x, INT16 const y, wchar_t const* const str)
+static void GDirty(INT16 x, INT16 y, const ST::utf32_buffer& codepoints)
 {
-	UINT16 const length = StringPixLength(str, FontDefault);
+	UINT16 const length = StringPixLength(codepoints, FontDefault);
 	if (length > 0)
 	{
 		UINT16 const height = GetFontHeight(FontDefault);
@@ -397,44 +398,23 @@ static void GDirty(INT16 const x, INT16 const y, wchar_t const* const str)
 }
 
 
-void GDirtyPrint(INT16 const x, INT16 const y, wchar_t const* const str) // XXX TODO0017
+void GDirtyPrint(INT16 x, INT16 y, const ST::utf32_buffer& codepoints)
 {
-	GDirty(x, y, str);
-	MPrint(x, y, str);
+	GDirty(x, y, codepoints);
+	MPrint(x, y, codepoints);
 }
 
 
-void GDirtyPrintF(INT16 const x, INT16 const y, wchar_t const* const fmt, ...)
+void GPrintInvalidate(INT16 x, INT16 y, const ST::utf32_buffer& codepoints)
 {
-	wchar_t	str[512];
-	va_list ap;
-	va_start(ap, fmt);
-	vswprintf(str, lengthof(str), fmt, ap);
-	va_end(ap);
-	GDirtyPrint(x, y, str);
-}
+	MPrint(x, y, codepoints);
 
-void GPrintInvalidate(INT16 const x, INT16 const y, wchar_t const* const str)
-{
-	MPrint(x, y, str);
-
-	UINT16 const length = StringPixLength(str, FontDefault);
+	UINT16 const length = StringPixLength(codepoints, FontDefault);
 	if (length > 0)
 	{
 		UINT16 const height = GetFontHeight(FontDefault);
 		InvalidateRegionEx(x, y, x + length, y + height);
 	}
-}
-
-
-void GPrintInvalidateF(INT16 const x, INT16 const y, wchar_t const* const fmt, ...)
-{
-	wchar_t	str[512];
-	va_list ap;
-	va_start(ap, fmt);
-	vswprintf(str, lengthof(str), fmt, ap);
-	va_end(ap);
-	GPrintInvalidate(x, y, str);
 }
 
 
@@ -444,7 +424,7 @@ try
 	BACKGROUND_SAVE* const bgs = RegisterBackgroundRect(BGND_FLAG_PERMANENT, x, y, w, h);
 	if (!bgs) return 0;
 
-	VIDEO_OVERLAY* const v    = MALLOCZ(VIDEO_OVERLAY);
+	VIDEO_OVERLAY* const v    = new VIDEO_OVERLAY{};
 	VIDEO_OVERLAY* const head = gVideoOverlays;
 	v->prev        = 0;
 	v->next        = head;
@@ -462,9 +442,9 @@ try
 catch (...) { return 0; }
 
 
-VIDEO_OVERLAY* RegisterVideoOverlay(OVERLAY_CALLBACK const callback, INT16 const x, INT16 const y, SGPFont const font, UINT8 const foreground, UINT8 const background, wchar_t const* const text)
+VIDEO_OVERLAY* RegisterVideoOverlay(OVERLAY_CALLBACK callback, INT16 x, INT16 y, SGPFont font, UINT8 foreground, UINT8 background, const ST::utf32_buffer& codepoints)
 {
-	INT16          const w = StringPixLength(text, font);
+	INT16          const w = StringPixLength(codepoints, font);
 	INT16          const h = GetFontHeight(font);
 	VIDEO_OVERLAY* const v = RegisterVideoOverlay(callback, x, y, w, h);
 	if (v)
@@ -472,7 +452,7 @@ VIDEO_OVERLAY* RegisterVideoOverlay(OVERLAY_CALLBACK const callback, INT16 const
 		v->uiFontID   = font;
 		v->ubFontFore = foreground;
 		v->ubFontBack = background;
-		wcslcpy(v->zText, text, lengthof(v->zText));
+		v->codepoints = codepoints;
 	}
 	return v;
 }
@@ -493,14 +473,14 @@ void RemoveVideoOverlay(VIDEO_OVERLAY* const v)
 
 		FreeBackgroundRect(v->background);
 
-		if (v->pSaveArea != NULL) MemFree(v->pSaveArea);
+		if (v->pSaveArea != NULL) delete v->pSaveArea;
 		v->pSaveArea = NULL;
 
 		VIDEO_OVERLAY* const prev = v->prev;
 		VIDEO_OVERLAY* const next = v->next;
 		*(prev ? &prev->next : &gVideoOverlays) = next;
 		if (next) next->prev = prev;
-		MemFree(v);
+		delete v;
 	}
 }
 
@@ -546,7 +526,7 @@ static void AllocateVideoOverlayArea(VIDEO_OVERLAY* const v)
 	UINT32                 const buf_size = (bgs->sRight - bgs->sLeft) * (bgs->sBottom - bgs->sTop);
 
 	v->fActivelySaving = TRUE;
-	v->pSaveArea       = MALLOCN(UINT16, buf_size);
+	v->pSaveArea       = new UINT16[buf_size]{};
 }
 
 
@@ -585,7 +565,7 @@ void DeleteVideoOverlaysArea(void)
 {
 	FOR_EACH_VIDEO_OVERLAY_SAFE(v)
 	{
-		if (v->pSaveArea != NULL) MemFree(v->pSaveArea);
+		if (v->pSaveArea != NULL) delete[] v->pSaveArea;
 		v->pSaveArea       = NULL;
 		v->fActivelySaving = FALSE;
 		if (v->fDeletionPending) RemoveVideoOverlay(v);
@@ -663,13 +643,10 @@ void EnableVideoOverlay(const BOOLEAN fEnable, VIDEO_OVERLAY* const v)
 }
 
 
-void SetVideoOverlayTextF(VIDEO_OVERLAY* const v, const wchar_t* Fmt, ...)
+void SetVideoOverlayText(VIDEO_OVERLAY* v, const ST::utf32_buffer& codepoints)
 {
 	if (!v) return;
-	va_list Arg;
-	va_start(Arg, Fmt);
-	vswprintf(v->zText, lengthof(v->zText), Fmt, Arg);
-	va_end(Arg);
+	v->codepoints = codepoints;
 }
 
 
@@ -678,9 +655,9 @@ void SetVideoOverlayPos(VIDEO_OVERLAY* const v, const INT16 X, const INT16 Y)
 	if (!v) return;
 
 	// If position has changed and there is text, adjust
-	if (v->zText[0] != L'\0')
+	if (v->codepoints.size() > 0)
 	{
-		UINT16 uiStringLength = StringPixLength(v->zText, v->uiFontID);
+		UINT16 uiStringLength = StringPixLength(v->codepoints, v->uiFontID);
 		UINT16 uiStringHeight = GetFontHeight(v->uiFontID);
 
 		// Delete old rect

@@ -465,7 +465,10 @@ void InitAnimationSurfacesPerBodytype( )
 			gubAnimSurfaceCorpseID[cnt1][cnt2] = NO_CORPSE;
 		}
 	}
-	memset( gRandomAnimDefs, 0, sizeof( gRandomAnimDefs ) );
+	for (auto& i : gRandomAnimDefs)
+	{
+		std::fill(std::begin(i), std::end(i), RANDOM_ANI_DEF{});
+	}
 
 
 	// REGULAR MALE GUY
@@ -2612,7 +2615,7 @@ UINT16 DetermineSoldierAnimationSurface(const SOLDIERTYPE* pSoldier, UINT16 usAn
 	if ( usAnimSurface == INVALID_ANIMATION	)
 	{
 		// WE SHOULD NOT BE USING THIS ANIMATION
-		SLOGW( "Invalid Animation File for Body %d, animation %hs.", pSoldier->ubBodyType, gAnimControl[usAnimState].zAnimStr);
+		SLOGW( "Invalid Animation File for Body %d, animation %s.", pSoldier->ubBodyType, gAnimControl[usAnimState].zAnimStr);
 		// Set index to FOUND_INVALID_ANIMATION
 		gubAnimSurfaceIndex[pSoldier->ubBodyType][usAnimState] = FOUND_INVALID_ANIMATION;
 		return( INVALID_ANIMATION_SURFACE );
@@ -2833,7 +2836,7 @@ UINT16 GetSoldierAnimationSurface(SOLDIERTYPE const* const pSoldier)
 		// Ensure that it's loaded!
 		if ( gAnimSurfaceDatabase[usAnimSurface].hVideoObject == NULL )
 		{
-			SLOGW("Animation Surface for Body %d, animation %hs, surface %d not loaded.",
+			SLOGW("Animation Surface for Body %d, animation %s, surface %d not loaded.",
 				pSoldier->ubBodyType, gAnimControl[pSoldier->usAnimState].zAnimStr, usAnimSurface);
 			usAnimSurface = INVALID_ANIMATION_SURFACE;
 		}

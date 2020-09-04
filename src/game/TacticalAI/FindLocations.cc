@@ -34,6 +34,8 @@
 #include "GameInstance.h"
 #include "WeaponModels.h"
 
+#include <algorithm>
+
 #ifdef _DEBUG
 	INT16 gsCoverValue[WORLD_MAX];
 	INT16 gsBestCover;
@@ -67,9 +69,9 @@ static INT32 CalcPercentBetter(INT32 iOldValue, INT32 iNewValue, INT32 iOldScale
 		return(NOWHERE);
 	}
 	iPercentBetter = (iValueChange * 100) / iScaleSum;
-	SLOGD("CalcPercentBetter: %%Better %ld, old %ld, new %ld, change %ld\noldScale %ld, newScale %ld, scaleSum %ld",
+	SLOGD(ST::format("CalcPercentBetter: %Better {}, old {}, new {}, change {}\noldScale {}, newScale {}, scaleSum {}",
 				iPercentBetter, iOldValue, iNewValue, iValueChange, iOldScale,
-				iNewScale, iScaleSum);
+				iNewScale, iScaleSum));
 	return(iPercentBetter);
 }
 
@@ -552,7 +554,7 @@ INT16 FindBestNearbyCover(SOLDIERTYPE *pSoldier, INT32 morale, INT32 *piPercentB
 #if defined( _DEBUG ) && !defined( PATHAI_VISIBLE_DEBUG )
 	if (gfDisplayCoverValues)
 	{
-		memset( gsCoverValue, 0x7F, sizeof( INT16 ) * WORLD_MAX );
+		std::fill_n(gsCoverValue, WORLD_MAX, 0x7F7F);
 	}
 #endif
 
@@ -974,8 +976,8 @@ INT16 FindBestNearbyCover(SOLDIERTYPE *pSoldier, INT32 morale, INT32 *piPercentB
 		// if best cover value found was at least 5% better than our current cover
 		if (*piPercentBetter >= MIN_PERCENT_BETTER)
 		{
-			SLOGD("Found Cover: current %ld, best %ld, %d%%Better %ld",
-				iCurrentCoverValue, iBestCoverValue, *piPercentBetter);
+			SLOGD(ST::format("Found Cover: current {}, best {}, %Better {}",
+				iCurrentCoverValue, iBestCoverValue, *piPercentBetter));
 			return((INT16)sBestCover);       // return the gridno of that cover
 		}
 	}
@@ -1664,7 +1666,7 @@ INT8 SearchForItems(SOLDIERTYPE& s, ItemSearchReason const reason, UINT16 const 
 	if (best_spot == NOWHERE) return AI_ACTION_NONE;
 
 	OBJECTTYPE const& o = GetWorldItem(best_item_idx).o;
-	SLOGD("%d decides to pick up %ls", s.ubID, ItemNames[o.usItem]);
+	SLOGD("%d decides to pick up %s", s.ubID, ItemNames[o.usItem].c_str());
 	if (GCM->getItem(o.usItem)->getItemClass() == IC_GUN &&
 		!FindBetterSpotForItem(s, HANDPOS))
 	{
@@ -1674,13 +1676,13 @@ INT8 SearchForItems(SOLDIERTYPE& s, ItemSearchReason const reason, UINT16 const 
 		}
 		if (s.inv[HANDPOS].fFlags & OBJECT_UNDROPPABLE)
 		{ // Destroy this item
-			SLOGD("%d decides he must drop %ls first so destroys it", s.ubID, ItemNames[s.inv[HANDPOS].usItem]);
+			SLOGD("%d decides he must drop %s first so destroys it", s.ubID, ItemNames[s.inv[HANDPOS].usItem].c_str());
 			DeleteObj(&s.inv[HANDPOS]);
 			DeductPoints(&s, AP_PICKUP_ITEM, 0);
 		}
 		else
 		{ // We want to drop this item
-			SLOGD("%d decides he must drop %ls first", s.ubID, ItemNames[s.inv[HANDPOS].usItem]);
+			SLOGD("%d decides he must drop %s first", s.ubID, ItemNames[s.inv[HANDPOS].usItem].c_str());
 			s.bNextAction            = AI_ACTION_PICKUP_ITEM;
 			s.usNextActionData       = best_spot;
 			s.iNextActionSpecialData = best_item_idx;
@@ -1734,28 +1736,22 @@ INT16 FindClosestDoor( SOLDIERTYPE * pSoldier )
 
 INT16 FindNearestEdgepointOnSpecifiedEdge( INT16 sGridNo, INT8 bEdgeCode )
 {
-	INT32 iLoop;
-	INT16 *psEdgepointArray;
-	INT32 iEdgepointArraySize;
+	std::vector<INT16>* pEdgepoints;
 	INT16 sClosestSpot = NOWHERE, sClosestDist = 0x7FFF, sTempDist;
 
 	switch( bEdgeCode )
 	{
 		case NORTH_EDGEPOINT_SEARCH:
-			psEdgepointArray = gps1stNorthEdgepointArray;
-			iEdgepointArraySize = gus1stNorthEdgepointArraySize;
+			pEdgepoints = &gps1stNorthEdgepointArray;
 			break;
 		case EAST_EDGEPOINT_SEARCH:
-			psEdgepointArray = gps1stEastEdgepointArray;
-			iEdgepointArraySize = gus1stEastEdgepointArraySize;
+			pEdgepoints = &gps1stEastEdgepointArray;
 			break;
 		case SOUTH_EDGEPOINT_SEARCH:
-			psEdgepointArray = gps1stSouthEdgepointArray;
-			iEdgepointArraySize = gus1stSouthEdgepointArraySize;
+			pEdgepoints = &gps1stSouthEdgepointArray;
 			break;
 		case WEST_EDGEPOINT_SEARCH:
-			psEdgepointArray = gps1stWestEdgepointArray;
-			iEdgepointArraySize = gus1stWestEdgepointArraySize;
+			pEdgepoints = &gps1stWestEdgepointArray;
 			break;
 		default:
 			// WTF???
@@ -1765,13 +1761,13 @@ INT16 FindNearestEdgepointOnSpecifiedEdge( INT16 sGridNo, INT8 bEdgeCode )
 	// Do a 2D search to find the closest map edgepoint and
 	// try to create a path there
 
-	for ( iLoop = 0; iLoop < iEdgepointArraySize; iLoop++ )
+	for (INT16 edgepoint : *pEdgepoints)
 	{
-		sTempDist = PythSpacesAway( sGridNo, psEdgepointArray[ iLoop ] );
+		sTempDist = PythSpacesAway(sGridNo, edgepoint);
 		if ( sTempDist < sClosestDist )
 		{
 			sClosestDist = sTempDist;
-			sClosestSpot = psEdgepointArray[ iLoop ];
+			sClosestSpot = edgepoint;
 		}
 	}
 
@@ -1784,8 +1780,7 @@ INT16 FindNearestEdgePoint( INT16 sGridNo )
 	INT16 sDist[5], sMinDist;
 	INT32 iLoop;
 	INT8  bMinIndex;
-	INT16 *psEdgepointArray;
-	INT32 iEdgepointArraySize;
+	std::vector<INT16>* pEdgepoints;
 	INT16 sClosestSpot = NOWHERE, sClosestDist = 0x7FFF, sTempDist;
 
 	GetAbsoluteScreenXYFromMapPos(sGridNo, &sScreenX, &sScreenY);
@@ -1813,20 +1808,16 @@ INT16 FindNearestEdgePoint( INT16 sGridNo )
 	switch( bMinIndex )
 	{
 		case 1:
-			psEdgepointArray = gps1stWestEdgepointArray;
-			iEdgepointArraySize = gus1stWestEdgepointArraySize;
+			pEdgepoints = &gps1stWestEdgepointArray;
 			break;
 		case 2:
-			psEdgepointArray = gps1stEastEdgepointArray;
-			iEdgepointArraySize = gus1stEastEdgepointArraySize;
+			pEdgepoints = &gps1stEastEdgepointArray;
 			break;
 		case 3:
-			psEdgepointArray = gps1stNorthEdgepointArray;
-			iEdgepointArraySize = gus1stNorthEdgepointArraySize;
+			pEdgepoints = &gps1stNorthEdgepointArray;
 			break;
 		case 4:
-			psEdgepointArray = gps1stSouthEdgepointArray;
-			iEdgepointArraySize = gus1stSouthEdgepointArraySize;
+			pEdgepoints = &gps1stSouthEdgepointArray;
 			break;
 		default:
 			// WTF???
@@ -1836,13 +1827,13 @@ INT16 FindNearestEdgePoint( INT16 sGridNo )
 	// Do a 2D search to find the closest map edgepoint and
 	// try to create a path there
 
-	for ( iLoop = 0; iLoop < iEdgepointArraySize; iLoop++ )
+	for (INT16 edgepoint : *pEdgepoints)
 	{
-		sTempDist = PythSpacesAway( sGridNo, psEdgepointArray[ iLoop ] );
+		sTempDist = PythSpacesAway(sGridNo, edgepoint);
 		if ( sTempDist < sClosestDist )
 		{
 			sClosestDist = sTempDist;
-			sClosestSpot = psEdgepointArray[ iLoop ];
+			sClosestSpot = edgepoint;
 		}
 	}
 

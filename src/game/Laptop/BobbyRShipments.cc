@@ -13,6 +13,9 @@
 #include "Video.h"
 #include "VSurface.h"
 #include "Font_Control.h"
+#include "Debug.h"
+
+#include <string_theory/string>
 
 
 #define BOBBYR_SHIPMENT_TITLE_TEXT_FONT		FONT14ARIAL
@@ -80,7 +83,7 @@ static GUIButtonRef guiBobbyRShipmentHome;
 static MOUSE_REGION gSelectedPreviousShipmentsRegion[BOBBYR_SHIPMENT_NUM_PREVIOUS_SHIPMENTS];
 
 
-static GUIButtonRef MakeButton(BUTTON_PICS* const img, const wchar_t* const text, const INT16 x, const GUI_CALLBACK click)
+static GUIButtonRef MakeButton(BUTTON_PICS* img, const ST::string& text, INT16 x, GUI_CALLBACK click)
 {
 	const INT16 shadow_col = BOBBYR_GUNS_SHADOW_COLOR;
 	GUIButtonRef const btn = CreateIconAndTextButton(img, text, BOBBYR_GUNS_BUTTON_FONT, BOBBYR_GUNS_TEXT_COLOR_ON, shadow_col, BOBBYR_GUNS_TEXT_COLOR_OFF, shadow_col, x, BOBBYR_SHIPMENT_BUTTON_Y, MSYS_PRIORITY_HIGH, click);
@@ -110,12 +113,13 @@ void EnterBobbyRShipments()
 	giBobbyRShipmentSelectedShipment = -1;
 
 	//if there are shipments
-	if( giNumberOfNewBobbyRShipment != 0 )
+	if (gpNewBobbyrShipments.size() != 0)
 	{
 		INT32 iCnt;
 
 		//get the first shipment #
-		for( iCnt=0; iCnt<giNumberOfNewBobbyRShipment; iCnt++ )
+		Assert(gpNewBobbyrShipments.size() <= INT32_MAX);
+		for (iCnt = 0; iCnt < static_cast<INT32>(gpNewBobbyrShipments.size()); iCnt++)
 		{
 			if( gpNewBobbyrShipments[iCnt].fActive )
 				giBobbyRShipmentSelectedShipment = iCnt;
@@ -239,7 +243,7 @@ static INT32 CountNumberValidShipmentForTheShipmentsPage(void);
 static void DisplayPreviousShipments(void)
 {
 	UINT32  uiCnt;
-	wchar_t zText[512];
+	ST::string zText;
 	UINT16  usPosY = BOBBYR_SHIPMENT_ORDER_NUM_START_Y;
 	UINT32  uiNumItems = CountNumberValidShipmentForTheShipmentsPage();
 	UINT32  uiNumberItemsInShipments = 0;
@@ -263,7 +267,7 @@ static void DisplayPreviousShipments(void)
 			}
 
 			//Display the "ordered on day num"
-			swprintf(zText, lengthof(zText), L"%ls %d", gpGameClockString, gpNewBobbyrShipments[uiCnt].uiOrderedOnDayNum);
+			zText = ST::format("{} {}", gpGameClockString, gpNewBobbyrShipments[uiCnt].uiOrderedOnDayNum);
 			DrawTextToScreen(zText, BOBBYR_SHIPMENT_ORDER_NUM_X, usPosY, BOBBYR_SHIPMENT_ORDER_NUM_WIDTH, BOBBYR_SHIPMENT_STATIC_TEXT_FONT, ubFontColor, 0, CENTER_JUSTIFIED);
 
 			uiNumberItemsInShipments = 0;
@@ -276,7 +280,7 @@ static void DisplayPreviousShipments(void)
 			}
 
 			//Display the # of items
-			swprintf( zText, lengthof(zText), L"%d", uiNumberItemsInShipments );
+			zText = ST::format("{}", uiNumberItemsInShipments);
 			DrawTextToScreen(zText, BOBBYR_SHIPMENT_NUM_ITEMS_X, usPosY, BOBBYR_SHIPMENT_NUM_ITEMS_WIDTH, BOBBYR_SHIPMENT_STATIC_TEXT_FONT, ubFontColor, 0, CENTER_JUSTIFIED);
 			usPosY += BOBBYR_SHIPMENT_GAP_BTN_LINES;
 		}
@@ -337,7 +341,8 @@ static void SelectPreviousShipmentsRegionCallBack(MOUSE_REGION* pRegion, INT32 i
 			giBobbyRShipmentSelectedShipment = -1;
 
 			//loop through and get the "x" iSlotID shipment
-			for( iCnt=0; iCnt<giNumberOfNewBobbyRShipment; iCnt++ )
+			Assert(gpNewBobbyrShipments.size() <= INT32_MAX);
+			for (iCnt = 0; iCnt < static_cast<INT32>(gpNewBobbyrShipments.size()); iCnt++)
 			{
 				if( gpNewBobbyrShipments[iCnt].fActive )
 				{
@@ -358,8 +363,9 @@ static void SelectPreviousShipmentsRegionCallBack(MOUSE_REGION* pRegion, INT32 i
 
 static INT32 CountNumberValidShipmentForTheShipmentsPage(void)
 {
-	if( giNumberOfNewBobbyRShipment > BOBBYR_SHIPMENT_NUM_PREVIOUS_SHIPMENTS )
+	Assert(gpNewBobbyrShipments.size() <= INT32_MAX);
+	if (gpNewBobbyrShipments.size() > BOBBYR_SHIPMENT_NUM_PREVIOUS_SHIPMENTS)
 		return( BOBBYR_SHIPMENT_NUM_PREVIOUS_SHIPMENTS );
 	else
-		return( giNumberOfNewBobbyRShipment );
+		return( static_cast<INT32>(gpNewBobbyrShipments.size()) );
 }

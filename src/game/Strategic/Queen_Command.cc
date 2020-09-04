@@ -49,7 +49,7 @@ UNDERGROUND_SECTORINFO *gpUndergroundSectorInfoHead = NULL;
 extern UNDERGROUND_SECTORINFO* gpUndergroundSectorInfoTail;
 BOOLEAN gfPendingEnemies = FALSE;
 
-extern GARRISON_GROUP *gGarrisonGroup;
+extern std::vector<GARRISON_GROUP> gGarrisonGroup;
 
 INT16 gsInterrogationGridNo[3] = { 7756, 7757, 7758 };
 
@@ -648,7 +648,7 @@ void ProcessQueenCmdImplicationsOfDeath(const SOLDIERTYPE* const pSoldier)
 		}
 		if( pGroup->fPlayer )
 		{
-			SLOGW("Attempting to process player group thinking it's an enemy group in ProcessQueenCmdImplicationsOfDeath()", pSoldier->ubGroupID);
+			SLOGW(ST::format("Attempting to process player group thinking it's an enemy group (#{}) in ProcessQueenCmdImplicationsOfDeath()", pSoldier->ubGroupID));
 			return;
 		}
 		switch( pSoldier->ubSoldierClass )
@@ -1123,7 +1123,7 @@ void LoadUnderGroundSectorInfoFromSavedGame(HWFILE const f)
 	UNDERGROUND_SECTORINFO** anchor = &gpUndergroundSectorInfoHead;
 	for (UINT32 n = n_records; n != 0; --n)
 	{
-		UNDERGROUND_SECTORINFO* const u = MALLOC(UNDERGROUND_SECTORINFO);
+		UNDERGROUND_SECTORINFO* const u = new UNDERGROUND_SECTORINFO{};
 		ExtractUndergroundSectorInfoFromFile(f, u);
 
 		gpUndergroundSectorInfoTail = u;

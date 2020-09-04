@@ -23,6 +23,9 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 
+#include <string_theory/string>
+
+
 struct FilesUnit
 {
 	UINT8 ubCode; // the code index in the files code table
@@ -33,7 +36,7 @@ struct FilesUnit
 
 struct FileString
 {
-	wchar_t* pString;
+	ST::string pString;
 	FileString* Next;
 };
 
@@ -339,7 +342,7 @@ static void ProcessAndEnterAFilesRecord(const UINT8 ubCode, const BOOLEAN fRead)
 		if ((*anchor)->ubCode == ubCode) return;
 	}
 
-	FilesUnit* const f = MALLOC(FilesUnit);
+	FilesUnit* const f = new FilesUnit{};
 	f->Next   = NULL;
 	f->ubCode = ubCode;
 	f->fRead  = fRead;
@@ -371,11 +374,11 @@ static void OpenAndReadFilesFile(void)
 		UINT8 code;
 		UINT8 already_read;
 
-		const BYTE* d = data;
+		DataReader d{data};
 		EXTR_U8(d, code)
 		EXTR_SKIP(d, 261)
 		EXTR_U8(d, already_read)
-		Assert(d == endof(data));
+		Assert(d.getConsumed() == lengthof(data));
 
 		ProcessAndEnterAFilesRecord(code, already_read);
 	}
@@ -389,11 +392,11 @@ static void OpenAndWriteFilesFile(void)
 	for (const FilesUnit* i = pFilesListHead; i; i = i->Next)
 	{
 		BYTE  data[FILE_ENTRY_SIZE];
-		BYTE* d = data;
+		DataWriter d{data};
 		INJ_U8(d, i->ubCode)
 		INJ_SKIP(d, 261)
 		INJ_U8(d, i->fRead)
-		Assert(d == endof(data));
+		Assert(d.getConsumed() == lengthof(data));
 
 		FileWrite(f, data, sizeof(data));
 	}
@@ -410,7 +413,7 @@ static void ClearFilesList(void)
 	{
 		FilesUnit* const del = i;
 		i = i->Next;
-		MemFree(del);
+		delete del;
 	}
 }
 
@@ -655,13 +658,11 @@ static FileString* LoadStringsIntoFileList(char const* const filename, UINT32 of
 	AutoSGPFile f(GCM->openGameResForReading(filename));
 	for (; n != 0; ++offset, --n)
 	{
-		wchar_t str[FILE_STRING_SIZE];
-		GCM->loadEncryptedString(f, str, lengthof(str) * offset, lengthof(str));
+		ST::string str = GCM->loadEncryptedString(f, FILE_STRING_SIZE * offset, FILE_STRING_SIZE);
 
-		FileString* const fs = MALLOC(FileString);
+		FileString* const fs = new FileString{};
 		fs->Next    = 0;
-		fs->pString = MALLOCN(wchar_t, wcslen(str) + 1);
-		wcscpy(fs->pString, str);
+		fs->pString = str;
 
 		// Append node to list
 		*anchor = fs;
@@ -679,8 +680,7 @@ namespace
 		{
 			FileString* const del = i;
 			i = i->Next;
-			MemFree(del->pString);
-			MemFree(del);
+			delete del;
 		}
 	}
 
@@ -730,7 +730,7 @@ static void HandleSpecialFiles(void)
 				break;
 		}
 
-		wchar_t const* const txt = i->pString;
+		ST::string txt = i->pString;
 		if (y + IanWrappedStringHeight(max_width, FILE_GAP, font, txt) >= MAX_FILE_MESSAGE_PAGE_SIZE)
 		{
 			// gonna get cut off, end now
@@ -855,7 +855,7 @@ static FileRecordWidth* CreateRecordWidth(INT32 iRecordNumber, INT32 iRecordWidt
 {
 	// allocs and inits a width info record for the multipage file viewer...this will tell the procedure that does inital computation on which record is the start of the current page
 	// how wide special records are ( ones that share space with pictures )
-	FileRecordWidth* const pTempRecord = MALLOC(FileRecordWidth);
+	FileRecordWidth* const pTempRecord = new FileRecordWidth{};
 	pTempRecord -> Next = NULL;
 	pTempRecord -> iRecordNumber = iRecordNumber;
 	pTempRecord -> iRecordWidth = iRecordWidth;
@@ -927,7 +927,7 @@ static void ClearOutWidthRecordsList(FileRecordWidth* i)
 	{
 		FileRecordWidth* const del = i;
 		i = i->Next;
-		MemFree(del);
+		delete del;
 	}
 }
 
@@ -1011,7 +1011,7 @@ static void HandleSpecialTerroristFile(INT32 const file_idx)
 			start_x   = FILE_VIEWER_X + 10;
 		}
 
-		wchar_t const* const txt = i->pString;
+		ST::string txt = i->pString;
 		if (y + IanWrappedStringHeight(max_width, FILE_GAP, font, txt) >= MAX_FILE_MESSAGE_PAGE_SIZE)
 		{
 			// gonna get cut off, end now

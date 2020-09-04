@@ -20,6 +20,8 @@
 #include "Debug.h"
 #include "MemMan.h"
 
+#include <algorithm>
+#include <iterator>
 
 static UINT16  gusMapPathingData[256];
 static BOOLEAN gfPlotToAvoidPlayerInfuencedSectors = FALSE;
@@ -52,6 +54,7 @@ struct trail_t
 //#define NOPASS (TRAVELCOST_OBSTACLE)
 //#define VEINCOST TRAVELCOST_FLAT     //actual cost for bridges and doors and such
 #define TRAILCELLTYPE UINT32
+#define TRAILCELLMAX 0xFFFFFFFF
 
 static path_t        pathQB[MAXpathQ];
 static TRAILCELLTYPE trailCostB[MAP_LENGTH];
@@ -211,13 +214,13 @@ INT32 FindStratPath(INT16 const sStart, INT16 const sDestination, GROUP const& g
 	queRequests = 2;
 
 	//initialize the ai data structures
-	memset(trailStratTreeB,0,sizeof(trailStratTreeB));
-	memset(trailCostB,255,sizeof(trailCostB));
+	std::fill(std::begin(trailStratTreeB), std::end(trailStratTreeB), trail_t{});
+	std::fill(std::begin(trailCostB), std::end(trailCostB), TRAILCELLMAX);
 
-	memset(pathQB,0,sizeof(pathQB));
+	std::fill(std::begin(pathQB), std::end(pathQB), path_t{});
 
 	// FOLLOWING LINE COMMENTED OUT ON MARCH 7/97 BY IC
-	memset(gusMapPathingData,((UINT16)sStart), sizeof(gusMapPathingData));
+	std::fill(std::begin(gusMapPathingData), std::end(gusMapPathingData), ((UINT16)sStart));
 	trailStratTreedxB=0;
 
 	//set up common info
@@ -442,7 +445,7 @@ PathSt* BuildAStrategicPath(INT16 const start_sector, INT16 const end_sector, GR
 	if (path_len == 0) return NULL;
 
 	// start new path list
-	PathSt* const head = MALLOC(PathSt);
+	PathSt* const head = new PathSt{};
 	head->uiSectorId = start_sector;
 	head->pNext      = NULL;
 	head->pPrev      = NULL;
@@ -468,7 +471,7 @@ PathSt* BuildAStrategicPath(INT16 const start_sector, INT16 const end_sector, GR
 			return NULL;
 		}
 
-		PathSt* const n = MALLOC(PathSt);
+		PathSt* const n = new PathSt{};
 		n->uiSectorId = cur_sector;
 		n->pPrev      = path;
 		n->pNext      = NULL;
@@ -539,7 +542,7 @@ PathSt* ClearStrategicPathList(PathSt* const pHeadOfPath, const INT16 sMvtGroup)
 	{
 		PathSt* const del = n;
 		n = n->pNext;
-		MemFree(del);
+		delete del;
 	}
 
 	if (sMvtGroup != -1 && sMvtGroup != 0)
@@ -644,12 +647,12 @@ PathSt* ClearStrategicPathListAfterThisSector(PathSt* pHeadOfPath, INT16 sX, INT
 		}
 
 		// delete delete node
-		MemFree( pDeleteNode );
+		delete pDeleteNode;
 	}
 
 
 	// clear out last node
-	MemFree( pNode );
+	delete pNode;
 	pNode = NULL;
 	pDeleteNode = NULL;
 
@@ -702,7 +705,7 @@ static PathSt* RemoveTailFromStrategicPath(PathSt* pHeadOfList)
 	pLastNode -> pNext = NULL;
 
 	// now remove old last node
-	MemFree( pNode );
+	delete pNode;
 
 	// return head of new list
 	return( pHeadOfList );
@@ -738,7 +741,7 @@ PathSt* RemoveHeadFromStrategicPath(PathSt* pList)
 	}
 
 	// free old head
-	MemFree( pNode );
+	delete pNode;
 
 	pNode = NULL;
 
@@ -769,7 +772,7 @@ PathSt* CopyPaths(PathSt* src)
 {
 	if (src == NULL) return NULL;
 
-	PathSt* const head = MALLOC(PathSt);
+	PathSt* const head = new PathSt{};
 	head->uiSectorId = src->uiSectorId;
 	head->pPrev      = NULL;
 
@@ -782,7 +785,7 @@ PathSt* CopyPaths(PathSt* src)
 			break;
 		}
 
-		PathSt* const p = MALLOC(PathSt);
+		PathSt* const p = new PathSt{};
 		p->uiSectorId	= src->uiSectorId;
 		p->pPrev      = dst;
 
@@ -1206,7 +1209,7 @@ void AddSectorToFrontOfMercPathForAllSoldiersInGroup( GROUP *pGroup, UINT8 ubSec
 static void AddSectorToFrontOfMercPath(PathSt** ppMercPath, UINT8 ubSectorX, UINT8 ubSectorY)
 {
 	// allocate and hang a new node at the front of the path list
-	PathSt* const pNode = MALLOC(PathSt);
+	PathSt* const pNode = new PathSt{};
 	pNode->uiSectorId = CALCULATE_STRATEGIC_INDEX( ubSectorX, ubSectorY );
 	pNode->pNext = *ppMercPath;
 	pNode->pPrev = NULL;

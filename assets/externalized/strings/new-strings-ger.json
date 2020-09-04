@@ -1,6 +1,7 @@
 [
-        "%ls equips %ls",
-        "%ls removes %ls",
+        "%s equips %s",
+        "%s removes %s",
+        "Da ist noch jemand im Sektor...",
 
         "__last_one"
 ]

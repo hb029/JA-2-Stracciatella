@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "Debug.h"
 #include "LoadSaveData.h"
 #include "LoadSaveObjectType.h"
@@ -7,6 +5,11 @@
 #include "Overhead.h"
 #include "Tactical_Save.h"
 #include "Types.h"
+
+#include <string_theory/string>
+
+#include <algorithm>
+#include <stdexcept>
 
 static UINT32 MercChecksum(SOLDIERTYPE const& s)
 {
@@ -40,9 +43,9 @@ void ExtractSoldierType(const BYTE* const data, SOLDIERTYPE* const s, bool strac
 	UINT16 usPathDataSize;
 	UINT16 usPathIndex;
 
-	memset(s, 0, sizeof(*s));
+	*s = SOLDIERTYPE{};
 
-	const BYTE* d = data;
+	DataReader d{data};
 	EXTR_U8(d, s->ubID)
 	EXTR_SKIP(d, 1)
 	EXTR_U8(d, s->ubBodyType)
@@ -52,7 +55,7 @@ void ExtractSoldierType(const BYTE* const data, SOLDIERTYPE* const s, bool strac
 	EXTR_U32(d, s->uiStatusFlags)
 	FOR_EACH_SOLDIER_INV_SLOT(i, *s)
 	{
-		d = ExtractObject(d, i);
+		ExtractObject(d, i);
 	}
 	EXTR_PTR(d, s->pTempObject)
 	EXTR_PTR(d, s->pKeyRing)
@@ -81,15 +84,11 @@ void ExtractSoldierType(const BYTE* const data, SOLDIERTYPE* const s, bool strac
 	if(stracLinuxFormat)
 	{
 		EXTR_SKIP(d, 2)
-		DataReader reader(d);
-		reader.readUTF32(s->name, lengthof(s->name));
-		d += reader.getConsumed();
+		s->name = d.readUTF32(SOLDIERTYPE_NAME_LENGTH);
 	}
 	else
 	{
-		DataReader reader(d);
-		reader.readUTF16(s->name, lengthof(s->name));
-		d += reader.getConsumed();
+		s->name = d.readUTF16(SOLDIERTYPE_NAME_LENGTH);
 	}
 	EXTR_I8(d, s->bVisible)
 	EXTR_I8(d, s->bActive)
@@ -187,10 +186,10 @@ void ExtractSoldierType(const BYTE* const data, SOLDIERTYPE* const s, bool strac
 	EXTR_I8(d, s->bMechanical)
 	EXTR_I8(d, s->bLifeMax)
 	EXTR_SKIP(d, 6)
-	EXTR_STR(d, s->HeadPal, lengthof(s->HeadPal))
-	EXTR_STR(d, s->PantsPal, lengthof(s->PantsPal))
-	EXTR_STR(d, s->VestPal, lengthof(s->VestPal))
-	EXTR_STR(d, s->SkinPal, lengthof(s->SkinPal))
+	s->HeadPal = d.readUTF8(PaletteRepID_LENGTH, ST::substitute_invalid);
+	s->PantsPal = d.readUTF8(PaletteRepID_LENGTH, ST::substitute_invalid);
+	s->VestPal = d.readUTF8(PaletteRepID_LENGTH, ST::substitute_invalid);
+	s->SkinPal = d.readUTF8(PaletteRepID_LENGTH, ST::substitute_invalid);
 	EXTR_SKIP(d, 328)
 	EXTR_I8(d, s->bMedical)
 	EXTR_BOOL(d, s->fBeginFade)
@@ -451,7 +450,7 @@ void ExtractSoldierType(const BYTE* const data, SOLDIERTYPE* const s, bool strac
 	EXTR_SKIP(d, 1)
 	EXTR_BOOL(d, s->fContractPriceHasIncreased)
 	EXTR_SKIP(d, 1)
-	EXTR_I32(d, s->iBurstSoundID)
+	EXTR_U32(d, s->uiBurstSoundID)
 	EXTR_BOOL(d, s->fFixingSAMSite)
 	EXTR_BOOL(d, s->fFixingRobot)
 	EXTR_I8(d, s->bSlotItemTakenFrom)
@@ -537,7 +536,7 @@ void ExtractSoldierType(const BYTE* const data, SOLDIERTYPE* const s, bool strac
 	EXTR_I8(d, s->bCorpseQuoteTolerance)
 	EXTR_SKIP(d, 1)
 	EXTR_I32(d, s->iPositionSndID)
-	EXTR_I32(d, s->iTuringSoundID)
+	EXTR_U32(d, s->uiTuringSoundID)
 	EXTR_U8(d, s->ubLastDamageReason)
 	EXTR_BOOL(d, s->fComplainedThatTired)
 	EXTR_I16A(d, s->sLastTwoLocations, lengthof(s->sLastTwoLocations))
@@ -547,11 +546,11 @@ void ExtractSoldierType(const BYTE* const data, SOLDIERTYPE* const s, bool strac
 	EXTR_SKIP(d, 39)
 	if(stracLinuxFormat)
 	{
-		Assert(d == data + 2352);
+		Assert(d.getConsumed() == 2352);
 	}
 	else
 	{
-		Assert(d == data + 2328);
+		Assert(d.getConsumed() == 2328);
 	}
 
 	if (checksum != MercChecksum(*s))
@@ -567,7 +566,7 @@ void InjectSoldierType(BYTE* const data, const SOLDIERTYPE* const s)
 	UINT16 usPathDataSize;
 	UINT16 usPathIndex;
 
-	BYTE* d = data;
+	DataWriter d{data};
 	INJ_U8(d, s->ubID)
 	INJ_SKIP(d, 1)
 	INJ_U8(d, s->ubBodyType)
@@ -577,7 +576,7 @@ void InjectSoldierType(BYTE* const data, const SOLDIERTYPE* const s)
 	INJ_U32(d, s->uiStatusFlags)
 	CFOR_EACH_SOLDIER_INV_SLOT(i, *s)
 	{
-		d = InjectObject(d, i);
+		InjectObject(d, i);
 	}
 	INJ_PTR(d, s->pTempObject)
 	INJ_PTR(d, s->pKeyRing)
@@ -603,11 +602,7 @@ void InjectSoldierType(BYTE* const data, const SOLDIERTYPE* const s)
 	INJ_U8(d, s->ubAttackingHand)
 	INJ_SKIP(d, 2)
 	INJ_I16(d, s->sWeightCarriedAtTurnStart)
-	{
-		DataWriter writer(d);
-		writer.writeStringAsUTF16(s->name, lengthof(s->name));
-		d += writer.getConsumed();
-	}
+	d.writeUTF16(s->name, SOLDIERTYPE_NAME_LENGTH);
 	INJ_I8(d, s->bVisible)
 	INJ_I8(d, s->bActive)
 	INJ_I8(d, s->bTeam)
@@ -700,10 +695,10 @@ void InjectSoldierType(BYTE* const data, const SOLDIERTYPE* const s)
 	INJ_I8(d, s->bMechanical)
 	INJ_I8(d, s->bLifeMax)
 	INJ_SKIP(d, 6)
-	INJ_STR(d, s->HeadPal, lengthof(s->HeadPal))
-	INJ_STR(d, s->PantsPal, lengthof(s->PantsPal))
-	INJ_STR(d, s->VestPal, lengthof(s->VestPal))
-	INJ_STR(d, s->SkinPal, lengthof(s->SkinPal))
+	d.writeUTF8(s->HeadPal, PaletteRepID_LENGTH);
+	d.writeUTF8(s->PantsPal, PaletteRepID_LENGTH);
+	d.writeUTF8(s->VestPal, PaletteRepID_LENGTH);
+	d.writeUTF8(s->SkinPal, PaletteRepID_LENGTH);
 	INJ_SKIP(d, 328)
 	INJ_I8(d, s->bMedical)
 	INJ_BOOL(d, s->fBeginFade)
@@ -732,7 +727,7 @@ void InjectSoldierType(BYTE* const data, const SOLDIERTYPE* const s)
 	// pathing info takes up 16 bit in the savegame but 8 bit in the engine
 	usPathDataSize = s->ubPathDataSize > MAX_PATH_LIST_SIZE ? (UINT16)MAX_PATH_LIST_SIZE : (UINT16)s->ubPathDataSize;
 	usPathIndex = (UINT16)s->ubPathIndex;
-	memset(usPathingData, 0, MAX_PATH_LIST_SIZE);
+	std::fill_n(usPathingData, MAX_PATH_LIST_SIZE, 0);
 	for (UINT8 i = 0; i < usPathDataSize; i++) {
 		usPathingData[i] = (UINT16)s->ubPathingData[i];
 	}
@@ -965,7 +960,7 @@ void InjectSoldierType(BYTE* const data, const SOLDIERTYPE* const s)
 	INJ_SKIP(d, 1)
 	INJ_BOOL(d, s->fContractPriceHasIncreased)
 	INJ_SKIP(d, 1)
-	INJ_I32(d, s->iBurstSoundID)
+	INJ_U32(d, s->uiBurstSoundID)
 	INJ_BOOL(d, s->fFixingSAMSite)
 	INJ_BOOL(d, s->fFixingRobot)
 	INJ_I8(d, s->bSlotItemTakenFrom)
@@ -1051,7 +1046,7 @@ void InjectSoldierType(BYTE* const data, const SOLDIERTYPE* const s)
 	INJ_I8(d, s->bCorpseQuoteTolerance)
 	INJ_SKIP(d, 1)
 	INJ_I32(d, s->iPositionSndID)
-	INJ_I32(d, s->iTuringSoundID)
+	INJ_U32(d, s->uiTuringSoundID)
 	INJ_U8(d, s->ubLastDamageReason)
 	INJ_BOOL(d, s->fComplainedThatTired)
 	INJ_I16A(d, s->sLastTwoLocations, lengthof(s->sLastTwoLocations))
@@ -1059,5 +1054,5 @@ void InjectSoldierType(BYTE* const data, const SOLDIERTYPE* const s)
 	INJ_I32(d, s->uiTimeSinceLastBleedGrunt)
 	INJ_SOLDIER(d, s->next_to_previous_attacker)
 	INJ_SKIP(d, 39)
-	Assert(d == data + 2328);
+	Assert(d.getConsumed() == 2328);
 }

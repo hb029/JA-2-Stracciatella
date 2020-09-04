@@ -1,11 +1,12 @@
 #pragma once
 
+#include "sgp/StrUtils.h"
+
+#include <string_theory/string>
+
 #include <map>
 #include <stdexcept>
 #include <stdint.h>
-#include <string>
-
-#include "sgp/StrUtils.h"
 
 class JsonObject;
 class JsonObjectReader;
@@ -25,7 +26,7 @@ struct CalibreModel
 	// This could be default in C++11
 	virtual ~CalibreModel();
 
-	const wchar_t* getName() const;
+	const ST::string* getName() const;
 
 	virtual void serializeTo(JsonObject &obj) const;
 	static CalibreModel* deserialize(JsonObjectReader &obj);
@@ -33,12 +34,12 @@ struct CalibreModel
 	static const CalibreModel* getNoCalibreObject();
 
 	uint16_t index;
-	std::string internalName;
-	std::string burstSoundString;
+	ST::string internalName;
+	ST::string burstSoundString;
 	bool showInHelpText;
 	bool monsterWeapon;
 	int silencerSound;
 };
 
 const CalibreModel* getCalibre(const char *calibreName,
-				const std::map<std::string, const CalibreModel*> &calibreMap);
+				const std::map<ST::string, const CalibreModel*> &calibreMap);

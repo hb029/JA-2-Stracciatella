@@ -13,11 +13,11 @@ extern MERCPROFILESTRUCT gMercProfiles[NUM_PROFILES];
 
 static inline MERCPROFILESTRUCT& GetProfile(ProfileID const id)
 {
-	Assert(id < lengthof(gMercProfiles));
-	return gMercProfiles[id];
+	if (id < lengthof(gMercProfiles))
+		return gMercProfiles[id];
+	SLOGA("invalid profile id %d", id);
+	abort();
 }
-
-#define AIM_AND_MERC_MERCS 51 // A.I.M. is 0-39, M.E.R.C.s are 40-50
 
 //enums for the mercs
 enum NPCIDs
@@ -187,6 +187,11 @@ enum NPCIDs
 	NPC168,
 	NPC169
 };
+
+#define AIM_AND_MERC_MERCS BUBBA // A.I.M. is 0-39, M.E.R.C.s are 40-50
+#define LAST_IMP_MERC (MIGUEL - 1)
+
+BOOLEAN IsProfileIdAnAimOrMERCMerc(UINT8 ubProfileID);
 
 void LoadMercProfiles();
 

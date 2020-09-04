@@ -64,12 +64,22 @@ enum
 	NUMBER_OF_REFUEL_SITES,
 };
 
+// the sam site enums
+enum{
+	SAM_SITE_ONE = 0,			// near Chitzena
+	SAM_SITE_TWO,					// near Drassen
+	SAM_SITE_THREE,				// near Cambria
+	SAM_SITE_FOUR,				// near Meduna
+	NUMBER_OF_SAM_SITES,
+};
+
 // helicopter vehicle id value
 extern INT32 iHelicopterVehicleId;
 
 static inline VEHICLETYPE& GetHelicopter(void)
 {
-	Assert(0 <= iHelicopterVehicleId && iHelicopterVehicleId < ubNumberOfVehicles);
+	Assert(pVehicleList.size() <= INT32_MAX);
+	Assert(0 <= iHelicopterVehicleId && iHelicopterVehicleId < static_cast<INT32>(pVehicleList.size()));
 	VEHICLETYPE& v = pVehicleList[iHelicopterVehicleId];
 	Assert(v.fValid);
 	return v;
@@ -133,7 +143,10 @@ BOOLEAN IsHelicopterPilotAvailable( void );
 void TakeOffHelicopter( void );
 
 // test whether or not a sector contains a fuel site
-bool IsRefuelSiteInSector(INT16 sector);
+bool IsRefuelSiteInSector(INT16 const sector);
+
+// test whether or not the sector can refuel the heli
+bool IsRefuelAvailableInSector(INT16 const sector);
 
 // update which refueling sites are controlled by player & therefore available
 void UpdateRefuelSiteAvailability( void );

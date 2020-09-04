@@ -43,6 +43,9 @@
 #include "Quests.h"
 #include "Logger.h"
 
+#include <string_theory/string>
+
+
 #define MIN_FLIGHT_PREP_TIME 6
 
 extern BOOLEAN gfTacticalDoHeliRun;
@@ -53,6 +56,16 @@ extern BOOLEAN gfFirstHeliRun;
 // Saved in general saved game structure
 INT16 g_merc_arrive_sector = START_SECTOR;
 
+void CreateSpecialItem(SOLDIERTYPE* const s, UINT16 item)
+{
+	OBJECTTYPE o;
+	CreateItem(item, 100, &o);
+	BOOLEAN fReturn = AutoPlaceObject(s, &o, FALSE);
+	if (!fReturn) {
+		// no space, so overwrite an existing item (can happen when importing IMPs)
+		s->inv[SMALLPOCK8POS] = o;
+	}
+}
 
 INT8 HireMerc(MERC_HIRE_STRUCT& h)
 {
@@ -83,7 +96,7 @@ INT8 HireMerc(MERC_HIRE_STRUCT& h)
 	}
 
 	SOLDIERCREATE_STRUCT MercCreateStruct;
-	memset(&MercCreateStruct, 0, sizeof(MercCreateStruct));
+	MercCreateStruct = SOLDIERCREATE_STRUCT{};
 	MercCreateStruct.ubProfile             = pid;
 	MercCreateStruct.sSectorX              = h.sSectorX;
 	MercCreateStruct.sSectorY              = h.sSectorY;
@@ -103,14 +116,7 @@ INT8 HireMerc(MERC_HIRE_STRUCT& h)
 		if (s->ubID == 0)
 		{
 			// OK, give this item to our merc!
-			OBJECTTYPE o;
-			memset(&o, 0, sizeof(o));
-			o.usItem            = LETTER;
-			o.ubNumberOfObjects = 1;
-			o.bStatus[0]        = 100;
-			const BOOLEAN fReturn = AutoPlaceObject(s, &o, FALSE);
-			(void)fReturn;
-			Assert(fReturn);
+			CreateSpecialItem(s, LETTER);
 		}
 
 		// Set insertion for first time in chopper
@@ -205,7 +211,7 @@ INT8 HireMerc(MERC_HIRE_STRUCT& h)
 
 		AddHistoryToPlayersLog(HISTORY_HIRED_MERC_FROM_MERC, pid, GetWorldTotalMin(), -1, -1);
 	}
-	else if (pid < MIGUEL)
+	else if (pid <= LAST_IMP_MERC)
 	{
 		s->ubWhatKindOfMercAmI = MERC_TYPE__PLAYER_CHARACTER;
 	}
@@ -282,7 +288,7 @@ void MercArrivesCallback(SOLDIERTYPE& s)
 
 	if (s.ubStrategicInsertionCode != INSERTION_CODE_CHOPPER)
 	{
-		ScreenMsg(FONT_MCOLOR_WHITE, MSG_INTERFACE, TacticalStr[MERC_HAS_ARRIVED_STR], s.name);
+		ScreenMsg(FONT_MCOLOR_WHITE, MSG_INTERFACE, st_format_printf(TacticalStr[MERC_HAS_ARRIVED_STR], s.name));
 
 		// ATE: He's going to say something, now that they've arrived...
 		if (!gTacticalStatus.bMercArrivingQuoteBeingUsed && !gfFirstHeliRun)
@@ -473,9 +479,9 @@ static void CheckForValidArrivalSector(void)
 	INT16   sSectorGridNo, sSectorGridNo2;
 	INT32   uiRange, uiLowestRange = 999999;
 	BOOLEAN fFound = FALSE;
-	wchar_t sString[ 1024 ];
-	wchar_t zShortTownIDString1[ 50 ];
-	wchar_t zShortTownIDString2[ 50 ];
+	ST::string sString;
+	ST::string zShortTownIDString1;
+	ST::string zShortTownIDString2;
 
 	sSectorGridNo = SECTOR_INFO_TO_STRATEGIC_INDEX(g_merc_arrive_sector);
 
@@ -485,7 +491,7 @@ static void CheckForValidArrivalSector(void)
 		return;
 	}
 
-	GetShortSectorString(SECTORX(g_merc_arrive_sector), SECTORY(g_merc_arrive_sector), zShortTownIDString1, lengthof(zShortTownIDString1));
+	zShortTownIDString1 = GetShortSectorString(SECTORX(g_merc_arrive_sector), SECTORY(g_merc_arrive_sector));
 
 
 	// If here - we need to do a search!
@@ -528,9 +534,9 @@ static void CheckForValidArrivalSector(void)
 
 		UpdateAnyInTransitMercsWithGlobalArrivalSector( );
 
-		GetShortSectorString(SECTORX(g_merc_arrive_sector), SECTORY(g_merc_arrive_sector), zShortTownIDString2, lengthof(zShortTownIDString2));
+		zShortTownIDString2 = GetShortSectorString(SECTORX(g_merc_arrive_sector), SECTORY(g_merc_arrive_sector));
 
-		swprintf(sString, lengthof(sString), str_arrival_rerouted, zShortTownIDString2, zShortTownIDString1);
+		sString = st_format_printf(str_arrival_rerouted, zShortTownIDString2, zShortTownIDString1);
 
 		DoScreenIndependantMessageBox(  sString, MSG_BOX_FLAG_OK, NULL );
 

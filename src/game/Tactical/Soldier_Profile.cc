@@ -131,7 +131,7 @@ void LoadMercProfiles()
 			MERCPROFILESTRUCT& p = gMercProfiles[i];
 
 			// // dumping std inventory
-			// printf("%03d/%ls\n", i, p.zNickname);
+			// printf("%03d/%s\n", i, p.zNickname.c_str());
 			// FOR_EACH(UINT16, k, p.inv)
 			// {
 			//   const ItemModel *item = GCM->getItem(*k);
@@ -579,7 +579,7 @@ SOLDIERTYPE* ChangeSoldierTeam(SOLDIERTYPE* const old_s, UINT8 const team)
 
 	// Create a new one.
 	SOLDIERCREATE_STRUCT c;
-	memset(&c, 0, sizeof(c));
+	c = SOLDIERCREATE_STRUCT{};
 	c.bTeam            = team;
 	c.ubProfile        = old_s->ubProfile;
 	c.bBodyType        = old_s->ubBodyType;
@@ -831,11 +831,13 @@ BOOLEAN UnRecruitEPC(ProfileID const pid)
 
 INT8 WhichBuddy( UINT8 ubCharNum, UINT8 ubBuddy )
 {
-	INT8								bLoop;
+	if (ubCharNum == NO_PROFILE)
+	{
+		return -1;
+	}
 
 	MERCPROFILESTRUCT const& p = GetProfile(ubCharNum);
-
-	for (bLoop = 0; bLoop < 3; bLoop++)
+	for (INT8 bLoop = 0; bLoop < 3; bLoop++)
 	{
 		if (p.bBuddy[bLoop] == ubBuddy)
 		{
@@ -1058,4 +1060,11 @@ BOOLEAN DoesNPCOwnBuilding( SOLDIERTYPE *pSoldier, INT16 sGridNo )
 	}
 
 	return( FALSE );
+}
+
+BOOLEAN IsProfileIdAnAimOrMERCMerc(UINT8 ubProfileID)
+{
+	// AIM: ubProfileID < BIFF
+	// MERC: ubProfileID >= BIFF && ubProfileID <= BUBBA
+	return ubProfileID <= AIM_AND_MERC_MERCS;
 }

@@ -69,10 +69,16 @@
 #include "ScreenIDs.h"
 #include "VSurface.h"
 #include "UILayout.h"
+#include "SamSiteModel.h"
 
 #include "ContentManager.h"
 #include "GameInstance.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
+#include <algorithm>
+#include <iterator>
 
 // various reason an assignment can be aborted before completion
 enum AssignmentAbortReason
@@ -234,6 +240,8 @@ BOOLEAN gfReEvaluateEveryonesNothingToDo = FALSE;
 // NOTE: A repairman must generate a least this many points / hour to be ABLE to repair a SAM site at all!
 #define SAM_SITE_REPAIR_DIVISOR		10
 
+// minimum condition a SAM site must be in to be fixable
+#define MIN_CONDITION_TO_FIX_SAM 20
 
 // a list of which sectors have characters
 static BOOLEAN fSectorsWithSoldiers[MAP_WORLD_X * MAP_WORLD_Y][4];
@@ -248,7 +256,10 @@ BOOLEAN IsSoldierCloseEnoughToSAMControlPanel( const SOLDIERTYPE *pSoldier );
 void InitSectorsWithSoldiersList( void )
 {
 	// init list of sectors
-	memset( &fSectorsWithSoldiers, 0, sizeof( fSectorsWithSoldiers ) );
+	for (auto& i : fSectorsWithSoldiers)
+	{
+		std::fill(std::begin(i), std::end(i), 0);
+	}
 }
 
 
@@ -374,9 +385,8 @@ static bool IsAnythingAroundForSoldierToRepair(SOLDIERTYPE const& s)
 	// Vehicles?
 	if (s.bSectorZ == 0)
 	{
-		CFOR_EACH_VEHICLE(i)
+		CFOR_EACH_VEHICLE(v)
 		{
-			VEHICLETYPE const& v = *i;
 			// The helicopter, is NEVER repairable
 			if (IsHelicopter(v))                         continue;
 			if (!IsThisVehicleAccessibleToSoldier(s, v)) continue;
@@ -731,7 +741,7 @@ static bool CanCharacterSleep(SOLDIERTYPE const& s, bool const explain_why_not)
 {
 	if (!AreAssignmentConditionsMet(s, AC_IMPASSABLE | AC_COMBAT | AC_EPC | AC_IN_HELI_IN_HOSTILE_SECTOR | AC_MOVING | AC_UNDERGROUND)) return false;
 
-	wchar_t const* why;
+	ST::string why;
 	if (s.fBetweenSectors) // Traveling?
 	{
 		if (s.bAssignment != VEHICLE)
@@ -781,8 +791,7 @@ static bool CanCharacterSleep(SOLDIERTYPE const& s, bool const explain_why_not)
 cannot_sleep:
 	if (explain_why_not)
 	{
-		wchar_t buf[128];
-		swprintf(buf, lengthof(buf), why, s.name);
+		ST::string buf = st_format_printf(why, s.name);
 		DoScreenIndependantMessageBox(buf, MSG_BOX_FLAG_OK, 0);
 	}
 	return false;
@@ -791,7 +800,7 @@ cannot_sleep:
 
 static BOOLEAN CanCharacterBeAwakened(SOLDIERTYPE* pSoldier, BOOLEAN fExplainWhyNot)
 {
-	wchar_t sString[ 128 ];
+	ST::string sString;
 
 	// if dead tired
 	if( ( pSoldier -> bBreathMax <= BREATHMAX_ABSOLUTE_MINIMUM ) && !pSoldier->fMercCollapsedFlag )
@@ -805,7 +814,7 @@ static BOOLEAN CanCharacterBeAwakened(SOLDIERTYPE* pSoldier, BOOLEAN fExplainWhy
 	{
 		if ( fExplainWhyNot )
 		{
-			swprintf( sString, lengthof(sString), zMarksMapScreenText[ 6 ], pSoldier->name );
+			sString = st_format_printf(zMarksMapScreenText[ 6 ], pSoldier->name);
 			DoScreenIndependantMessageBox( sString, MSG_BOX_FLAG_OK, NULL );
 		}
 
@@ -1763,11 +1772,11 @@ static bool DoRepair(SOLDIERTYPE* const repairer, SOLDIERTYPE const* const owner
 	{ // report it as fixed
 		if (repairer == owner)
 		{
-			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, g_langRes->Message[STR_REPAIRED], repairer->name, ItemNames[item]);
+			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(g_langRes->Message[STR_REPAIRED], repairer->name, ItemNames[item]));
 		}
 		else
 		{ // NOTE: may need to be changed for localized versions
-			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, gzLateLocalizedString[STR_LATE_35], repairer->name, owner->name, ItemNames[item]);
+			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(gzLateLocalizedString[STR_LATE_35], repairer->name, owner->name, ItemNames[item]));
 		}
 	}
 	return true;
@@ -1902,7 +1911,7 @@ static void HandleRepairBySoldier(SOLDIERTYPE& s)
 		// if he fixed something of his, and now has no more of his own items to fix
 		if (fAnyOfSoldiersOwnItemsWereFixed && !DoesCharacterHaveAnyItemsToRepair(&s, -1))
 		{
-			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, sRepairsDoneString[0], s.name);
+			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(sRepairsDoneString[0], s.name));
 
 			// let player react
 			StopTimeCompression();
@@ -2092,7 +2101,7 @@ static void HandleTrainingInSector(const INT16 sMapX, const INT16 sMapY, const I
 
 	// init trainer list
 	const SOLDIERTYPE* pStatTrainerList[NUM_TRAINABLE_STATS]; // can't have more "best" trainers than trainable stats
-	memset( pStatTrainerList, 0, sizeof( pStatTrainerList ) );
+	std::fill(std::begin(pStatTrainerList), std::end(pStatTrainerList), nullptr);
 
 	// build list of teammate trainers in this sector.
 
@@ -2182,7 +2191,7 @@ static void HandleTrainingInSector(const INT16 sMapX, const INT16 sMapY, const I
 	if (CanSectorContainMilita(sMapX, sMapY, bZ))
 	{
 		// init town trainer list
-		memset( TownTrainer, 0, sizeof( TownTrainer ) );
+		std::fill(std::begin(TownTrainer), std::end(TownTrainer), TOWN_TRAINER_TYPE{});
 		ubTownTrainers = 0;
 
 		// build list of all the town trainers in this sector and their training pts
@@ -2668,7 +2677,7 @@ void MakeSoldiersTacticalAnimationReflectAssignment(SOLDIERTYPE* const s)
 static void AssignmentAborted(SOLDIERTYPE const& s, AssignmentAbortReason const reason)
 {
 	Assert(reason < NUM_ASSIGN_ABORT_REASONS);
-	ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, gzLateLocalizedString[reason], s.name);
+	ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(gzLateLocalizedString[reason], s.name));
 	StopTimeCompression();
 	fCharacterInfoPanelDirty = TRUE;
 	fTeamPanelDirty          = TRUE;
@@ -2994,9 +3003,8 @@ static void CreateDestroyMouseRegionForVehicleMenu(void)
 		UINT16      const  h    = GetLineSpace(box) + GetFontHeight(GetBoxFont(box));
 		MOUSE_REGION*      r    = gVehicleMenuRegion;
 		SOLDIERTYPE const& s    = *GetSelectedAssignSoldier(FALSE);
-		FOR_EACH_VEHICLE(i)
+		FOR_EACH_VEHICLE(v)
 		{
-			VEHICLETYPE& v = *i;
 			if (!IsThisVehicleAccessibleToSoldier(s, v)) continue;
 
 			// add mouse region for each accessible vehicle
@@ -3044,9 +3052,8 @@ static void HandleShadingOfLinesForVehicleMenu()
 
 	SOLDIERTYPE const& s    = *GetSelectedAssignSoldier(FALSE);
 	UINT32             line = 0;
-	CFOR_EACH_VEHICLE(i)
+	CFOR_EACH_VEHICLE(v)
 	{
-		VEHICLETYPE const& v = *i;
 		// inaccessible vehicles aren't listed at all!
 		if (!IsThisVehicleAccessibleToSoldier(s, v)) continue;
 
@@ -3074,7 +3081,7 @@ static void VehicleMenuBtnCallback(MOUSE_REGION* pRegion, INT32 iReason)
 		}
 		else
 		{
-			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_UI_FEEDBACK, gzLateLocalizedString[STR_LATE_18], zVehicleName[v.ubVehicleType]);
+			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_UI_FEEDBACK, st_format_printf(gzLateLocalizedString[STR_LATE_18], zVehicleName[v.ubVehicleType]));
 		}
 
 		fShowAssignmentMenu = FALSE;
@@ -3149,9 +3156,8 @@ static void DisplayRepairMenu(SOLDIERTYPE const& s)
 
 	if (s.bSectorZ == 0)
 	{ // Run through list of vehicles in sector and add them to pop up box
-		CFOR_EACH_VEHICLE(i)
+		CFOR_EACH_VEHICLE(v)
 		{
-			VEHICLETYPE const& v = *i;
 			// Don't even list the helicopter, because it's never repairable
 			if (IsHelicopter(v))                         continue;
 			if (!IsThisVehicleAccessibleToSoldier(s, v)) continue;
@@ -3195,9 +3201,8 @@ static void HandleShadingOfLinesForRepairMenu()
 
 	if (s.bSectorZ == 0)
 	{
-		CFOR_EACH_VEHICLE(i)
+		CFOR_EACH_VEHICLE(v)
 		{
-			VEHICLETYPE const& v = *i;
 			// don't even list the helicopter, because it's NEVER repairable...
 			if (IsHelicopter(v))                         continue;
 			if (!IsThisVehicleAccessibleToSoldier(s, v)) continue;
@@ -3259,9 +3264,8 @@ static void CreateDestroyMouseRegionForRepairMenu(void)
 		if (s.bSectorZ == 0)
 		{
 			// vehicles
-			CFOR_EACH_VEHICLE(i)
+			CFOR_EACH_VEHICLE(v)
 			{
-				VEHICLETYPE const& v = *i;
 				// don't even list the helicopter, because it's NEVER repairable...
 				if (IsHelicopter(v)) continue;
 
@@ -3696,7 +3700,7 @@ void DetermineWhichAssignmentMenusCanBeShown(void)
 		HideBoxIfShown(ghAttributeBox);
 		HideBoxIfShown(ghVehicleBox);
 
-		// do we really want to hide this box?
+		// do we really want ot hide this box?
 		//if (!fShowContractMenu) HideBoxIfShown(ghRemoveMercAssignBox);
 		//HideBox( ghSquadBox );
 
@@ -4136,10 +4140,12 @@ static void CreateDestroyMouseRegionsForSquadMenu()
 		INT32  const  w    = area.w;
 		INT32  const  h    = GetLineSpace(ghSquadBox) + GetFontHeight(GetBoxFont(ghSquadBox));
 
-		INT32 i;
-		for (i = 0; i < GetNumberOfLinesOfTextInBox(ghSquadBox) - 1; ++i)
+		// add mouse region for each line of text except cancel
+		UINT32 lines = GetNumberOfLinesOfTextInBox(ghSquadBox);
+		if (lines > 0) lines--;
+		UINT32 i;
+		for (i = 0; i < lines; ++i)
 		{
-			// add mouse region for each line of text
 			MOUSE_REGION* const r = &gSquadMenuRegion[i];
 			MSYS_DefineRegion(r, x, y, x + w, y + h, MSYS_PRIORITY_HIGHEST - 2, MSYS_NO_CURSOR, SquadMenuMvtCallBack, SquadMenuBtnCallback);
 			MSYS_SetRegionUserData(r, 0, i);
@@ -4623,8 +4629,9 @@ static void SquadMenuBtnCallback(MOUSE_REGION* const pRegion, INT32 const reason
 		}
 
 		/* Can the character join this squad?  If already in it, accept that as a
-		 * legal choice and exit menu */
+			* legal choice and exit menu */
 		SOLDIERTYPE& s = *GetSelectedAssignSoldier(FALSE);
+		ST::string buf;
 		switch (CanCharacterSquad(s, value))
 		{
 			case CHARACTER_CAN_JOIN_SQUAD: // able to add, do it
@@ -4634,8 +4641,8 @@ static void SquadMenuBtnCallback(MOUSE_REGION* const pRegion, INT32 const reason
 				AddCharacterToSquad(&s, value);
 				if (exiting_helicopter) SetSoldierExitHelicopterInsertionData(&s); // XXX TODO001D
 				MakeSoldiersTacticalAnimationReflectAssignment(&s);
-				/* FALLTHROUGH */
 			}
+				// fallthrough
 			case CHARACTER_CANT_JOIN_SQUAD_ALREADY_IN_IT:
 				// Stop displaying, leave
 				fShowAssignmentMenu      = FALSE;
@@ -4646,24 +4653,25 @@ static void SquadMenuBtnCallback(MOUSE_REGION* const pRegion, INT32 const reason
 				gfRenderPBInterface      = TRUE;
 				break;
 
-				wchar_t buf[128];
 			case CHARACTER_CANT_JOIN_SQUAD_SQUAD_MOVING:
-				swprintf(buf, lengthof(buf), pMapErrorString[36], s.name, pLongAssignmentStrings[value]);
-				goto show_error;
-			case CHARACTER_CANT_JOIN_SQUAD_VEHICLE:
-				swprintf(buf, lengthof(buf), pMapErrorString[37], s.name);
-				goto show_error;
-			case CHARACTER_CANT_JOIN_SQUAD_TOO_FAR:
-				swprintf(buf, lengthof(buf), pMapErrorString[20], s.name, pLongAssignmentStrings[value]);
-				goto show_error;
-			case CHARACTER_CANT_JOIN_SQUAD_FULL:
-				swprintf(buf, lengthof(buf), pMapErrorString[19], s.name, pLongAssignmentStrings[value]);
-				goto show_error;
-			default: // generic "you can't join this squad" msg
-				swprintf(buf, lengthof(buf), pMapErrorString[38], s.name, pLongAssignmentStrings[value]);
-show_error:
-				DoScreenIndependantMessageBox(buf, MSG_BOX_FLAG_OK, NULL);
+				buf = st_format_printf(pMapErrorString[36], s.name, pLongAssignmentStrings[value]);
 				break;
+			case CHARACTER_CANT_JOIN_SQUAD_VEHICLE:
+				buf = st_format_printf(pMapErrorString[37], s.name);
+				break;
+			case CHARACTER_CANT_JOIN_SQUAD_TOO_FAR:
+				buf = st_format_printf(pMapErrorString[20], s.name, pLongAssignmentStrings[value]);
+				break;
+			case CHARACTER_CANT_JOIN_SQUAD_FULL:
+				buf = st_format_printf(pMapErrorString[19], s.name, pLongAssignmentStrings[value]);
+				break;
+			default: // generic "you can't join this squad" msg
+				buf = st_format_printf(pMapErrorString[38], s.name, pLongAssignmentStrings[value]);
+				break;
+		}
+		if (!buf.empty())
+		{
+			DoScreenIndependantMessageBox(buf, MSG_BOX_FLAG_OK, NULL);
 		}
 
 		SetAssignmentForList(value, 0);
@@ -4676,8 +4684,8 @@ static void TrainingMenuBtnCallback(MOUSE_REGION* pRegion, INT32 iReason)
 	// btn callback handler for assignment region
 	INT32 iValue = -1;
 	SOLDIERTYPE * pSoldier = NULL;
-	wchar_t sString[ 128 ];
-	wchar_t sStringA[ 128 ];
+	ST::string sString;
+	ST::string sStringA;
 
 
 	pSoldier = GetSelectedAssignSoldier( FALSE );
@@ -4727,7 +4735,7 @@ static void TrainingMenuBtnCallback(MOUSE_REGION* pRegion, INT32 iReason)
 						// can we keep militia in this town?
 						if (!MilitiaTrainingAllowedInSector(pSoldier->sSectorX, pSoldier->sSectorY, pSoldier->bSectorZ))
 						{
-							swprintf( sString, lengthof(sString), pMapErrorString[ 31 ], pTownNames[ bTownId ] );
+							sString = st_format_printf(pMapErrorString[ 31 ], GCM->getTownName(bTownId));
 							DoScreenIndependantMessageBox( sString, MSG_BOX_FLAG_OK, NULL );
 							break;
 						}
@@ -4745,13 +4753,13 @@ static void TrainingMenuBtnCallback(MOUSE_REGION* pRegion, INT32 iReason)
 						if( bTownId == BLANK_SECTOR )
 						{
 							// SAM site
-							GetShortSectorString(  pSoldier->sSectorX, pSoldier->sSectorY, sStringA, lengthof(sStringA));
-							swprintf(sString, lengthof(sString), zMarksMapScreenText[20], sStringA);
+							sStringA = GetShortSectorString(pSoldier->sSectorX, pSoldier->sSectorY);
+							sString = st_format_printf(zMarksMapScreenText[20], sStringA);
 						}
 						else
 						{
 							// town
-							swprintf(sString, lengthof(sString), zMarksMapScreenText[20], pTownNames[bTownId]);
+							sString = st_format_printf(zMarksMapScreenText[20], GCM->getTownName(bTownId));
 						}
 
 						DoScreenIndependantMessageBox( sString, MSG_BOX_FLAG_OK, NULL );
@@ -4760,7 +4768,7 @@ static void TrainingMenuBtnCallback(MOUSE_REGION* pRegion, INT32 iReason)
 
 					if ( CountMilitiaTrainersInSoldiersSector( pSoldier ) >= MAX_MILITIA_TRAINERS_PER_SECTOR )
 					{
-						swprintf(sString, lengthof(sString), gzLateLocalizedString[STR_LATE_47], MAX_MILITIA_TRAINERS_PER_SECTOR);
+						sString = st_format_printf(gzLateLocalizedString[STR_LATE_47], MAX_MILITIA_TRAINERS_PER_SECTOR);
 						DoScreenIndependantMessageBox( sString, MSG_BOX_FLAG_OK, NULL );
 						break;
 					}
@@ -4921,7 +4929,7 @@ static void AssignmentMenuBtnCallback(MOUSE_REGION* pRegion, INT32 iReason)
 {
 	// btn callback handler for assignment region
 	INT32 iValue = -1;
-	wchar_t sString[ 128 ];
+	ST::string sString;
 
 	SOLDIERTYPE * pSoldier = NULL;
 
@@ -5070,7 +5078,7 @@ static void AssignmentMenuBtnCallback(MOUSE_REGION* pRegion, INT32 iReason)
 					{
 						fTeamPanelDirty = TRUE;
 						fMapScreenBottomDirty = TRUE;
-						swprintf(sString, lengthof(sString), zMarksMapScreenText[18], pSoldier->name);
+						sString = st_format_printf(zMarksMapScreenText[18], pSoldier->name);
 
 						DoScreenIndependantMessageBox( sString , MSG_BOX_FLAG_OK, NULL );
 					}
@@ -5141,7 +5149,7 @@ static void AssignmentMenuBtnCallback(MOUSE_REGION* pRegion, INT32 iReason)
 					{
 						fTeamPanelDirty = TRUE;
 						fMapScreenBottomDirty = TRUE;
-						swprintf(sString, lengthof(sString), zMarksMapScreenText[17], pSoldier->name);
+						sString = st_format_printf(zMarksMapScreenText[17], pSoldier->name);
 
 						DoScreenIndependantMessageBox( sString , MSG_BOX_FLAG_OK, NULL );
 					}
@@ -5216,8 +5224,7 @@ static void CreateSquadBox(void)
 	for (UINT32 i = 0; i <= uiMaxSquad; ++i)
 	{
 		// get info about current squad and put in  string
-		wchar_t buf[64];
-		swprintf(buf, lengthof(buf), L"%ls ( %d/%d )", pSquadMenuStrings[i], NumberOfPeopleInSquad(i), NUMBER_OF_SOLDIERS_PER_SQUAD);
+		ST::string buf = ST::format("{} ( {}/{} )", pSquadMenuStrings[i], NumberOfPeopleInSquad(i), NUMBER_OF_SOLDIERS_PER_SQUAD);
 		AddMonoString(box, buf);
 	}
 
@@ -5278,7 +5285,7 @@ static void HandleShadingOfLinesForSquadMenu(void)
 			// Shade, if the reason doesn't have a good explanatory message
 			bResult == CHARACTER_CANT_JOIN_SQUAD ? POPUP_SHADE      :
 			bResult == CHARACTER_CAN_JOIN_SQUAD  ? POPUP_SHADE_NONE :
-			                                       POPUP_SHADE_SECONDARY;
+					POPUP_SHADE_SECONDARY;
 		ShadeStringInBox(box, i, shade);
 	}
 }
@@ -5297,9 +5304,8 @@ static bool DisplayVehicleMenu(SOLDIERTYPE const& s)
 
 	// Run through list of vehicles in sector and add them to pop up box
 	bool vehicle_present = false;
-	CFOR_EACH_VEHICLE(i)
+	CFOR_EACH_VEHICLE(v)
 	{
-		VEHICLETYPE const& v = *i;
 		if (!IsThisVehicleAccessibleToSoldier(s, v)) continue;
 		AddMonoString(box, pVehicleStrings[v.ubVehicleType]);
 		vehicle_present = true;
@@ -5354,10 +5360,8 @@ void CreateContractBox(const SOLDIERTYPE* const s)
 					continue;
 			}
 
-			wchar_t sDollarString[50];
-			SPrintMoney(sDollarString, salary);
-			wchar_t sString[50];
-			swprintf(sString, lengthof(sString), L"%ls ( %ls )", pContractStrings[i], sDollarString);
+			ST::string sDollarString = SPrintMoney(salary);
+			ST::string sString = ST::format("{} ( {} )", pContractStrings[i], sDollarString);
 			AddMonoString(box, sString);
 		}
 	}
@@ -5421,13 +5425,13 @@ static void CreateAssignmentsBox()
 
 	for (UINT32 i = 0; i < MAX_ASSIGN_STRING_COUNT; ++i)
 	{
-		wchar_t const* str = pAssignMenuStrings[i];
+		ST::string str = pAssignMenuStrings[i];
 		// if we have a soldier, and this is the squad line
-		wchar_t buf[128];
+		ST::string buf;
 		if (i == ASSIGN_MENU_ON_DUTY && s != NULL && s->bAssignment < ON_DUTY)
 		{
 			// show his squad # in brackets
-			swprintf(buf, lengthof(buf), L"%ls(%d)", str, s->bAssignment + 1);
+			buf = ST::format("{}({})", str, s->bAssignment + 1);
 			str = buf;
 		}
 		AddMonoString(box, str);
@@ -5716,7 +5720,7 @@ static bool CharacterIsTakingItEasy(SOLDIERTYPE const&);
 static void HandleRestFatigueAndSleepStatus()
 {
 	{ /* Run through all player characters and handle their rest, fatigue, and
-		 * going to sleep */
+		* going to sleep */
 		bool   reason_added = false;
 		bool   box_set_up   = false;
 		UINT16 sleep_quote  = QUOTE_NEED_SLEEP;
@@ -5746,11 +5750,11 @@ static void HandleRestFatigueAndSleepStatus()
 			if (s.bBreathMax <= BREATHMAX_ABSOLUTE_MINIMUM)
 			{
 				/* If between sectors, don't put tired mercs to sleep, will be handled
-				 * when they arrive at the next sector */
+					* when they arrive at the next sector */
 				if (s.fBetweenSectors) continue;
 
 				/* He goes to sleep, provided it's at all possible (it still won't happen
-				 * in a hostile sector, etc.) */
+					* in a hostile sector, etc.) */
 				if (!SetMercAsleep(s, false)) continue;
 
 				if (s.bAssignment < ON_DUTY || s.bAssignment == VEHICLE)
@@ -5798,7 +5802,7 @@ static void HandleRestFatigueAndSleepStatus()
 	}
 
 	{ /* Now handle waking. Needs seperate list queue, that's why it has its own
-		 * loop */
+		* loop */
 		bool box_set_up   = false;
 		bool reason_added = false;
 		FOR_EACH_IN_TEAM(i, OUR_TEAM)
@@ -6147,9 +6151,9 @@ BOOLEAN IsTheSAMSiteInSectorRepairable( INT16 sSectorX, INT16 sSectorY, INT16 sS
 		return( FALSE );
 	}
 
-	for (UINT8 i = 0; i < NUMBER_OF_SAMS; ++i)
+	for (const SamSiteModel* samSite : GCM->getSamSites())
 	{
-		if(pSamList[i] == SECTOR( sSectorX, sSectorY ))
+		if (samSite->sectorId == SECTOR( sSectorX, sSectorY ))
 		{
 			bSAMCondition = StrategicMap[ CALCULATE_STRATEGIC_INDEX( sSectorX, sSectorY ) ].bSAMCondition;
 
@@ -6179,9 +6183,9 @@ BOOLEAN SoldierInSameSectorAsSAM( const SOLDIERTYPE *pSoldier )
 	}
 
 	// now check each sam site in the list
-	for (UINT8 i = 0; i < NUMBER_OF_SAMS; ++i)
+	for (auto samSite : GCM->getSamSites())
 	{
-		if(pSamList[i] == SECTOR(pSoldier->sSectorX, pSoldier->sSectorY))
+		if(samSite->sectorId == SECTOR(pSoldier->sSectorX, pSoldier->sSectorY))
 		{
 			return( TRUE );
 		}
@@ -6198,9 +6202,9 @@ BOOLEAN IsSoldierCloseEnoughToSAMControlPanel( const SOLDIERTYPE *pSoldier )
 	}
 	
 	// now check each sam site in the list
-	for (UINT8 i = 0; i < NUMBER_OF_SAMS; ++i)
+	for (auto samSite : GCM->getSamSites())
 	{
-		if(pSamList[i] == SECTOR(pSoldier->sSectorX, pSoldier->sSectorY))
+		if (samSite->sectorId == SECTOR(pSoldier->sSectorX, pSoldier->sSectorY))
 		{
 			return( TRUE );
 		}
@@ -6501,7 +6505,7 @@ BOOLEAN AnyMercInGroupCantContinueMoving(GROUP const& g)
 		if (!PlayerSoldierTooTiredToTravel(s)) continue;
 
 		/* NOTE: we only complain about it if it's gonna force the group to stop
-		 * moving! */
+			* moving! */
 		group_must_stop = TRUE;
 
 		HandleImportantMercQuote(&s, quote);
@@ -6598,7 +6602,7 @@ BOOLEAN HandleSelectedMercsBeingPutAsleep(BOOLEAN const wake_up, BOOLEAN const d
 	if (!success && display_warning)
 	{
 		// inform player not everyone could be woken up/put to sleep
-		wchar_t const* const warning = wake_up ?
+		ST::string warning = wake_up ?
 			pMapErrorString[27] : pMapErrorString[26];
 		DoScreenIndependantMessageBox(warning, MSG_BOX_FLAG_OK, NULL);
 	}
@@ -6911,7 +6915,8 @@ void SetAssignmentForList(INT8 const bAssignment, INT8 const bParam)
 
 						// able to add, do it
 						AddCharacterToSquad(&s, bAssignment);
-						/* FALLTHROUGH */
+						fItWorked = TRUE;
+						break;
 					}
 
 					// if already in it, don't report that as an error
@@ -7216,7 +7221,7 @@ void ResumeOldAssignment(SOLDIERTYPE* const s)
 	StopTimeCompression();
 
 	/* Assignment has changed, redraw left side as well as the map (to update
-	 * on/off duty icons) */
+		* on/off duty icons) */
 	fTeamPanelDirty          = TRUE;
 	fCharacterInfoPanelDirty = TRUE;
 	fMapPanelDirty           = TRUE;
@@ -7301,7 +7306,7 @@ static void RepairItemsOnOthers(SOLDIERTYPE* pSoldier, UINT8* pubRepairPtsLeft)
 
 		if ( fSomethingWasRepairedThisPass && !DoesCharacterHaveAnyItemsToRepair( pSoldier, ubPassType ) )
 		{
-			ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, sRepairsDoneString[ 1 + ubPassType ], pSoldier->name );
+			ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(sRepairsDoneString[ 1 + ubPassType ], pSoldier->name) );
 
 			// let player react
 			StopTimeCompression();
@@ -7335,12 +7340,12 @@ static BOOLEAN UnjamGunsOnSoldier(SOLDIERTYPE* pOwnerSoldier, SOLDIERTYPE* pRepa
 				// report it as unjammed
 				if ( pRepairSoldier == pOwnerSoldier )
 				{
-					ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, gzLateLocalizedString[STR_LATE_53], pRepairSoldier->name, ItemNames[pOwnerSoldier->inv[bPocket].usItem]);
+					ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(gzLateLocalizedString[STR_LATE_53], pRepairSoldier->name, ItemNames[pOwnerSoldier->inv[bPocket].usItem]));
 				}
 				else
 				{
 					// NOTE: may need to be changed for localized versions
-					ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, gzLateLocalizedString[STR_LATE_54], pRepairSoldier->name, pOwnerSoldier->name, ItemNames[pOwnerSoldier->inv[bPocket].usItem]);
+					ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(gzLateLocalizedString[STR_LATE_54], pRepairSoldier->name, pOwnerSoldier->name, ItemNames[pOwnerSoldier->inv[bPocket].usItem]));
 				}
 
 				fAnyGunsWereUnjammed = TRUE;

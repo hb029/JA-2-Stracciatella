@@ -223,7 +223,7 @@ enum WorldDirections
 
 // ENUMERATION OF SOLDIER POSIITONS IN GLOBAL SOLDIER LIST
 #define MAX_NUM_SOLDIERS				148
-#define NUM_PLANNING_MERCS				8
+#define NUM_PLANNING_MERCS				8 // XXX this is a remnant of the planning mode, see issue #902
 #define TOTAL_SOLDIERS					( NUM_PLANNING_MERCS + MAX_NUM_SOLDIERS )
 
 // DEFINE TEAMS
@@ -236,6 +236,9 @@ enum WorldDirections
 
 
 //-----------------------------------------------
+//NOTE:  The editor uses these enumerations, so please update the text as well if you modify or
+//       add new groups.  Try to abbreviate the team name as much as possible.  The text is in
+//       EditorMercs.c
 //
 // civilian "sub teams":
 enum
@@ -282,21 +285,11 @@ enum BoxingStates
 	LOST_ROUND
 };
 
-//NOTE:  The editor uses these enumerations, so please update the text as well if you modify or
-//       add new groups.  Try to abbreviate the team name as much as possible.  The text is in
-//       EditorMercs.c
-extern const wchar_t* gszCivGroupNames[NUM_CIV_GROUPS];
-
 //
 //-----------------------------------------------
 
 // PALETTE SUBSITUTION TYPES
 
-typedef CHAR8 PaletteRepID[ 30 ];
-
-
-// MACROS
-// This will set an animation ID
-#define SET_PALETTEREP_ID( a, b )			( strcpy( a, b ) )
+#define PaletteRepID_LENGTH 30
 
 #endif

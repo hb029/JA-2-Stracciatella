@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "Buffer.h"
 #include "HImage.h"
 #include "LoadSaveData.h"
@@ -35,6 +33,13 @@
 
 #include "ContentManager.h"
 #include "GameInstance.h"
+
+#include <climits>
+#include <string_theory/format>
+#include <string_theory/string>
+
+#include <stdexcept>
+
 
 #ifdef COUNT_PATHS
 	extern UINT32 guiSuccessfulPathChecks;
@@ -179,17 +184,17 @@ namespace
 			DB_STRUCTURE_REF const* const end = sr + f->usNumberOfStructures;
 			for (DB_STRUCTURE_REF* i = sr; i != end; ++i)
 			{
-				if (i->ppTile) MemFree(i->ppTile);
+				if (i->ppTile) delete[] i->ppTile;
 			}
-			MemFree(sr);
+			delete[] sr;
 		}
-		if (f->pubStructureData) MemFree(f->pubStructureData);
+		if (f->pubStructureData) delete[] f->pubStructureData;
 		if (f->pAuxData)
 		{
-			MemFree(f->pAuxData);
-			if (f->pTileLocData) MemFree(f->pTileLocData);
+			delete[] f->pAuxData;
+			if (f->pTileLocData) delete[] f->pTileLocData;
 		}
-		MemFree(f);
+		delete f;
 	}
 }
 
@@ -247,7 +252,7 @@ static void LoadStructureData(char const* const filename, STRUCTURE_FILE_REF* co
 	UINT8  flags;
 	UINT16 n_tile_locs_stored;
 
-	BYTE const* d = data;
+	DataReader d{data};
 	EXTR_STR(d, id, lengthof(id))
 	EXTR_U16(d, n_structures);
 	EXTR_U16( d, n_structures_stored)
@@ -255,7 +260,7 @@ static void LoadStructureData(char const* const filename, STRUCTURE_FILE_REF* co
 	EXTR_U8(  d, flags)
 	EXTR_SKIP(d, 3)
 	EXTR_U16( d, n_tile_locs_stored)
-	Assert(d == endof(data));
+	Assert(d.getConsumed() == lengthof(data));
 
 	if (strncmp(id, STRUCTURE_FILE_ID, STRUCTURE_FILE_ID_LEN) != 0 ||
 			n_structures == 0)
@@ -293,12 +298,49 @@ static void LoadStructureData(char const* const filename, STRUCTURE_FILE_REF* co
 	sfr->pubStructureData = structure_data.Release();
 }
 
+void NormalizeStructureTiles(DB_STRUCTURE_TILE** pTiles, UINT8 ubNumTiles)
+{
+	/**
+	 * In #1107, it was discovered that some of the Copter structures do not
+	 * have a base tile. RemoveStruct will not work without a base tile, as 
+	 * it tries to find a non-existent base structure.
+	 *
+	 * This function attempts to correct such issues with JSD data, by 
+	 * ensuring there is a tile with (0, 0) position relative to base.
+	 */
+	int minDistFromBase = INT_MAX;
+	for (UINT8 i = 0; i < ubNumTiles; i++)
+	{
+		DB_STRUCTURE_TILE* tile = pTiles[i];
+		if (abs(minDistFromBase) > abs(tile->sPosRelToBase))
+		{
+			minDistFromBase = tile->sPosRelToBase;
+		}
+	}
+
+	if (minDistFromBase == 0)
+	{
+		// Data is fine. Nothing to do.
+		return;
+	}
+
+	SLOGD(ST::format("Adjusting tiles relative positions by {}", -minDistFromBase));
+	int xDist = minDistFromBase % WORLD_COLS;
+	int yDist = minDistFromBase / WORLD_COLS;
+	for (UINT8 i = 0; i < ubNumTiles; i++)
+	{
+		DB_STRUCTURE_TILE* tile = pTiles[i];
+		tile->sPosRelToBase -= minDistFromBase;
+		tile->bXPosRelToBase -= xDist;
+		tile->bYPosRelToBase -= yDist;
+	}
+}
 
 static void CreateFileStructureArrays(STRUCTURE_FILE_REF* const pFileRef, UINT32 uiDataSize)
 { /* Based on a file chunk, creates all the dynamic arrays for the structure
 	 * definitions contained within */
 	UINT8*                  pCurrent        = pFileRef->pubStructureData;
-	DB_STRUCTURE_REF* const pDBStructureRef = MALLOCNZ(DB_STRUCTURE_REF, pFileRef->usNumberOfStructures);
+	DB_STRUCTURE_REF* const pDBStructureRef = new DB_STRUCTURE_REF[pFileRef->usNumberOfStructures]{};
 	pFileRef->pDBStructureRef = pDBStructureRef;
 	for (UINT16 usLoop = 0; usLoop < pFileRef->usNumberOfStructuresStored; ++usLoop)
 	{
@@ -311,7 +353,7 @@ static void CreateFileStructureArrays(STRUCTURE_FILE_REF* const pFileRef, UINT32
 		pCurrent   += sizeof(DB_STRUCTURE);
 		uiDataSize -= sizeof(DB_STRUCTURE);
 
-		DB_STRUCTURE_TILE** const tiles       = MALLOCN(DB_STRUCTURE_TILE*, dbs->ubNumberOfTiles);
+		DB_STRUCTURE_TILE** const tiles       = new DB_STRUCTURE_TILE*[dbs->ubNumberOfTiles]{};
 		UINT16              const usIndex     = dbs->usStructureNumber;
 		pDBStructureRef[usIndex].pDBStructure = dbs;
 		pDBStructureRef[usIndex].ppTile       = tiles;
@@ -334,6 +376,9 @@ static void CreateFileStructureArrays(STRUCTURE_FILE_REF* const pFileRef, UINT32
 			tile->sPosRelToBase = tile->bXPosRelToBase + tile->bYPosRelToBase * WORLD_COLS;
 			uiHitPoints += FilledTilePositions(tile);
 		}
+
+		NormalizeStructureTiles(tiles, dbs->ubNumberOfTiles);
+
 		// scale hit points down to something reasonable...
 		uiHitPoints = uiHitPoints * 100 / 255;
 		dbs->ubHitPoints = (UINT8)uiHitPoints;
@@ -343,7 +388,7 @@ static void CreateFileStructureArrays(STRUCTURE_FILE_REF* const pFileRef, UINT32
 
 STRUCTURE_FILE_REF* LoadStructureFile(char const* const filename)
 { // NB should be passed in expected number of structures so we can check equality
-	SGP::AutoObj<STRUCTURE_FILE_REF, FreeStructureFileRef> sfr(MALLOCZ(STRUCTURE_FILE_REF));
+	SGP::AutoObj<STRUCTURE_FILE_REF, FreeStructureFileRef> sfr(new STRUCTURE_FILE_REF{});
 	UINT32 data_size = 0;
 	LoadStructureData(filename, sfr, &data_size);
 	if (sfr->pubStructureData) CreateFileStructureArrays(sfr, data_size);
@@ -365,11 +410,15 @@ static STRUCTURE* CreateStructureFromDB(DB_STRUCTURE_REF const* const pDBStructu
 	DB_STRUCTURE const* const pDBStructure = pDBStructureRef->pDBStructure;
 	DB_STRUCTURE_TILE*  const pTile        = pDBStructureRef->ppTile[ubTileNum];
 
-	STRUCTURE* const pStructure = MALLOCZ(STRUCTURE);
+	STRUCTURE* const pStructure = new STRUCTURE{};
 
 	pStructure->fFlags          = pDBStructure->fFlags;
 	pStructure->pShape          = &pTile->Shape;
 	pStructure->pDBStructureRef = pDBStructureRef;
+	if (pTile->sPosRelToBase != 0 && ubTileNum == 0)
+	{
+		SLOGW(ST::format("Possible bad structure {}", pDBStructureRef->pDBStructure->usStructureNumber));
+	}
 	if (pTile->sPosRelToBase == 0)
 	{	// base tile
 		pStructure->fFlags      |= STRUCTURE_BASE_TILE;
@@ -674,7 +723,7 @@ try
 			// Free allocated memory and abort!
 			for (UINT8 k = 0; k < i; ++k)
 			{
-				MemFree(structures[k]);
+				delete structures[k];
 			}
 			return 0;
 		}
@@ -787,7 +836,7 @@ static void DeleteStructureFromTile(MAP_ELEMENT* const me, STRUCTURE* const s)
 	// only one allowed in a tile, so we are safe to do this
 	if (s->fFlags & STRUCTURE_OPENABLE) me->uiFlags &= ~MAPELEMENT_INTERACTIVETILE;
 
-	MemFree(s);
+	delete s;
 }
 
 
@@ -1231,26 +1280,27 @@ BOOLEAN DamageStructure(STRUCTURE* const s, UINT8 damage, StructureDamageReason 
 #define LINE_HEIGHT 20
 void DebugStructurePage1()
 {
-	static wchar_t const* const WallOrientationString[] =
+	static const ST::string WallOrientationString[] =
 	{
-		L"None",
-		L"Inside left",
-		L"Inside right",
-		L"Outside left",
-		L"Outside right"
+		"None",
+		"Inside left",
+		"Inside right",
+		"Outside left",
+		"Outside right"
 	};
 
 	GridNo const grid_no = GetMouseMapPos();
 	if (grid_no == NOWHERE) {
-		MPageHeader(L"DEBUG STRUCTURES PAGE ONE");
+		MPageHeader("DEBUG STRUCTURES PAGE ONE");
+		return;
 	} else {
-		MPageHeader(L"DEBUG STRUCTURES PAGE ONE, GRIDNO %d", grid_no);
+		MPageHeader(ST::format("DEBUG STRUCTURES PAGE ONE, GRIDNO {}", grid_no));
 	}
 
 	INT32 const h = DEBUG_PAGE_LINE_HEIGHT;
 	INT32 y = DEBUG_PAGE_START_Y;
 
-	MPrintStat(DEBUG_PAGE_FIRST_COLUMN, y+=h, L"Building:", gubBuildingInfo[grid_no]);
+	MPrintStat(DEBUG_PAGE_FIRST_COLUMN, y+=h, "Building:", gubBuildingInfo[grid_no]);
 
 
 	bool might_have_structures = GridNoOnVisibleWorldTile(grid_no);
@@ -1261,12 +1311,12 @@ void DebugStructurePage1()
 			++n_structures;
 		}
 	}
-	MPrintStat(DEBUG_PAGE_FIRST_COLUMN, y += h, L"Number of structures:", n_structures);
+	MPrintStat(DEBUG_PAGE_FIRST_COLUMN, y += h, "Number of structures:", n_structures);
 
 	if (!might_have_structures) return;
 
-	MHeader(DEBUG_PAGE_FIRST_COLUMN, y += h, L"Movement Costs:");
-	mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"N %d NE %d E %d SE %d S %d SW %d W %d NW %d",
+	MHeader(DEBUG_PAGE_FIRST_COLUMN, y += h, "Movement Costs:");
+	MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, ST::format("N {} NE {} E {} SE {} S {} SW {} W {} NW {}",
 		gubWorldMovementCosts[grid_no][NORTH    ][gsInterfaceLevel],
 		gubWorldMovementCosts[grid_no][NORTHEAST][gsInterfaceLevel],
 		gubWorldMovementCosts[grid_no][EAST     ][gsInterfaceLevel],
@@ -1274,11 +1324,11 @@ void DebugStructurePage1()
 		gubWorldMovementCosts[grid_no][SOUTH    ][gsInterfaceLevel],
 		gubWorldMovementCosts[grid_no][SOUTHWEST][gsInterfaceLevel],
 		gubWorldMovementCosts[grid_no][WEST     ][gsInterfaceLevel],
-		gubWorldMovementCosts[grid_no][NORTHWEST][gsInterfaceLevel]);
-	MHeader(DEBUG_PAGE_FIRST_COLUMN, y += h, L"Ground smell:");
-	mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"%d of strength %d",
+		gubWorldMovementCosts[grid_no][NORTHWEST][gsInterfaceLevel]));
+	MHeader(DEBUG_PAGE_FIRST_COLUMN, y += h, "Ground smell:");
+	MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, ST::format("{} of strength {}",
 		SMELL_TYPE(gpWorldLevelData[grid_no].ubSmellInfo),
-		SMELL_STRENGTH(gpWorldLevelData[grid_no].ubSmellInfo));
+		SMELL_STRENGTH(gpWorldLevelData[grid_no].ubSmellInfo)));
 
 	INT16 const desired_level = gsInterfaceLevel == I_GROUND_LEVEL ? STRUCTURE_ON_GROUND : STRUCTURE_ON_ROOF;
 	for (STRUCTURE* s = gpWorldLevelData[grid_no].pStructureHead; s; s = s->pNext)
@@ -1287,117 +1337,116 @@ void DebugStructurePage1()
 
 		y += h;
 
-		MPrintStat(DEBUG_PAGE_FIRST_COLUMN, y += h, L"Structure ID:", s->usStructureID);
-		MHeader(DEBUG_PAGE_FIRST_COLUMN, y += h, L"Type:");
+		MPrintStat(DEBUG_PAGE_FIRST_COLUMN, y += h, "Structure ID:", s->usStructureID);
+		MHeader(DEBUG_PAGE_FIRST_COLUMN, y += h, "Type:");
 		if (s->fFlags & STRUCTURE_GENERIC)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Generic structure no %d", s->fFlags, s->pDBStructureRef->pDBStructure->usStructureNumber);
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, ST::format("Generic structure no {}", s->pDBStructureRef->pDBStructure->usStructureNumber));
 		}
 		else if (s->fFlags & STRUCTURE_TREE)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Tree");
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, "Tree");
 		}
 		else if (s->fFlags & STRUCTURE_FENCE)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Fence with orientation %ls", WallOrientationString[s->ubWallOrientation]);
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, ST::format("Fence with orientation {}", WallOrientationString[s->ubWallOrientation]));
 		}
 		else if (s->fFlags & STRUCTURE_WIREFENCE)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Wirefence with orientation %ls", WallOrientationString[s->ubWallOrientation]);
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, ST::format("Wirefence with orientation {}", WallOrientationString[s->ubWallOrientation]));
 		}
 		else if (s->fFlags & STRUCTURE_WALL)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Wall with orientation %ls", WallOrientationString[s->ubWallOrientation]);
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, ST::format("Wall with orientation {}", WallOrientationString[s->ubWallOrientation]));
 		}
 		else if (s->fFlags & STRUCTURE_WALLNWINDOW)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Wall with window with orientation %ls", WallOrientationString[s->ubWallOrientation]);
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, ST::format("Wall with window with orientation {}", WallOrientationString[s->ubWallOrientation]));
 		}
 		else if (s->fFlags & STRUCTURE_VEHICLE)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Vehicle %d", s->pDBStructureRef->pDBStructure->usStructureNumber);
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, ST::format("Vehicle {}", s->pDBStructureRef->pDBStructure->usStructureNumber));
 		}
 		else if (s->fFlags & STRUCTURE_NORMAL_ROOF)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Roof");
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, "Roof");
 		}
 		else if (s->fFlags & STRUCTURE_SLANTED_ROOF)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Slanted roof");
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, "Slanted roof");
 		}
 		else if (s->fFlags & STRUCTURE_TALL_ROOF)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Tall roof");
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, "Tall roof");
 		}
 		else if (s->fFlags & STRUCTURE_SWITCH)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Switch");
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, "Switch");
 		}
 		else if (s->fFlags & STRUCTURE_CORPSE)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Corpse");
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, "Corpse");
 		}
 		else if (s->fFlags & STRUCTURE_PERSON)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Person");
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, "Person");
 		}
 		else if (s->fFlags & STRUCTURE_CAVEWALL)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Cave wall");
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, "Cave wall");
 		}
 		else if (s->fFlags & STRUCTURE_DOOR)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Door with orientation %ls", WallOrientationString[s->ubWallOrientation]);
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, ST::format("Door with orientation {}", WallOrientationString[s->ubWallOrientation]));
 		}
 		else if (s->fFlags & STRUCTURE_SLIDINGDOOR)
 		{
-			wchar_t const* const state = s->fFlags & STRUCTURE_OPEN ? L"Open" : L"Closed";
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"%ls sliding door with orientation %ls", state, WallOrientationString[s->ubWallOrientation]);
+			ST::string state = s->fFlags & STRUCTURE_OPEN ? "Open" : "Closed";
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, ST::format("{} sliding door with orientation {}", state, WallOrientationString[s->ubWallOrientation]));
 		}
 		else if (s->fFlags & STRUCTURE_DDOOR_LEFT)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"DDoorLft with orientation %ls", WallOrientationString[s->ubWallOrientation]);
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, ST::format("DDoorLft with orientation {}", WallOrientationString[s->ubWallOrientation]));
 		}
 		else if (s->fFlags & STRUCTURE_DDOOR_RIGHT)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"DDoorRt with orientation %ls", WallOrientationString[s->ubWallOrientation]);
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, ST::format("DDoorRt with orientation {}", WallOrientationString[s->ubWallOrientation]));
 		}
 		else
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Unknown Structure");
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, "Unknown Structure");
 		}
 
-		MHeader(DEBUG_PAGE_FIRST_COLUMN, y += h, L"Flags:");
-		wchar_t flagString[256];
-		swprintf(flagString, lengthof(flagString), L"");
+		MHeader(DEBUG_PAGE_FIRST_COLUMN, y += h, "Flags:");
+		ST::string flagString;
 		if (s->fFlags & STRUCTURE_MOBILE) {
-			wcscat(flagString, L"MOB ");
+			flagString += "MOB ";
 		}
 		if (s->fFlags & STRUCTURE_PASSABLE) {
-			wcscat(flagString, L"PAS ");
+			flagString += "PAS ";
 		}
 		if (s->fFlags & STRUCTURE_EXPLOSIVE) {
-			wcscat(flagString, L"EXP ");
+			flagString += "EXP ";
 		}
 		if (s->fFlags & STRUCTURE_TRANSPARENT) {
-			wcscat(flagString, L"TRA ");
+			flagString += "TRA ";
 		}
 		if (s->fFlags & STRUCTURE_HASITEMONTOP) {
-			wcscat(flagString, L"HIT ");
+			flagString += "HIT ";
 		}
 		if (s->fFlags & STRUCTURE_SPECIAL) {
-			wcscat(flagString, L"SPE ");
+			flagString += "SPE ";
 		}
 		if (s->fFlags & STRUCTURE_LIGHTSOURCE) {
-			wcscat(flagString, L"LIG ");
+			flagString += "LIG ";
 		}
-		mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, flagString);
+		MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, flagString);
 
 		INT8             const height = StructureHeight(s);
 		STRUCTURE const* const base   = FindBaseStructure(s);
 		UINT8            const armour = gubMaterialArmour[s->pDBStructureRef->pDBStructure->ubArmour];
-		MHeader(DEBUG_PAGE_FIRST_COLUMN, y += h, L"Structure info:");
-		mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L"Structure height %d, cube offset %d, armour %d, HP %d", height, s->sCubeOffset, armour, base->ubHitPoints);
+		MHeader(DEBUG_PAGE_FIRST_COLUMN, y += h, "Structure info:");
+		MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, ST::format("Structure height {}, cube offset {}, armour {}, HP {}}", height, s->sCubeOffset, armour, base->ubHitPoints));
 
 		UINT8 dens0;
 		UINT8 dens1;
@@ -1405,8 +1454,8 @@ void DebugStructurePage1()
 		UINT8 dens3;
 		if (StructureDensity(s, &dens0, &dens1, &dens2, &dens3))
 		{
-			MHeader(DEBUG_PAGE_FIRST_COLUMN, y += h, L"Structure fill:");
-			mprintf(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, L" %d%%/%d%%/%d%%/%d%% density %d", dens0, dens1, dens2, dens3, s->pDBStructureRef->pDBStructure->ubDensity);
+			MHeader(DEBUG_PAGE_FIRST_COLUMN, y += h, "Structure fill:");
+			MPrint(DEBUG_PAGE_FIRST_COLUMN+DEBUG_PAGE_LABEL_WIDTH, y, ST::format(" {}%/{}%/{}%/{}% density {}", dens0, dens1, dens2, dens3, s->pDBStructureRef->pDBStructure->ubDensity));
 		}
 	}
 
@@ -1414,27 +1463,27 @@ void DebugStructurePage1()
 	LOSResults const& los = gLOSTestResults;
 	if (los.fLOSTestPerformed)
 	{
-		mprintf(DEBUG_PAGE_FIRST_COLUMN, y+=h, L"LOS from (%7d,%7d,%7d)", los.iStartX, los.iStartY, los.iStartZ);
-		mprintf(DEBUG_PAGE_FIRST_COLUMN, y+=h, L"to (%7d,%7d,%7d)", los.iEndX, los.iEndY, los.iEndZ);
+		MPrint(DEBUG_PAGE_FIRST_COLUMN, y+=h, ST::format("LOS from ({7d},{7d},{7d})", los.iStartX, los.iStartY, los.iStartZ));
+		MPrint(DEBUG_PAGE_FIRST_COLUMN, y+=h, ST::format("to ({7d},{7d},{7d})", los.iEndX, los.iEndY, los.iEndZ));
 		if (los.fOutOfRange)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN, y+=h, L"is out of range");
+			MPrint(DEBUG_PAGE_FIRST_COLUMN, y+=h, "is out of range");
 		}
 		else if (los.fLOSClear)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN, y+=h, L"is clear!");
+			MPrint(DEBUG_PAGE_FIRST_COLUMN, y+=h, "is clear!");
 		}
 		else
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN, y+=h, L"is blocked at (%7d,%7d,%7d)!", los.iStoppedX, los.iStoppedY, los.iStoppedZ);
-			mprintf(DEBUG_PAGE_FIRST_COLUMN, y+=h, L"Blocked at cube level %d", los.iCurrCubesZ);
+			MPrint(DEBUG_PAGE_FIRST_COLUMN, y+=h, ST::format("is blocked at ({7d},{7d},{7d})!", los.iStoppedX, los.iStoppedY, los.iStoppedZ));
+			MPrint(DEBUG_PAGE_FIRST_COLUMN, y+=h, ST::format("Blocked at cube level {}", los.iCurrCubesZ));
 		}
-		mprintf(DEBUG_PAGE_FIRST_COLUMN, y+=h, L"Passed through %d tree bits!", los.ubTreeSpotsHit);
-		mprintf(DEBUG_PAGE_FIRST_COLUMN, y+=h, L"Maximum range was %7d", los.iMaxDistance);
-		mprintf(DEBUG_PAGE_FIRST_COLUMN, y+=h, L"actual range was %7d", los.iDistance);
+		MPrint(DEBUG_PAGE_FIRST_COLUMN, y+=h, ST::format("Passed through {} tree bits!", los.ubTreeSpotsHit));
+		MPrint(DEBUG_PAGE_FIRST_COLUMN, y+=h, ST::format("Maximum range was {7d}", los.iMaxDistance));
+		MPrint(DEBUG_PAGE_FIRST_COLUMN, y+=h, ST::format("actual range was {7d}", los.iDistance));
 		if (los.ubChanceToGetThrough <= 100)
 		{
-			mprintf(DEBUG_PAGE_FIRST_COLUMN, y+=h, L"Chance to get through was %d", los.ubChanceToGetThrough);
+			MPrint(DEBUG_PAGE_FIRST_COLUMN, y+=h, ST::format("Chance to get through was {}", los.ubChanceToGetThrough));
 		}
 	}
 #endif
@@ -1442,12 +1491,12 @@ void DebugStructurePage1()
 #ifdef COUNT_PATHS
 	if (guiTotalPathChecks > 0)
 	{
-		mprintf(DEBUG_PAGE_FIRST_COLUMN, y+=h,
-			L"Total %ld, %%succ %3ld | %%failed %3ld | %%unsucc %3ld",
+		MPrint(DEBUG_PAGE_FIRST_COLUMN, y+=h,
+			ST::format("Total {}, %succ {3d} | %failed {3d} | %unsucc {3d}",
 			guiTotalPathChecks,
 			100 * guiSuccessfulPathChecks   / guiTotalPathChecks,
 			100 * guiFailedPathChecks       / guiTotalPathChecks,
-			100 * guiUnsuccessfulPathChecks / guiTotalPathChecks);
+			100 * guiUnsuccessfulPathChecks / guiTotalPathChecks));
 	}
 #endif
 }
@@ -1488,7 +1537,7 @@ void AddZStripInfoToVObject(HVOBJECT const hVObject, STRUCTURE_FILE_REF const* c
 	if (!fFound) return;
 
 	UINT         const zcount = hVObject->SubregionCount();
-	ZStripInfo** const zinfo  = MALLOCNZ(ZStripInfo*, zcount);
+	ZStripInfo** const zinfo  = new ZStripInfo*[zcount]{};
 
 	INT16 sSTIStep;
 	if (fFromAnimation)
@@ -1550,7 +1599,7 @@ void AddZStripInfoToVObject(HVOBJECT const hVObject, STRUCTURE_FILE_REF const* c
 				// ATE: We allow SLIDING DOORS of 2 tile sizes...
 				if (!(pDBStructure->fFlags & STRUCTURE_ANYDOOR) || pDBStructure->fFlags & STRUCTURE_SLIDINGDOOR)
 				{
-					ZStripInfo* const pCurr = MALLOC(ZStripInfo);
+					ZStripInfo* const pCurr = new ZStripInfo{};
 					Assert(uiDestVoIndex < zcount);
 					zinfo[uiDestVoIndex] = pCurr;
 
@@ -1670,7 +1719,7 @@ void AddZStripInfoToVObject(HVOBJECT const hVObject, STRUCTURE_FILE_REF const* c
 
 					// now create the array!
 					pCurr->ubNumberOfZChanges = ubNumIncreasing + ubNumStable + ubNumDecreasing;
-					pCurr->pbZChange = MALLOCN(INT8, pCurr->ubNumberOfZChanges);
+					pCurr->pbZChange = new INT8[pCurr->ubNumberOfZChanges]{};
 
 					UINT8 ubLoop2;
 					for (ubLoop2 = 0; ubLoop2 < ubNumIncreasing; ubLoop2++)
@@ -1707,10 +1756,10 @@ void AddZStripInfoToVObject(HVOBJECT const hVObject, STRUCTURE_FILE_REF const* c
 		{
 			if (zinfo[ubLoop2] != NULL)
 			{
-				MemFree(zinfo[uiLoop]);
+				delete zinfo[uiLoop];
 			}
 		}
-		MemFree(zinfo);
+		delete[] zinfo;
 		throw;
 	}
 

@@ -13,7 +13,7 @@
 
 TEST(Items, weaponsLoading)
 {
-	DefaultContentManager * cm = createDefaultCMForTesting();
+	DefaultContentManager * cm = DefaultContentManagerUT::createDefaultCMForTesting();
 	ASSERT_TRUE(cm != NULL);
 	ASSERT_TRUE(cm->loadGameData());
 	EXPECT_TRUE(cm->getWeaponByName("MP5K") != NULL);
@@ -24,43 +24,43 @@ TEST(Items, weaponsLoading)
 
 TEST(Items, bug120_cawsAmmo)
 {
-	DefaultContentManager * cm = createDefaultCMForTesting();
+	DefaultContentManager * cm = DefaultContentManagerUT::createDefaultCMForTesting();
 	ASSERT_TRUE(cm->loadGameData());
 
 	// test SAP clip parameters
 	const MagazineModel* sapClip = cm->getMagazineByName("CLIPCAWS_10_SAP");
-	EXPECT_EQ(sapClip->calibre->internalName, std::string("AMMOCAWS"));
-	EXPECT_EQ(sapClip->ammoType->internalName, std::string("AMMO_SUPER_AP"));
+	EXPECT_EQ(sapClip->calibre->internalName, ST::string("AMMOCAWS"));
+	EXPECT_EQ(sapClip->ammoType->internalName, ST::string("AMMO_SUPER_AP"));
 
 	// test FLECH clip parameters
 	const MagazineModel* flechClip = cm->getMagazineByName("CLIPCAWS_10_FLECH");
-	EXPECT_EQ(flechClip->calibre->internalName, std::string("AMMOCAWS"));
-	EXPECT_EQ(flechClip->ammoType->internalName, std::string("AMMO_BUCKSHOT"));
+	EXPECT_EQ(flechClip->calibre->internalName, ST::string("AMMOCAWS"));
+	EXPECT_EQ(flechClip->ammoType->internalName, ST::string("AMMO_BUCKSHOT"));
 
 	delete cm;
 }
 
 TEST(Items, bug120_12gAmmo)
 {
-	DefaultContentManager * cm = createDefaultCMForTesting();
+	DefaultContentManager * cm = DefaultContentManagerUT::createDefaultCMForTesting();
 	ASSERT_TRUE(cm->loadGameData());
 
 	// test SAP clip parameters
 	const MagazineModel* clip = cm->getMagazineByName("CLIP12G_7");
-	EXPECT_EQ(clip->calibre->internalName,           std::string("AMMO12G"));
-	EXPECT_EQ(clip->ammoType->internalName,          std::string("AMMO_REGULAR"));
+	EXPECT_EQ(clip->calibre->internalName,           ST::string("AMMO12G"));
+	EXPECT_EQ(clip->ammoType->internalName,          ST::string("AMMO_REGULAR"));
 
 	// test FLECH clip parameters
 	const MagazineModel* clipBuckshot = cm->getMagazineByName("CLIP12G_7_BUCKSHOT");
-	EXPECT_EQ(clipBuckshot->calibre->internalName,           std::string("AMMO12G"));
-	EXPECT_EQ(clipBuckshot->ammoType->internalName,          std::string("AMMO_BUCKSHOT"));
+	EXPECT_EQ(clipBuckshot->calibre->internalName,           ST::string("AMMO12G"));
+	EXPECT_EQ(clipBuckshot->ammoType->internalName,          ST::string("AMMO_BUCKSHOT"));
 
 	delete cm;
 }
 
 TEST(Items, bug120_cawsDefaultMag)
 {
-	DefaultContentManager * cm = createDefaultCMForTesting();
+	DefaultContentManager * cm = DefaultContentManagerUT::createDefaultCMForTesting();
 	ASSERT_TRUE(cm->loadGameData());
 
 	GCM = cm;
@@ -83,7 +83,7 @@ TEST(Items, bug120_cawsDefaultMag)
 
 TEST(Items, bug120_spas15DefaultMag)
 {
-	DefaultContentManager * cm = createDefaultCMForTesting();
+	DefaultContentManager * cm = DefaultContentManagerUT::createDefaultCMForTesting();
 	ASSERT_TRUE(cm->loadGameData());
 
 	GCM = cm;

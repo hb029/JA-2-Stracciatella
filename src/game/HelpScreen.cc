@@ -34,6 +34,9 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 
+#include <string_theory/string>
+
+
 extern void PrintDate( void );
 extern void PrintNumberOnTeam( void );
 extern void PrintBalance( void );
@@ -313,7 +316,7 @@ static GUIButtonRef giHelpScreenScrollArrows[2];
 void InitHelpScreenSystem()
 {
 	//set some values
-	memset( &gHelpScreen, 0, sizeof( gHelpScreen ) );
+	gHelpScreen = HELP_SCREEN_STRUCT{};
 
 	//set it up so we can enter the screen
 	gfHelpScreenEntry = TRUE;
@@ -832,7 +835,7 @@ static void SetSizeAndPropertiesOfHelpScreen(void)
 
 
 static void BtnHelpScreenBtnsCallback(GUI_BUTTON* btn, INT32 reason);
-static void GetHelpScreenText(UINT32 uiRecordToGet, wchar_t* pText);
+static ST::string GetHelpScreenText(UINT32 uiRecordToGet);
 
 
 static void CreateHelpScreenButtons(void)
@@ -852,8 +855,7 @@ static void CreateHelpScreenButtons(void)
 		for( i=0; i< gHelpScreen.bNumberOfButtons; i++ )
 		{
 			//get the text for the button
-			wchar_t sText[HELPSCREEN_RECORD_SIZE];
-			GetHelpScreenText(gHelpScreenBtnTextRecordNum[gHelpScreen.bCurrentHelpScreen][i], sText);
+			ST::string sText = GetHelpScreenText(gHelpScreenBtnTextRecordNum[gHelpScreen.bCurrentHelpScreen][i]);
 
 			giHelpScreenButtonsImage[i] = UseLoadedButtonImage( giExitBtnImage, -1,1,5,3,7 );
 
@@ -1123,12 +1125,12 @@ static void DisplayCurrentScreenTitleAndFooter(void)
 	else
 		usWidth = gHelpScreen.usScreenWidth - HELP_SCREEN_TEXT_LEFT_MARGIN - HELP_SCREEN_TEXT_RIGHT_MARGIN_SPACE;
 
-	wchar_t zText[HELPSCREEN_RECORD_SIZE];
+	ST::string zText;
 
 	//if this screen has a valid title
 	if( iStartLoc != -1 )
 	{
-		GetHelpScreenText(iStartLoc, zText);
+		zText = GetHelpScreenText(iStartLoc);
 
 		SetFontShadow( NO_SHADOW );
 
@@ -1139,7 +1141,7 @@ static void DisplayCurrentScreenTitleAndFooter(void)
 	}
 
 	//Display the '( press H to get help... )'
-	GetHelpScreenText(HLP_TXT_CONSTANT_SUBTITLE, zText);
+	zText = GetHelpScreenText(HLP_TXT_CONSTANT_SUBTITLE);
 
 	usPosX = gHelpScreen.usLeftMarginPosX;
 
@@ -1150,7 +1152,7 @@ static void DisplayCurrentScreenTitleAndFooter(void)
 	if( !gHelpScreen.fForceHelpScreenToComeUp )
 	{
 		//calc location for the ' [ x ] Dont display again...'
-		GetHelpScreenText(HLP_TXT_CONSTANT_FOOTER, zText);
+		zText = GetHelpScreenText(HLP_TXT_CONSTANT_FOOTER);
 
 		usPosX = gHelpScreen.usLeftMarginPosX + HELP_SCREEN_SHOW_HELP_AGAIN_REGION_TEXT_OFFSET_X;
 
@@ -1230,9 +1232,9 @@ static void ChangeToHelpScreenSubPage(INT8 bNewPage)
 }
 
 
-static void GetHelpScreenText(const UINT32 uiRecordToGet, wchar_t* const pText)
+static ST::string GetHelpScreenText(UINT32 uiRecordToGet)
 {
-	GCM->loadEncryptedString(BINARYDATADIR "/help.edt", pText, HELPSCREEN_RECORD_SIZE * uiRecordToGet, HELPSCREEN_RECORD_SIZE);
+	return GCM->loadEncryptedString(BINARYDATADIR "/help.edt", HELPSCREEN_RECORD_SIZE * uiRecordToGet, HELPSCREEN_RECORD_SIZE);
 }
 
 
@@ -1243,8 +1245,7 @@ static UINT16 GetAndDisplayHelpScreenText(UINT32 uiRecord, UINT16 usPosX, UINT16
 
 	SetFontShadow( NO_SHADOW );
 
-	wchar_t zText[HELPSCREEN_RECORD_SIZE];
-	GetHelpScreenText( uiRecord, zText );
+	ST::string zText = GetHelpScreenText(uiRecord);
 
 	//Display the text
 	usNumVertPixels = IanDisplayWrappedString(usPosX, usPosY, usWidth, HELP_SCREEN_GAP_BTN_LINES, HELP_SCREEN_TEXT_BODY_FONT, HELP_SCREEN_TEXT_BODY_COLOR, zText, HELP_SCREEN_TEXT_BACKGROUND, 0);
@@ -1898,7 +1899,7 @@ static void ChangeTopLineInTextBufferByAmount(INT32 const delta)
 	if (new_top > max_top) new_top = max_top;
 	if (new_top < 0)       new_top = 0;
 
-	if (new_top == top) return;
+	if (static_cast<UINT32>(new_top) == top) return;
 
 	top                   = new_top;
 	hlp.ubHelpScreenDirty = HLP_SCRN_DRTY_LVL_REFRESH_TEXT;

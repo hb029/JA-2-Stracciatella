@@ -12,17 +12,22 @@
 #include "Random.h"
 #include "SoundMan.h"
 #include "Timer.h"
-#include <SDL.h>
-#include <assert.h>
-#include <stdexcept>
 
 #include "ContentManager.h"
 #include "GameInstance.h"
 #include "Logger.h"
 
+#include <SDL.h>
+#include <string_theory/string>
 
-// Uncomment this to disable the startup of sound hardware
-//#define SOUND_DISABLE
+#include <algorithm>
+#include <assert.h>
+#include <cmath>
+#include <climits>
+#include <vector>
+#include <iterator>
+#include <stdexcept>
+
 
 /*
  * from\to FREE PLAY STOP DEAD
@@ -74,10 +79,10 @@ enum
 // Holds the regular sample data, as well as the data for the random samples
 struct SAMPLETAG
 {
-	CHAR8   pName[128];  // Path to sample data
+	ST::string pName;  // Path to sample data
 	UINT32  n_samples;
 	UINT32  uiFlags;     // Status flags
-	PTR     pData;       // pointer to sample data memory
+	UINT8*  pData;       // pointer to sample data memory
 	UINT32  uiCacheHits;
 
 	// Random sound data
@@ -112,7 +117,7 @@ struct SOUNDTAG
 	UINT32        Pan;
 };
 
-static size_t GetSampleSize(const SAMPLETAG* const s);
+static UINT32 GetSampleSize(const SAMPLETAG* const s);
 static const UINT32 guiSoundMemoryLimit    = SOUND_DEFAULT_MEMORY; // Maximum memory used for sounds
 static       UINT32 guiSoundMemoryUsed     = 0;                    // Memory currently in use
 //static const UINT32 guiSoundCacheThreshold = SOUND_DEFAULT_THRESH; // Double-buffered threshold
@@ -121,8 +126,7 @@ static void DecreaseSoundMemoryUsedBySample(SAMPLETAG *sample) { guiSoundMemoryU
 
 static BOOLEAN fSoundSystemInit = FALSE; // Startup called
 static BOOLEAN gfEnableStartup  = TRUE;  // Allow hardware to start up
-static INT32*  gMixBuffer = NULL;
-static UINT32  guiMixLength = 0;
+static std::vector<INT32> gMixBuffer;
 
 SDL_AudioSpec gTargetAudioSpec;
 
@@ -137,6 +141,11 @@ void SoundEnableSound(BOOLEAN fEnable)
 	gfEnableStartup = fEnable;
 }
 
+bool IsSoundEnabled()
+{
+	return gfEnableStartup;
+}
+
 
 static void    SoundInitCache(void);
 static BOOLEAN SoundInitHardware(void);
@@ -146,11 +155,9 @@ void InitializeSoundManager(void)
 {
 	if (fSoundSystemInit) ShutdownSoundManager();
 
-	memset(pSoundList, 0, sizeof(pSoundList));
+	std::fill(std::begin(pSoundList), std::end(pSoundList), SOUNDTAG{});
 
-#ifndef SOUND_DISABLE
 	if (gfEnableStartup && SoundInitHardware()) fSoundSystemInit = TRUE;
-#endif
 
 	SoundInitCache();
 
@@ -168,12 +175,7 @@ void ShutdownSoundManager(void)
 	SoundEmptyCache();
 	SoundShutdownHardware();
 	fSoundSystemInit = FALSE;
-	if (gMixBuffer != NULL)
-	{
-		MemFree(gMixBuffer);
-		gMixBuffer = NULL;
-		guiMixLength = 0;
-	}
+	gMixBuffer.clear();
 }
 
 
@@ -204,16 +206,15 @@ UINT32 SoundPlay(const char* pFilename, UINT32 volume, UINT32 pan, UINT32 loop, 
 	return SoundStartSample(sample, channel, volume, pan, loop, end_callback, data);
 }
 
-static SAMPLETAG* SoundLoadBuffer(SDL_AudioFormat format, UINT8 channels, int freq, UINT8* pbuffer, UINT32 size);
+static SAMPLETAG* SoundLoadBuffer(std::vector<UINT8>& buf, SDL_AudioFormat format, UINT8 channels, int freq);
 static BOOLEAN    SoundCleanCache(void);
 static SAMPLETAG* SoundGetEmptySample(void);
 
-UINT32 SoundPlayFromSmackBuff(UINT8 channels, UINT8 depth, UINT32 rate, UINT8* pbuffer, UINT32 size, UINT32 volume, UINT32 pan, UINT32 loop, void (*end_callback)(void*), void* data)
+UINT32 SoundPlayFromSmackBuff(const char* name, UINT8 channels, UINT8 depth, UINT32 rate, std::vector<UINT8>& buf, UINT32 volume, UINT32 pan, UINT32 loop, void (*end_callback)(void*), void* data)
 {
 	SDL_AudioFormat format;
 
-	if (pbuffer == NULL) return SOUND_ERROR;
-	if (size == 0) return SOUND_ERROR;
+	if (buf.empty()) return SOUND_ERROR;
 
 	//Originaly Sound Blaster could only play mono unsigned 8-bit PCM data.
 	//Later it became capable of playing 16-bit audio data, but needed to be signed and LSB.
@@ -222,10 +223,10 @@ UINT32 SoundPlayFromSmackBuff(UINT8 channels, UINT8 depth, UINT32 rate, UINT8* p
 	else if (depth == 16) format = AUDIO_S16LSB;
 	else return SOUND_ERROR;
 
-	SAMPLETAG* s = SoundLoadBuffer(format, channels, rate, pbuffer, size);
+	SAMPLETAG* s = SoundLoadBuffer(buf, format, channels, rate);
 	if (s == NULL) return SOUND_ERROR;
 
-	sprintf(s->pName, "SmackBuff %p - SampleSize %u", pbuffer, size);
+	s->pName           = name;
 	s->uiPanMax        = 64;
 	s->uiMaxInstances  = 1;
 
@@ -257,7 +258,7 @@ try
 	}
 
 	//Get the real file handle of the file
-	FILE* hRealFileHandle = GetRealFileHandleFromFileManFileHandle(hFile);
+	File* hRealFileHandle = GetRealFileHandleFromFileManFileHandle(hFile);
 	if (hRealFileHandle == NULL)
 	{
 		SLOGE("SoundPlayStreamedFile(): Couldnt get a real file handle for '%s' in SoundPlayStreamedFile()", pFilename );
@@ -476,7 +477,7 @@ void SoundServiceStreams(void)
 		SOUNDTAG* Sound = &pSoundList[i];
 		if (Sound->State == CHANNEL_DEAD)
 		{
-			SLOGD("DEAD channel %u file \"%s\" (refcount %u)", i, Sound->pSample->pName, Sound->pSample->uiInstances);
+			SLOGD(ST::format("DEAD channel {} file \"{}\" (refcount {})", i, Sound->pSample->pName, Sound->pSample->uiInstances));
 			if (Sound->EOSCallback != NULL) Sound->EOSCallback(Sound->pCallbackData);
 			assert(Sound->pSample->uiInstances != 0);
 			Sound->pSample->uiInstances--;
@@ -503,7 +504,7 @@ UINT32 SoundGetPosition(UINT32 uiSoundID)
 // Zeros out the structures of the sample list.
 static void SoundInitCache(void)
 {
-	memset(pSampleList, 0, sizeof(pSampleList));
+	std::fill(std::begin(pSampleList), std::end(pSampleList), SAMPLETAG{});
 }
 
 
@@ -545,89 +546,170 @@ static SAMPLETAG* SoundGetCached(const char* pFilename)
 
 	FOR_EACH(SAMPLETAG, i, pSampleList)
 	{
-		if (strcasecmp(i->pName, pFilename) == 0) return i;
+		if (i->pName.compare_i(pFilename) == 0) return i;
 	}
 
 	return NULL;
 }
 
-static size_t GetSampleSize(const SAMPLETAG* const s)
+static UINT32 GetSampleSize(const SAMPLETAG* const s)
 {
-	return 2u * (s->uiFlags & SAMPLE_STEREO ? 2 : 1);
+	return 2 * (s->uiFlags & SAMPLE_STEREO ? 2 : 1);
+}
+
+/* Converts audio data in the buffer */
+static bool SoundConvertBuffer(std::vector<UINT8>& buf,
+	SDL_AudioFormat from_format, UINT8 from_channels, int from_hz,
+	SDL_AudioFormat to_format, UINT8 to_channels, int to_hz)
+{
+	Assert(from_channels > 0);
+	Assert(to_channels > 0);
+	Assert(from_hz > 0);
+	Assert(to_hz > 0);
+
+	SDL_version sdl_version_linked;
+	SDL_GetVersion(&sdl_version_linked);
+	bool is_sdl206 = (sdl_version_linked.major == 2 && sdl_version_linked.minor == 0 && sdl_version_linked.patch == 6);
+
+	// SDL 2.0.6 crashes in SDL_ResampleAudio with an out of bounds read of an internal buffer
+	// to avoid the crash we use a custom resampler
+	int sdl_hz = is_sdl206 ? from_hz : to_hz;
+
+	// apply SDL audio converter
+	SDL_AudioCVT cvt;
+	int ret = SDL_BuildAudioCVT(&cvt, from_format, from_channels, from_hz, to_format, to_channels, sdl_hz);
+	if (ret == -1)
+	{
+		SLOGE("SoundConvertBuffer: unsupported conversion (format %x->%x channels %d->%d hz %d->%d(%d)) - %s", from_format, to_format, from_channels, to_channels, from_hz, sdl_hz, to_hz, SDL_GetError());
+		return false;
+	}
+	if (cvt.needed)
+	{
+		// original size
+		Assert(buf.size() <= INT_MAX);
+		cvt.len = static_cast<int>(buf.size());
+
+		// temporary size
+		size_t tmpsize = static_cast<size_t>(buf.size() * cvt.len_mult);
+		buf.resize(tmpsize);
+		cvt.buf = buf.data();
+
+		// convert
+		if (SDL_ConvertAudio(&cvt) == -1)
+		{
+			SLOGE("SoundConvertBuffer: SDL_ConvertAudio failed - %s", SDL_GetError());
+			return false;
+		}
+
+		// final size
+		size_t finalsize = static_cast<size_t>(cvt.len_cvt);
+		Assert(finalsize <= tmpsize);
+		buf.resize(finalsize);
+	}
+
+	// apply custom resampler
+	// uses linear interpolation between frames
+	// it has a cheap cpu cost and produces little audible noise
+	if (sdl_hz != to_hz)
+	{
+		size_t sample_bits = SDL_AUDIO_BITSIZE(to_format);
+		Assert(sample_bits % 8 == 0);
+		size_t frame_size = (sample_bits / 8) * to_channels;
+		if (buf.size() % frame_size != 0)
+		{
+			SLOGE("SoundConvertBuffer: buffer size %u must be a multiple of frame_size %u", static_cast<UINT32>(buf.size()), static_cast<UINT32>(frame_size));
+			return false;
+		}
+
+		if (to_format == AUDIO_S16LSB || to_format == AUDIO_S16MSB)
+		{
+			size_t sample_size = sizeof(INT16);
+			Assert(sample_size == 2);
+			if (to_format != AUDIO_S16SYS)
+			{
+				// to system endianess
+				for (size_t i = 0; i < buf.size(); i += sample_size) {
+					std::swap(buf[i], buf[i + 1]);
+				}
+			}
+			// to interpolate the duration of the last frame we need an extra frame with silence
+			buf.insert(buf.end(), frame_size, 0);
+			// current position in the interpolation
+			// when negative, a frame should be intepolated and from_hz added
+			// when positive (or zero), the last frame should be updated and to_hz subtracted
+			int pos = 0;
+			INT16* last = nullptr;
+			std::vector<UINT8> resampled;
+			for (size_t i = 0; i < buf.size(); i += frame_size)
+			{
+				INT16* frame = reinterpret_cast<INT16*>(buf.data() + i);
+				while (pos < 0) {
+					Assert(last != nullptr);
+					if (pos == -to_hz) {
+						// we have the exact value of `t = 0`
+						UINT8* bytes = reinterpret_cast<UINT8*>(last);
+						resampled.insert(resampled.end(), bytes, bytes + frame_size);
+					}
+					else {
+						// interpolate from the last frame to the current frame
+						double t = static_cast<double>(pos + to_hz) / to_hz;
+						for (size_t channel = 0; channel < to_channels; channel++)
+						{
+							double interpolated = (1.0 - t) * last[channel] + t * frame[channel];
+							INT16 sample = static_cast<INT16>(round(interpolated));
+							UINT8* bytes = reinterpret_cast<UINT8*>(&sample);
+							resampled.insert(resampled.end(), bytes, bytes + sample_size);
+						}
+					}
+					pos += from_hz;
+				}
+				// update the last frame
+				last = frame;
+				pos -= to_hz;
+			}
+			buf = std::move(resampled);
+			if (to_format != AUDIO_S16SYS)
+			{
+				// from system endianess
+				for (size_t i = 0; i < buf.size(); i += sample_size) {
+					std::swap(buf[i], buf[i + 1]);
+				}
+			}
+			return true;
+		}
+		SLOGE("SoundConvertBuffer: unsupported conversion (format %x channels %d hz %d->%d)", to_format, to_channels, sdl_hz, to_hz);
+		return false;
+	}
+	return true;
 }
 
 /* Loads a sound from a buffer into the cache, allocating memory and a slot for storage.
  *
  * Returns: The sample if successful, NULL otherwise. */
-static SAMPLETAG* SoundLoadBuffer(SDL_AudioFormat format, UINT8 channels, int freq, UINT8* buffer, UINT32 size)
+static SAMPLETAG* SoundLoadBuffer(std::vector<UINT8>& buf, SDL_AudioFormat format, UINT8 channels, int freq)
 {
-	SDL_AudioCVT cvt;
-	int ret;
-	UINT8* sampledata = NULL;
-	UINT32 samplesize = 0;
-	UINT8  samplechannels;
-
-	if (buffer == NULL || size == 0)
+	UINT8 samplechannels = std::min(channels, gTargetAudioSpec.channels);
+	bool ok = SoundConvertBuffer(buf, format, channels, freq, gTargetAudioSpec.format, samplechannels, gTargetAudioSpec.freq);
+	if (!ok)
 	{
-		SLOGE("SoundLoadBuffer Error: buffer is empty - Buffer: %p, Size: %u", buffer, size);
+		SLOGE("SoundLoadBuffer Error: failed to convert data");
 		return NULL;
 	}
 
-	samplechannels = __min(channels, gTargetAudioSpec.channels);
-	ret = SDL_BuildAudioCVT(&cvt, format, channels, freq, gTargetAudioSpec.format, samplechannels, gTargetAudioSpec.freq);
-	if (ret == -1)
+	if (buf.empty())
 	{
-		SLOGE("SoundLoadBuffer Error: unsupported audio conversion - %s", SDL_GetError());
+		SLOGE("SoundLoadBuffer Error: buffer is empty");
 		return NULL;
 	}
-
-	if (cvt.needed)
-	{
-		UINT32 bufsize = size * cvt.len_mult;
-		UINT32 cvtsize = size * cvt.len_ratio;
-
-		Assert(bufsize >= size);
-		cvt.len = size;
-		cvt.buf = MALLOCN(UINT8, bufsize);
-		memcpy(cvt.buf, buffer, size);
-
-		if (SDL_ConvertAudio(&cvt) == -1) {
-			SLOGE("SoundLoadBuffer Error: error converting audio - %s", SDL_GetError());
-			MemFree(cvt.buf);
-			return NULL;
-		}
-
-		if (cvtsize == bufsize)
-		{
-			Assert(cvtsize == cvt.len_cvt);
-			sampledata = cvt.buf;
-			samplesize = cvtsize;
-		}
-		else// if (cvtsize < bufsize)
-		{
-			Assert(cvtsize < bufsize);
-			sampledata = MALLOCN(UINT8, cvtsize);
-			memcpy(sampledata, cvt.buf, cvtsize);
-			samplesize = cvtsize;
-			MemFree(cvt.buf);
-		}
-	}
-	else// if (!cvt.needed)
-	{
-		sampledata = MALLOCN(UINT8, size);
-		memcpy(sampledata, buffer, size);
-		samplesize = size;
-	}
-	// cvt is invalid from this point forward
 
 	// if insufficient memory, start unloading old samples until either
 	// there's nothing left to unload, or we fit
+	UINT32 samplesize = static_cast<UINT32>(buf.size());
 	while (samplesize + guiSoundMemoryUsed > guiSoundMemoryLimit)
 	{
 		if (!SoundCleanCache())
 		{
 			SLOGE("SoundLoadBuffer Error: not enough memory - Size: %u, Used: %u, Max: %u", samplesize, guiSoundMemoryUsed, guiSoundMemoryLimit);
-			MemFree(sampledata);
 			return NULL;
 		}
 	}
@@ -644,9 +726,11 @@ static SAMPLETAG* SoundLoadBuffer(SDL_AudioFormat format, UINT8 channels, int fr
 	if (s == NULL)
 	{
 		SLOGE("SoundLoadBuffer Error: sound channels are full");
-		MemFree(sampledata);
 		return NULL;
 	}
+
+	UINT8* sampledata = new UINT8[samplesize]{};
+	memcpy(sampledata, buf.data(), samplesize);
 
 	s->pData = sampledata;
 	s->uiFlags |= SAMPLE_ALLOCATED;
@@ -697,18 +781,18 @@ static SAMPLETAG* SoundLoadDisk(const char* pFilename)
 		return NULL;
 	}
 
-	SAMPLETAG* s = SoundLoadBuffer(wavSpec.format, wavSpec.channels, wavSpec.freq, wavBuffer, wavLength);
-
+	std::vector<UINT8> buf(wavBuffer, wavBuffer + wavLength);
 	SDL_FreeWAV(wavBuffer);
 	SDL_FreeRW(rwOps);
 
+	SAMPLETAG* s = SoundLoadBuffer(buf, wavSpec.format, wavSpec.channels, wavSpec.freq);
 	if (s == NULL)
 	{
 		SLOGE("SoundLoadDisk: Error converting sound file \"%s\"", pFilename);
 		return NULL;
 	}
 
-	strcpy(s->pName, pFilename);
+	s->pName = pFilename;
 
 	return s;
 }
@@ -740,7 +824,7 @@ static BOOLEAN SoundCleanCache(void)
 
 	if (candidate != NULL)
 	{
-		SLOGD("freeing sample %u \"%s\" with %u hits", candidate - pSampleList, candidate->pName, candidate->uiCacheHits);
+		SLOGD(ST::format("freeing sample {} \"{}\" with {} hits", candidate - pSampleList, candidate->pName, candidate->uiCacheHits));
 		SoundFreeSample(candidate);
 		return TRUE;
 	}
@@ -771,8 +855,8 @@ static void SoundFreeSample(SAMPLETAG* s)
 	assert(s->uiInstances == 0);
 
 	DecreaseSoundMemoryUsedBySample(s);
-	MemFree(s->pData);
-	memset(s, 0, sizeof(*s));
+	delete[] s->pData;
+	*s = SAMPLETAG{};
 }
 
 
@@ -793,14 +877,18 @@ static SOUNDTAG* SoundGetChannelByID(UINT32 uiSoundID)
 
 static void SoundCallback(void* userdata, Uint8* stream, int len)
 {
-	// INT16 data is being mixed as INT32, so it needs to be double the length of the stream
-	if ( guiMixLength < len * 2 )
+	if (len < 0)
 	{
-		guiMixLength = len * 2;
-		gMixBuffer = REALLOC(gMixBuffer, INT32, guiMixLength);
+		SLOGA("SoundCallback: unexpected negative len %d", len);
+		return;
 	}
 
-	SDL_memset(gMixBuffer, 0, guiMixLength);
+	// 16-bit stereo = 2 bytes per value, 2 values per sample
+	UINT32 want_bytes = static_cast<UINT32>(len);
+	UINT32 want_values = want_bytes / sizeof(INT16);
+	UINT32 want_samples = want_values / 2;
+
+	gMixBuffer.assign(want_values, 0);
 
 	// Mix sounds
 	for (UINT32 i = 0; i < lengthof(pSoundList); i++)
@@ -823,8 +911,8 @@ static void SoundCallback(void* userdata, Uint8* stream, int len)
 				const SAMPLETAG* const s = Sound->pSample;
 				const INT vol_l   = Sound->uiFadeVolume * (127 - Sound->Pan) / MAXVOLUME;
 				const INT vol_r   = Sound->uiFadeVolume * (  0 + Sound->Pan) / MAXVOLUME;
-				size_t    samples = len / 4;
-				size_t    amount;
+				UINT32    samples = want_samples;
+				UINT32    amount;
 
 mixing:
 				amount = MIN(samples, s->n_samples - Sound->pos);
@@ -869,13 +957,17 @@ mixing:
 
 	// Clip sounds and fill the stream
 	INT16* Stream = (INT16*)stream;
-	UINT32 uiEnd = len / sizeof(Stream[0]);
-	for (UINT32 i = 0; i < uiEnd; ++i)
+	for (UINT32 i = 0; i < want_values; ++i)
 	{
 		if (gMixBuffer[i] >= INT16_MAX)     Stream[i] = INT16_MAX;
 		else if(gMixBuffer[i] <= INT16_MIN) Stream[i] = INT16_MIN;
 		else                                Stream[i] = (INT16)gMixBuffer[i];
 	}
+
+	// "The callback must completely initialize the buffer"
+	// see: https://wiki.libsdl.org/SDL_AudioSpec
+	UINT32 have_bytes = want_values * sizeof(INT16);
+	std::fill_n(stream + have_bytes, want_bytes - have_bytes, 0);
 }
 
 
@@ -892,7 +984,7 @@ static BOOLEAN SoundInitHardware(void)
 
 	if (SDL_OpenAudio(&gTargetAudioSpec, NULL) != 0) return FALSE;
 
-	memset(pSoundList, 0, sizeof(pSoundList));
+	std::fill(std::begin(pSoundList), std::end(pSoundList), SOUNDTAG{});
 	SDL_PauseAudio(0);
 	return TRUE;
 }
@@ -928,7 +1020,7 @@ static UINT32 SoundGetUniqueID(void);
  * Returns: Unique sound ID if successful, SOUND_ERROR if not. */
 static UINT32 SoundStartSample(SAMPLETAG* sample, SOUNDTAG* channel, UINT32 volume, UINT32 pan, UINT32 loop, void (*end_callback)(void*), void* data)
 {
-	SLOGD("playing channel %u sample %u file \"%s\"", channel - pSoundList, sample - pSampleList, sample->pName);
+	SLOGD(ST::format("playing channel {} sample {} file \"{}\"", channel - pSoundList, sample - pSampleList, sample->pName));
 
 	if (!fSoundSystemInit) return SOUND_ERROR;
 
@@ -974,7 +1066,7 @@ static BOOLEAN SoundStopChannel(SOUNDTAG* channel)
 
 	if (channel->pSample == NULL) return FALSE;
 
-	SLOGD("stopping channel channel %u", channel - pSoundList);
+	SLOGD(ST::format("stopping channel channel {}", (channel - pSoundList)));
 	channel->State = CHANNEL_STOP;
 	return TRUE;
 }

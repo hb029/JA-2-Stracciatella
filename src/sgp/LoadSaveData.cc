@@ -1,44 +1,10 @@
 #include "LoadSaveData.h"
-#include "UTF8String.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
 
-/** Encode wchar_t into UTF-16 and write to the buffer.
- * @param string        String to encode
- * @param outputBuf     Output buffer for the encoded string
- * @param charsToWrite  Number of characters to write (at least one trailing 0x0000 will be written) */
-void wchar_to_utf16(const wchar_t *string, void *outputBuf, int charsToWrite)
-{
-	if(charsToWrite > 0)
-	{
-#ifdef _WIN32
-		// Windows.
-		// wchar_t is already encoded in utf-16
-		const uint16_t *utf16_string = (const uint16_t*)string;
-		size_t stringLen = wcslen(string);
-#else
-		// Linux or Mac OS.
-		// Let's convert to utf-8 and then to utf-16
-		UTF8String str((const uint32_t*)string);
-		std::vector<uint16_t> utf16_data = str.getUTF16();
-		const uint16_t *utf16_string = utf16_data.data();
-		size_t stringLen = utf16_data.size();
-#endif
+#include <algorithm>
 
-		// calculating number of characters to copy
-		int charsToCopy = MIN(charsToWrite, stringLen);
-		memcpy(outputBuf, utf16_string, charsToCopy * 2);
-		if(charsToCopy < charsToWrite)
-		{
-			memset(((char*)outputBuf) + charsToCopy * 2, 0, (charsToWrite-charsToCopy)*2);
-		}
-	}
-}
-
-/** Get number of the consumed bytes during reading. */
-size_t DataReader::getConsumed() const
-{
-	return ((const char*)m_buf) - ((const char*)m_original);
-}
 
 ////////////////////////////////////////////////////////////////////////////
 // DataWriter
@@ -46,52 +12,77 @@ size_t DataReader::getConsumed() const
 
 /** Constructor.
  * @param buf Pointer to the buffer for writing data. */
-DataWriter::DataWriter(void *buf)
+DataWriter::DataWriter(void* buf)
 	:m_buf(buf), m_original(buf)
 {
 }
 
-/** Write wchar string into UTF-16 format.
- *
- * If \a numChars is bigger then the number of actual characters in the string,
- * then zeroes will be written to the buffer.
- *
- * @param string      String to write
- * @param numChars    Number of characters to write. */
-void DataWriter::writeStringAsUTF16(const wchar_t *string, int numChars)
+void DataWriter::writeUTF8(const ST::string& str, size_t numChars)
 {
-	wchar_to_utf16(string, m_buf, numChars);
-	move(2*numChars);
+	size_t n = std::min<size_t>(str.size() + 1, numChars);
+	if (str.size() > n)
+	{
+		SLOGW(ST::format("DataWriter::writeUTF8: truncating '{}' {}->{}", str, str.size(), n));
+	}
+	writeArray(str.c_str(), n);
+	skip(sizeof(char) * (numChars - n));
+}
+
+void DataWriter::writeUTF16(const ST::string& str, size_t numChars)
+{
+	ST::utf16_buffer buf = str.to_utf16();
+	size_t n = std::min<size_t>(buf.size() + 1, numChars);
+	if (buf.size() > n)
+	{
+		SLOGW(ST::format("DataWriter::writeUTF16: truncating '{}' {}->{}", str, buf.size(), n));
+	}
+	writeArray(buf.c_str(), n);
+	skip(sizeof(char16_t) * (numChars - n));
+}
+
+void DataWriter::writeUTF32(const ST::string& str, size_t numChars)
+{
+	ST::utf32_buffer buf = str.to_utf32();
+	size_t n = std::min<size_t>(buf.size() + 1, numChars);
+	if (buf.size() > n)
+	{
+		SLOGW(ST::format("DataWriter::writeUTF32: truncating '{}' {}->{}", str, buf.size(), n));
+	}
+	writeArray(buf.c_str(), n);
+	skip(sizeof(char32_t) * (numChars - n));
 }
 
 void DataWriter::writeU8 (uint8_t  value)
 {
-	*((uint8_t*)m_buf) = value;
-	move(1);
+	write(value);
 }
 
 void DataWriter::writeU16(uint16_t value)
 {
-	*((uint16_t*)m_buf) = value;
-	move(2);
+	write(value);
 }
 
 void DataWriter::writeU32(uint32_t value)
 {
-	*((uint32_t*)m_buf) = value;
-	move(4);
+	write(value);
+}
+
+void DataWriter::skip(size_t numBytes)
+{
+	std::fill_n(reinterpret_cast<uint8_t*>(m_buf), numBytes, 0);
+	move(numBytes);
 }
 
 /** Move pointer to \a numBytes bytes forward. */
-void DataWriter::move(int numBytes)
+void DataWriter::move(size_t numBytes)
 {
-	m_buf = ((char*)m_buf) + numBytes;
+	m_buf = reinterpret_cast<uint8_t*>(m_buf) + numBytes;
 }
 
 /** Get number of the consumed bytes during writing. */
 size_t DataWriter::getConsumed() const
 {
-	return ((const char*)m_buf) - ((const char*)m_original);
+	return reinterpret_cast<uint8_t*>(m_buf) - reinterpret_cast<uint8_t*>(m_original);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -99,93 +90,71 @@ size_t DataWriter::getConsumed() const
 ////////////////////////////////////////////////////////////////////////////
 
 
-/** Constructor.
- * @param buf Pointer to the buffer for writing data. */
-DataReader::DataReader(const void *buf)
-	:m_buf(buf), m_original(buf)
+DataReader::DataReader(const void* buf)
+	: m_buf(buf), m_original(buf)
 {
 }
 
-/** Read UTF-16 encoded string.
- * @param numChars Number of characters to read. */
-UTF8String DataReader::readUTF16(int numChars, const IEncodingCorrector *fixer)
+ST::string DataReader::readUTF8(size_t numChars, ST::utf_validation_t validation)
 {
-	std::vector<uint16_t> data;
-	while(numChars-- > 0)
+	ST::char_buffer buf{numChars, '\0'};
+	readArray(buf.data(), numChars);
+	return ST::string{buf.c_str(), validation};
+}
+
+ST::string DataReader::readUTF16(size_t numChars, const IEncodingCorrector* fixer, ST::utf_validation_t validation)
+{
+	ST::utf16_buffer buf{numChars, u'\0'};
+	readArray(buf.data(), numChars);
+	if (fixer)
 	{
-		uint16_t codePoint = readU16();
-		if(fixer)
+		for (char16_t& c : buf)
 		{
-			codePoint = fixer->fix(codePoint);
+			c = fixer->fix(c);
+			if (c == u'\0')
+			{
+				break;
+			}
 		}
-		data.push_back(codePoint);
 	}
-	data.push_back(0);
-	return UTF8String(data.data());
+	return ST::string{buf.c_str(), validation};
 }
 
-/** Read UTF-32 encoded string.
- * @param numChars Number of characters to read. */
-UTF8String DataReader::readUTF32(int numChars)
+ST::string DataReader::readUTF32(size_t numChars, ST::utf_validation_t validation)
 {
-	std::vector<uint32_t> data;
-	while(numChars-- > 0)
-	{
-		data.push_back(readU32());
-	}
-	data.push_back(0);
-	return UTF8String(data.data());
-}
-
-/** Read UTF-16 encoded string into wide string buffer.
- * @param buffer Buffer to read data in.
- * @param numChars Number of characters to read.
- * @param fixer Optional encoding corrector.  It is used for fixing incorrectly encoded text. */
-void DataReader::readUTF16(wchar_t *buffer, int numChars, const IEncodingCorrector *fixer)
-{
-	UTF8String str = readUTF16(numChars, fixer);
-	std::vector<wchar_t> wstr = str.getWCHAR();
-	int charsToCopy = MIN(wstr.size(), numChars);
-	memcpy(buffer, wstr.data(), charsToCopy * sizeof(wchar_t));
-}
-
-/** Read UTF-32 encoded string into wide string buffer.
- * @param buffer Buffer to read data in.
- * @param numChars Number of characters to read. */
-void DataReader::readUTF32(wchar_t *buffer, int numChars)
-{
-	UTF8String str = readUTF32(numChars);
-	std::vector<wchar_t> wstr = str.getWCHAR();
-	int charsToCopy = MIN(wstr.size(), numChars);
-	memcpy(buffer, wstr.data(), charsToCopy * sizeof(wchar_t));
+	ST::utf32_buffer buf{numChars, U'\0'};
+	readArray(buf.data(), numChars);
+	return ST::string{buf.c_str(), validation};
 }
 
 uint8_t DataReader::readU8()
 {
-	uint8_t value = *((uint8_t*)m_buf);
-	move(1);
-	return value;
+	return read<uint8_t>();
 }
 
 uint16_t DataReader::readU16()
 {
-	uint16_t value = *((uint16_t*)m_buf);
-	move(2);
-	return value;
+	return read<uint16_t>();
 }
 
-/** Move pointer to \a numBytes bytes forward. */
 uint32_t DataReader::readU32()
 {
-	uint32_t value = *((uint32_t*)m_buf);
-	move(4);
-	return value;
+	return read<uint32_t>();
 }
 
-/** Move pointer to \a numBytes bytes forward. */
-void DataReader::move(int numBytes)
+void DataReader::skip(size_t numBytes)
 {
-	m_buf = ((char*)m_buf) + numBytes;
+	move(numBytes);
+}
+
+void DataReader::move(size_t numBytes)
+{
+	m_buf = reinterpret_cast<const uint8_t*>(m_buf) + numBytes;
+}
+
+size_t DataReader::getConsumed() const
+{
+	return reinterpret_cast<const uint8_t*>(m_buf) - reinterpret_cast<const uint8_t*>(m_original);
 }
 
 ////////////////////////////////////////////////////////////////////////////

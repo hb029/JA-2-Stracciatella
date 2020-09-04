@@ -177,7 +177,7 @@ void LoadEnemySoldiersFromTempFile()
 			if (!dp)
 			{
 				// Need to upgrade the placement to detailed placement
-				dp = MALLOC(SOLDIERCREATE_STRUCT);
+				dp = new SOLDIERCREATE_STRUCT{};
 				curr->pDetailedPlacement = dp;
 			}
 			// Now replace the map pristine placement info with the temp map file
@@ -427,7 +427,7 @@ void NewWayOfLoadingEnemySoldiersFromTempFile()
 			if (!dp)
 			{
 				// Need to upgrade the placement to detailed placement
-				dp = MALLOC(SOLDIERCREATE_STRUCT);
+				dp = new SOLDIERCREATE_STRUCT{};
 				curr->pDetailedPlacement = dp;
 			}
 			// Now replace the map pristine placement info with the temp map file
@@ -591,7 +591,7 @@ void NewWayOfLoadingCiviliansFromTempFile()
 			if (!dp)
 			{
 				// Need to upgrade the placement to detailed placement
-				dp = MALLOC(SOLDIERCREATE_STRUCT);
+				dp = new SOLDIERCREATE_STRUCT{};
 				curr->pDetailedPlacement = dp;
 			}
 			// Now replace the map pristine placement info with the temp map file
@@ -622,7 +622,7 @@ void NewWayOfLoadingCiviliansFromTempFile()
 			if (dp->bLife < dp->bLifeMax)
 			{
 				// Add 4 life for every hour that passes.
-				INT32 const new_life = MIN(dp->bLife + time_since_last_loaded / 15, dp->bLifeMax);
+				INT32 const new_life = MIN(dp->bLife + time_since_last_loaded / 15, (unsigned int)dp->bLifeMax);
 				dp->bLife = (INT8)new_life;
 			}
 
@@ -711,7 +711,7 @@ void NewWayOfSavingEnemyAndCivliansToTempFile(INT16 const sSectorX, INT16 const 
 		if (!dp)
 		{
 			//need to upgrade the placement to detailed placement
-			dp                                        = MALLOCZ(SOLDIERCREATE_STRUCT);
+			dp                                        = new SOLDIERCREATE_STRUCT{};
 			curr->pDetailedPlacement                  = dp;
 			curr->pBasicPlacement->fDetailedPlacement = TRUE;
 		}
@@ -761,17 +761,17 @@ void NewWayOfSavingEnemyAndCivliansToTempFile(INT16 const sSectorX, INT16 const 
 			dp->sInsertionGridNo = curr->pBasicPlacement->usStartingGridNo;
 		}
 
-		wcslcpy(dp->name, s.name, lengthof(dp->name));
+		dp->name = s.name;
 
 		// Copy patrol points
 		dp->bPatrolCnt = s.bPatrolCnt;
 		memcpy(dp->sPatrolGrid, s.usPatrolGrid, sizeof(dp->sPatrolGrid));
 
 		// Copy colors for soldier based on the body type.
-		strcpy(dp->HeadPal,  s.HeadPal);
-		strcpy(dp->VestPal,  s.VestPal);
-		strcpy(dp->SkinPal,  s.SkinPal);
-		strcpy(dp->PantsPal, s.PantsPal);
+		dp->HeadPal = s.HeadPal;
+		dp->VestPal = s.VestPal;
+		dp->SkinPal = s.SkinPal;
+		dp->PantsPal = s.PantsPal;
 
 		// Copy soldier's inventory
 		memcpy(dp->Inv, s.inv, sizeof(dp->Inv));

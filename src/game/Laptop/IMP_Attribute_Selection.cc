@@ -2,6 +2,7 @@
 #include "Directories.h"
 #include "Font.h"
 #include "IMP_Attribute_Selection.h"
+#include "IMP_SkillTraits.h"
 #include "IMPVideoObjects.h"
 #include "Input.h"
 #include "MessageBoxScreen.h"
@@ -19,6 +20,9 @@
 #include "GameInstance.h"
 #include "ContentManager.h"
 #include "policy/GamePolicy.h"
+
+#include <string_theory/format>
+
 
 // width of the slider bar region
 #define BAR_WIDTH 423 - 197
@@ -322,6 +326,7 @@ static void IncrementStat(INT32 iStatToIncrement)
 		case MEDICAL_SKILL:        val = &iCurrentMedical;     break;
 		case MECHANICAL_SKILL:     val = &iCurrentMechanical;  break;
 		case EXPLOSIVE_SKILL:      val = &iCurrentExplosives;  break;
+		default:                   SLOGA("unexpected stat %d", iStatToIncrement); return;
 	}
 
 	if (*val == 0)
@@ -363,6 +368,7 @@ static void DecrementStat(INT32 iStatToDecrement)
 		case MEDICAL_SKILL:        val = &iCurrentMedical;     may_be_zero = TRUE; break;
 		case MECHANICAL_SKILL:     val = &iCurrentMechanical;  may_be_zero = TRUE; break;
 		case EXPLOSIVE_SKILL:      val = &iCurrentExplosives;  may_be_zero = TRUE; break;
+		default:                   SLOGA("unexpected stat %d", iStatToDecrement); return;
 	}
 
 	if (*val > MIN_ATTRIBUTE_POINTS)
@@ -444,7 +450,7 @@ void RenderAttributeBoxes(void)
 
 		sX += LAPTOP_SCREEN_UL_X;
 		sY += LAPTOP_SCREEN_WEB_UL_Y;
-		mprintf(sX + 13, sY + 3, L"%d", val);
+		MPrint(sX + 13, sY + 3, ST::format("{}", val));
 	}
 
 	SetFontShadow(DEFAULT_SHADOW);
@@ -736,6 +742,10 @@ void SetAttributes(void)
 
 	// reset bonus pts
 	iCurrentBonusPoints = BONUS_ATTRIBUTE_POINTS;
+	if (gamepolicy(imp_pick_skills_directly))
+	{
+		iCurrentBonusPoints += DoesPlayerHaveExtraAttibutePointsToDistributeBasedOnSkillSelection();
+	}
 }
 
 
@@ -747,7 +757,7 @@ void DrawBonusPointsRemaining(void)
 	if (fReviewStats) return;
 
 	SetFontAttributes(FONT12ARIAL, FONT_WHITE);
-	mprintf(LAPTOP_SCREEN_UL_X + 425, LAPTOP_SCREEN_WEB_UL_Y + 51, L"%d", iCurrentBonusPoints);
+	MPrint(LAPTOP_SCREEN_UL_X + 425, LAPTOP_SCREEN_WEB_UL_Y + 51, ST::format("{}", iCurrentBonusPoints));
 	InvalidateRegion(LAPTOP_SCREEN_UL_X + 425, LAPTOP_SCREEN_WEB_UL_Y + 51, LAPTOP_SCREEN_UL_X + 475, LAPTOP_SCREEN_WEB_UL_Y + 71);
 }
 

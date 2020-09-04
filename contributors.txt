@@ -1,33 +1,51 @@
-Primal author of the project
-----------------------------
+Founder of the project
+----------------------
 
 Tron
-
 
 Contributors (sorted alphabetically)
 ------------------------------------
 
 Agatae (https://bitbucket.org/Agatae)
-derSteFfi <der_steffi@gmx.de>
-Gennady Trafimenkov <gennady.trafimenkov@gmail.com>
-Jaka Kranjc <smgl@lynxlynx.info>
-JAsmine-ja2 (https://bitbucket.org/JAsmine-ja2)
+akdjka
+Alex Ellwein
+Alexander 'z33ky' Hirsch
+Alexander Gordeev
+Alexander von Gernler
+Czcibór
+David Krawiec
+daviel
+Derek Chan
+Dmitry Marakasov
+Edwin Buck
+Felix Zürker
+Flávio J. Saraiva
+Gennady Trafimenkov
+Greg Kennedy
+Gregor Zorc
+Jaka Kranjc
+JAsmine-ja2
+juzza1
+Manuel K
 mgl from The Bear's Pit Forum
-Misanthropos <misanthropos@gmx.net>
-Nils Reuße <n.reusse@hxgn.net>
-Nils R <ml@hxgn.net>
+Michał Janiszewski
+Mladen Milinkovic
+Momoko Hanasaki
+Nils Reuße
+oldlaptop
 Oliver Jankowski
-Peinthor Rene <peinthor@gmail.com>
+Peinthor Rene
+Poncho
 Rebekka Bais (Logo Design)
-RinneT <thomas.rinsch@arcor.de>
-rk <rk@razlaw.name>
-sam <bg9zzxik@gmail.com>
-Stefan Lau <github@stefanlau.com>
-Stephan Bauroth <der_steffi@gmx.de>
+Richard Fröhning
+Rinne
+rk
+RoddyAtHat
+sam
+Simon Bitschnau
+Stefan Lau
+Stephan Bauroth
 sunshine from The Bear's Pit Forum
-vancv <vanc.vaclav@gmail.com>
-vxx <no@e.mail>
+vancv
 wolf (committer to the original Tron's svn repository)
-
-
-(*) Please feel free to send update for this list to the project maintainer.
+wvx

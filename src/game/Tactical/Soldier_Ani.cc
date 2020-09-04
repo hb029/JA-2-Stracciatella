@@ -489,6 +489,12 @@ BOOLEAN AdjustToNextAnimationFrame( SOLDIERTYPE *pSoldier )
 					//CODE: FOR A NON-INTERRUPTABLE SCRIPT - SIGNAL DONE
 					pSoldier->fInNonintAnim = FALSE;
 
+					if (pSoldier->usAnimState == STEAL_ITEM) {
+						SLOGD(ST::format("Reducing attacker busy count..., CODE FROM ANIMATION {} ( {} )",
+							gAnimControl[pSoldier->usAnimState].zAnimStr, pSoldier->usAnimState));
+						ReduceAttackBusyCount(pSoldier, FALSE);
+					}
+
 					// ATE: if it's the begin cower animation, unset ui, cause it could
 					// be from player changin stance
 					if ( pSoldier->usAnimState == START_COWER )
@@ -667,9 +673,9 @@ BOOLEAN AdjustToNextAnimationFrame( SOLDIERTYPE *pSoldier )
 							pSoldier->bBulletsLeft = 0;
 
 							// OK, Stop burst sound...
-							if ( pSoldier->iBurstSoundID != NO_SAMPLE )
+							if ( pSoldier->uiBurstSoundID != NO_SAMPLE )
 							{
-								SoundStop( pSoldier->iBurstSoundID );
+								SoundStop( pSoldier->uiBurstSoundID );
 							}
 
 							if (pSoldier->bTeam == OUR_TEAM)
@@ -882,10 +888,10 @@ BOOLEAN AdjustToNextAnimationFrame( SOLDIERTYPE *pSoldier )
 						// Update UI
 						DirtyMercPanelInterface( pSoldier, DIRTYLEVEL2 );
 
-						MemFree( pSoldier->pTempObject );
+						delete pSoldier->pTempObject;
 						pSoldier->pTempObject = NULL;
 
-						MemFree( pSoldier->pThrowParams );
+						delete pSoldier->pThrowParams;
 						pSoldier->pThrowParams = NULL;
 					}
 					break;
@@ -1613,9 +1619,16 @@ BOOLEAN AdjustToNextAnimationFrame( SOLDIERTYPE *pSoldier )
 							HandleSystemNewAISituation(pSoldier);
 						}
 
-						// EVENT HAS BEEN HANDLED
-						soldier->removePendingAction();
-
+						if (pSoldier->ubPendingAction != MERC_GIVEITEM)
+						{
+							// EVENT HAS BEEN HANDLED
+							soldier->removePendingAction();
+						}
+						else
+						{
+							// Reset the target grid no
+							pSoldier->sPendingActionData2 = GetMan(pSoldier->uiPendingActionData4).sGridNo;
+						}
 					}
 
 
@@ -2225,7 +2238,7 @@ no_cry:
 
 					// code: freeup attcker
 					SLOGD(
-						"Reducing attacker busy count..., CODE FROM ANIMATION %hs ( %d )",
+						"Reducing attacker busy count..., CODE FROM ANIMATION %s ( %d )",
 						gAnimControl[pSoldier->usAnimState].zAnimStr, pSoldier->usAnimState);
 					ReduceAttackBusyCount(pSoldier, FALSE);
 
@@ -2263,7 +2276,7 @@ no_cry:
 							AutoPlaceObject( pSoldier, pSoldier->pTempObject, TRUE );
 						}
 
-						MemFree( pSoldier->pTempObject );
+						delete pSoldier->pTempObject;
 						pSoldier->pTempObject = NULL;
 					}
 				}
@@ -2274,7 +2287,7 @@ no_cry:
 					// INcrement attacker busy count....
 					gTacticalStatus.ubAttackBusyCount++;
 					SLOGD(
-						"Incrementing attacker busy count..., CODE FROM ANIMATION %hs ( %d ) : Count now %d",
+						"Incrementing attacker busy count..., CODE FROM ANIMATION %s ( %d ) : Count now %d",
 						gAnimControl[pSoldier->usAnimState].zAnimStr, pSoldier->usAnimState,
 						gTacticalStatus.ubAttackBusyCount);
 					break;
@@ -2321,7 +2334,10 @@ no_cry:
 					INT8 bPanicTrigger;
 
 					bPanicTrigger = ClosestPanicTrigger( pSoldier );
-					SetOffPanicBombs(pSoldier, bPanicTrigger);
+					if (bPanicTrigger != -1)
+					{
+						SetOffPanicBombs(pSoldier, bPanicTrigger);
+					}
 					// any AI guy has been specially given keys for this, now take them
 					// away
 					pSoldier->bHasKeys = pSoldier->bHasKeys >> 1;
@@ -2342,7 +2358,7 @@ no_cry:
 						AddItemToPool(pSoldier->sPendingActionData2, pSoldier->pTempObject, VISIBLE, pSoldier->bLevel, 0, -1);
 						NotifySoldiersToLookforItems( );
 
-						MemFree( pSoldier->pTempObject );
+						delete pSoldier->pTempObject;
 						pSoldier->pTempObject = NULL;
 					}
 					break;
@@ -3442,7 +3458,7 @@ void HandleCheckForDeathCommonCode(SOLDIERTYPE* const pSoldier)
 
 		default:
 			// IF we are here - something is wrong - we should have a death animation here
-			SLOGW("unconscious hit sequence needed for animation %d", pSoldier->usAnimState);
+			SLOGD("unconscious hit sequence needed for animation %d", pSoldier->usAnimState);
 			return;
 	}
 	ChangeSoldierState(pSoldier, state, 0, FALSE);

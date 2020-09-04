@@ -34,7 +34,7 @@ try
 
 	// Load structure data, if any.
 	// Start by hacking the image filename into that for the structure data
-	std::string cStructureFilename(FileMan::replaceExtension(cFilename, ".jsd"));
+	ST::string cStructureFilename(FileMan::replaceExtension(cFilename, "jsd"));
 
 	AutoStructureFileRef pStructureFileRef;
 	if (GCM->doesGameResExists( cStructureFilename ))
@@ -61,7 +61,7 @@ try
 	else if (hImage->uiAppDataSize == hVObject->SubregionCount() * sizeof(AuxObjectData))
 	{
 		// Valid auxiliary data, so make a copy of it for TileSurf
-		pTileSurf->pAuxData = MALLOCN(AuxObjectData, hVObject->SubregionCount());
+		pTileSurf->pAuxData = new AuxObjectData[hVObject->SubregionCount()]{};
 		memcpy( pTileSurf->pAuxData, hImage->pAppData, hImage->uiAppDataSize );
 	}
 	else
@@ -75,7 +75,7 @@ try
 }
 catch (...)
 {
-	SET_ERROR("Could not load tile file: %s", cFilename);
+	SET_ERROR(ST::format("Could not load tile file : {}", cFilename));
 	throw;
 }
 
@@ -93,12 +93,12 @@ void DeleteTileSurface(TILE_IMAGERY* const pTileSurf)
 		// free it ourselves.
 		if (pTileSurf->pAuxData != NULL)
 		{
-			MemFree( pTileSurf->pAuxData );
+			delete[] pTileSurf->pAuxData;
 		}
 	}
 
 	DeleteVideoObject(pTileSurf->vo);
-	MemFree( pTileSurf );
+	delete pTileSurf;
 }
 
 
@@ -122,7 +122,7 @@ void SetRaisedObjectFlag(char const* const filename, TILE_IMAGERY* const t)
 	if (DEBRISWOOD != t->fType && t->fType != DEBRISWEEDS && t->fType != DEBRIS2MISC && t->fType != ANOTHERDEBRIS) return;
 
 	// Loop through array of RAISED objecttype imagery and set global value
-	std::string rootfile(FileMan::getFileNameWithoutExt(filename));
+	ST::string rootfile(FileMan::getFileNameWithoutExt(filename));
 	for (char const (*i)[9] = RaisedObjectFiles; i != endof(RaisedObjectFiles); ++i)
 	{
 		if (strcasecmp(*i, rootfile.c_str()) != 0) continue;

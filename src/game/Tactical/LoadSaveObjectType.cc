@@ -4,15 +4,24 @@
 
 #include "ContentManager.h"
 #include "GameInstance.h"
+#include "ItemModel.h"
 
 
-const BYTE* ExtractObject(const BYTE* const data, OBJECTTYPE* const o)
+void ExtractObject(DataReader& d, OBJECTTYPE* const o)
 {
-	const BYTE* d = data;
+	size_t start = d.getConsumed();
 	EXTR_U16(d, o->usItem)
 	EXTR_U8(d, o->ubNumberOfObjects)
 	EXTR_SKIP(d, 1)
-	switch (GCM->getItem(o->usItem)->getItemClass())
+
+	const ItemModel* item = GCM->getItem(o->usItem);
+	if (!item)
+	{
+		SLOGW(ST::format("Item (index {}) is not defined and will be ignored. Maybe the file was saved for a different game version", o->usItem));
+		item = GCM->getItem(NONE);
+	}
+
+	switch (item->getItemClass())
 	{
 		case IC_AMMO:
 			EXTR_U8A(d, o->ubShotsLeft, lengthof(o->ubShotsLeft))
@@ -96,15 +105,13 @@ extract_status:
 	EXTR_U8(d, o->ubWeight)
 	EXTR_U8(d, o->fUsed)
 	EXTR_SKIP(d, 2)
-	Assert(d == data + 36);
-
-	return d;
+	Assert(d.getConsumed() == start + 36);
 }
 
 
-BYTE* InjectObject(BYTE* const data, const OBJECTTYPE* const o)
+void InjectObject(DataWriter& d, const OBJECTTYPE* o)
 {
-	BYTE* d = data;
+	size_t start = d.getConsumed();
 	INJ_U16(d, o->usItem)
 	INJ_U8(d, o->ubNumberOfObjects)
 	INJ_SKIP(d, 1)
@@ -192,7 +199,5 @@ inject_status:
 	INJ_U8(d, o->ubWeight)
 	INJ_U8(d, o->fUsed)
 	INJ_SKIP(d, 2)
-	Assert(d == data + 36);
-
-	return d;
+	Assert(d.getConsumed() == start + 36);
 }

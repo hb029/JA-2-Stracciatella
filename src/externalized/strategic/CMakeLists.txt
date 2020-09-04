@@ -1,0 +1,22 @@
+file(GLOB LOCAL_JA2_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
+set(JA2_SOURCES
+    ${JA2_SOURCES}
+    ${LOCAL_JA2_HEADERS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/BloodCatPlacementsModel.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/BloodCatSpawnsModel.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/CreatureLairModel.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/FactParamsModel.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/MineModel.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/MovementCostsModel.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/NpcPlacementModel.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/SamSiteModel.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/SamSiteAirControlModel.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/TownModel.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/UndergroundSectorModel.cc
+    PARENT_SCOPE
+)
+set(JA2_INCLUDES
+    ${JA2_INCLUDES}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    PARENT_SCOPE
+)

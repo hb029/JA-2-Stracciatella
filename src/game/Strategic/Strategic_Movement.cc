@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "LoadSaveData.h"
 #include "Map_Screen_Interface_Bottom.h"
 #include "MessageBoxScreen.h"
@@ -55,6 +53,15 @@
 #include "Strategic_Mines.h"
 #include "Assignments.h"
 
+#include <string_theory/string>
+
+#include <algorithm>
+#include <iterator>
+#include <stdexcept>
+
+#include "GameInstance.h"
+#include "ContentManager.h"
+#include "externalized/strategic/BloodCatSpawnsModel.h"
 
 // the delay for a group about to arrive
 #define ABOUT_TO_ARRIVE_DELAY 5
@@ -117,7 +124,7 @@ GROUP* CreateNewPlayerGroupDepartingFromSector(UINT8 const ubSectorX, UINT8 cons
 {
 	AssertMsg( ubSectorX >= 1 && ubSectorX <= 16, String( "CreateNewPlayerGroup with out of range sectorX value of %d", ubSectorX ) );
 	AssertMsg( ubSectorY >= 1 && ubSectorY <= 16, String( "CreateNewPlayerGroup with out of range sectorY value of %d", ubSectorY ) );
-	GROUP* const pNew = MALLOCZ(GROUP);
+	GROUP* const pNew = new GROUP{};
 	pNew->pPlayerList = NULL;
 	pNew->pWaypoints = NULL;
 	pNew->ubSectorX = pNew->ubNextX = ubSectorX;
@@ -140,7 +147,7 @@ GROUP* CreateNewVehicleGroupDepartingFromSector(UINT8 const ubSectorX, UINT8 con
 {
 	AssertMsg( ubSectorX >= 1 && ubSectorX <= 16, String( "CreateNewVehicleGroup with out of range sectorX value of %d", ubSectorX ) );
 	AssertMsg( ubSectorY >= 1 && ubSectorY <= 16, String( "CreateNewVehicleGroup with out of range sectorY value of %d", ubSectorY ) );
-	GROUP* const pNew = MALLOCZ(GROUP);
+	GROUP* const pNew = new GROUP{};
 	pNew->pWaypoints = NULL;
 	pNew->ubSectorX = pNew->ubNextX = ubSectorX;
 	pNew->ubSectorY = pNew->ubNextY = ubSectorY;
@@ -165,7 +172,7 @@ void AddPlayerToGroup(GROUP& g, SOLDIERTYPE& s)
 {
 	AssertMsg(g.fPlayer, "Attempting AddPlayerToGroup() on an ENEMY group!");
 
-	PLAYERGROUP* const p = MALLOC(PLAYERGROUP);
+	PLAYERGROUP* const p = new PLAYERGROUP{};
 	p->pSoldier = &s;
 	p->next     = 0;
 
@@ -208,7 +215,7 @@ void RemovePlayerFromPGroup(GROUP& g, SOLDIERTYPE& s)
 		if (p->pSoldier != &s) continue;
 
 		*i = p->next;
-		MemFree(p);
+		delete p;
 
 		s.ubPrevSectorID = SECTOR(g.ubPrevX, g.ubPrevY);
 		s.ubGroupID      = 0;
@@ -436,7 +443,7 @@ BOOLEAN AddWaypointToPGroup(GROUP* const g, UINT8 const x, UINT8 const y) // Sam
 		Assert(n_aligned_axes == 1);
 	}
 
-	WAYPOINT* const new_wp = MALLOC(WAYPOINT);
+	WAYPOINT* const new_wp = new WAYPOINT{};
 	new_wp->x    = x;
 	new_wp->y    = y;
 	new_wp->next = 0;
@@ -495,9 +502,9 @@ BOOLEAN AddWaypointStrategicIDToPGroup( GROUP *pGroup, UINT32 uiSectorID )
 //............................................................
 GROUP* CreateNewEnemyGroupDepartingFromSector( UINT32 uiSector, UINT8 ubNumAdmins, UINT8 ubNumTroops, UINT8 ubNumElites )
 {
-	AssertMsg( uiSector >= 0 && uiSector <= 255, String( "CreateNewEnemyGroup with out of range value of %d", uiSector ) );
-	GROUP* const pNew = MALLOCZ(GROUP);
-	pNew->pEnemyGroup = MALLOCZ(ENEMYGROUP);
+	AssertMsg( uiSector <= 255, String( "CreateNewEnemyGroup with out of range value of %d", uiSector ) );
+	GROUP* const pNew = new GROUP{};
+	pNew->pEnemyGroup = new ENEMYGROUP{};
 	pNew->pWaypoints = NULL;
 	pNew->ubSectorX = (UINT8)SECTORX( uiSector );
 	pNew->ubSectorY = (UINT8)SECTORY( uiSector );
@@ -508,7 +515,7 @@ GROUP* CreateNewEnemyGroupDepartingFromSector( UINT32 uiSector, UINT8 ubNumAdmin
 	pNew->pEnemyGroup->ubNumAdmins = ubNumAdmins;
 	pNew->pEnemyGroup->ubNumTroops = ubNumTroops;
 	pNew->pEnemyGroup->ubNumElites = ubNumElites;
-	pNew->ubGroupSize = (UINT8)(ubNumAdmins + ubNumTroops + ubNumElites);
+	pNew->ubGroupSize = (UINT8)(ubNumTroops + ubNumElites);
 	pNew->ubTransportationMask = FOOT;
 	pNew->fVehicle = FALSE;
 	pNew->ubCreatedSectorID = pNew->ubOriginalSector;
@@ -567,7 +574,7 @@ static void RemoveGroupFromList(GROUP* const g)
 		Assert(uniqueIDMask[index] & mask);
 		uniqueIDMask[index] &= ~mask;
 
-		MemFree(g);
+		delete g;
 		return;
 	}
 	SLOGA("Trying to remove a strategic group that isn't in the list!");
@@ -681,7 +688,7 @@ static void PrepareForPreBattleInterface(GROUP* pPlayerDialogGroup, GROUP* pInit
 
 			InterruptTime();
 			PauseGame();
-			LockPauseState(LOCK_PAUSE_11);
+			LockPauseState(LOCK_PAUSE_PREBATTLE_CURRENT_SQUAD);
 
 			if( !gfTacticalTraversal )
 				fDisableMapInterfaceDueToBattle = TRUE;
@@ -702,7 +709,7 @@ static void PrepareForPreBattleInterface(GROUP* pPlayerDialogGroup, GROUP* pInit
 		HandleImportantPBIQuote(*chosen, pInitiatingBattleGroup);
 		InterruptTime();
 		PauseGame();
-		LockPauseState(LOCK_PAUSE_12);
+		LockPauseState(LOCK_PAUSE_PREBATTLE);
 
 		// disable exit from mapscreen and what not until face done talking
 		fDisableMapInterfaceDueToBattle = TRUE;
@@ -889,10 +896,8 @@ static BOOLEAN CheckConditionsForBattle(GROUP* pGroup)
 			}
 			else
 			{
-				wchar_t str[ 256 ];
-				wchar_t pSectorStr[ 128 ];
-				GetSectorIDString( pGroup->ubSectorX, pGroup->ubSectorY, pGroup->ubSectorZ , pSectorStr, lengthof(pSectorStr), TRUE );
-				swprintf( str, lengthof(str), gpStrategicString[ STR_DIALOG_ENEMIES_ATTACK_UNCONCIOUSMERCS ], pSectorStr );
+				ST::string pSectorStr = GetSectorIDString(pGroup->ubSectorX, pGroup->ubSectorY, pGroup->ubSectorZ, TRUE);
+				ST::string str = st_format_printf(gpStrategicString[ STR_DIALOG_ENEMIES_ATTACK_UNCONCIOUSMERCS ], pSectorStr);
 				DoScreenIndependantMessageBox( str, MSG_BOX_FLAG_OK, TriggerPrebattleInterface );
 			}
 		}
@@ -1053,17 +1058,17 @@ static void AwardExperienceForTravelling(GROUP& g)
 static void AddCorpsesToBloodcatLair(INT16 sSectorX, INT16 sSectorY)
 {
 	ROTTING_CORPSE_DEFINITION		Corpse;
-	memset( &Corpse, 0, sizeof( ROTTING_CORPSE_DEFINITION ) );
+	Corpse = ROTTING_CORPSE_DEFINITION{};
 
 	// Setup some values!
 	Corpse.ubBodyType        = REGMALE;
 	Corpse.sHeightAdjustment = 0;
 	Corpse.bVisible          = TRUE;
 
-	SET_PALETTEREP_ID ( Corpse.HeadPal,  "BROWNHEAD" );
-	SET_PALETTEREP_ID ( Corpse.VestPal,  "YELLOWVEST" );
-	SET_PALETTEREP_ID ( Corpse.SkinPal,  "PINKSKIN" );
-	SET_PALETTEREP_ID ( Corpse.PantsPal, "GREENPANTS" );
+	Corpse.HeadPal  = "BROWNHEAD";
+	Corpse.VestPal  = "YELLOWVEST";
+	Corpse.SkinPal  = "PINKSKIN";
+	Corpse.PantsPal = "GREENPANTS";
 
 
 	Corpse.bDirection = (INT8)Random(8);
@@ -1266,7 +1271,7 @@ void GroupArrivedAtSector(GROUP& g, BOOLEAN const check_for_battle, BOOLEAN cons
 		}
 
 		bool    const  here = x == gWorldSectorX && y == gWorldSectorY && z == gbWorldSectorZ;
-		wchar_t const* who  = 0;
+		ST::string who;
 		if (!g.fVehicle)
 		{
 			// non-vehicle player group
@@ -1358,12 +1363,12 @@ void GroupArrivedAtSector(GROUP& g, BOOLEAN const check_for_battle, BOOLEAN cons
 			if (!group_destroyed) who = pVehicleStrings[v.ubVehicleType];
 		}
 
-		if (who)
+		if (!who.empty())
 		{ /* Don't print any messages when arriving underground (there's no delay
 			 * involved) or if we never left (cancel) */
 			if (GroupAtFinalDestination(&g) && z == 0 && !never_left)
 			{
-				ScreenMsg(FONT_MCOLOR_DKRED, MSG_INTERFACE, pMessageStrings[MSG_ARRIVE], who, pMapVertIndex[y], pMapHortIndex[x]);
+				ScreenMsg(FONT_MCOLOR_DKRED, MSG_INTERFACE, st_format_printf(pMessageStrings[MSG_ARRIVE], who, pMapVertIndex[y], pMapHortIndex[x]));
 			}
 		}
 
@@ -1373,7 +1378,8 @@ void GroupArrivedAtSector(GROUP& g, BOOLEAN const check_for_battle, BOOLEAN cons
 			if (!g.fVehicle || !IsGroupTheHelicopterGroup(g))
 			{
 				// ATE: Add a few corpse to the bloodcat lair
-				if (SECTOR(x, y) == SEC_I16 &&
+				auto spawns = GCM->getBloodCatSpawnsOfSector( SECTOR(x, y) );
+				if ( spawns != NULL && spawns->isLair &&
 					!GetSectorFlagStatus(x, y, z, SF_ALREADY_VISITED))
 				{
 					AddCorpsesToBloodcatLair(x, y);
@@ -1627,21 +1633,20 @@ static BOOLEAN PossibleToCoordinateSimultaneousGroupArrivals(GROUP* const first_
 	// Postpone the battle until the user answers the dialog.
 	InterruptTime();
 	PauseGame();
-	LockPauseState(LOCK_PAUSE_13);
+	LockPauseState(LOCK_PAUSE_SIMULTANEOUS_ARRIVAL);
 	gpPendingSimultaneousGroup = first_group;
 
-	wchar_t const* const pStr =
+	ST::string pStr =
 		n_nearby_groups == 1 ? gpStrategicString[STR_DETECTED_SINGULAR] :
 		gpStrategicString[STR_DETECTED_PLURAL];
-	wchar_t const* const enemy_type =
+	ST::string enemy_type =
 		gubEnemyEncounterCode == ENTERING_BLOODCAT_LAIR_CODE ? gpStrategicString[STR_PB_BLOODCATS] :
 		gpStrategicString[STR_PB_ENEMIES];
 	/* header, sector, singular/plural str, confirmation string.
 	 * Ex:  Enemies have been detected in sector J9 and another squad is about to
 	 *      arrive.  Do you wish to coordinate a simultaneous arrival? */
-	wchar_t str[255];
-	size_t const n = swprintf(str, lengthof(str), pStr, enemy_type, 'A' + first_group->ubSectorY - 1, first_group->ubSectorX);
-	swprintf(str + n, lengthof(str) - n, L" %ls", gpStrategicString[STR_COORDINATE]);
+	ST::string str = st_format_printf(pStr, enemy_type, 'A' + first_group->ubSectorY - 1, first_group->ubSectorX);
+	str += ST::format(" {}", gpStrategicString[STR_COORDINATE]);
 	DoMapMessageBox(MSG_BOX_BASIC_STYLE, str, guiCurrentScreen, MSG_BOX_FLAG_YESNO, PlanSimultaneousGroupArrivalCallback);
 	gfWaitingForInput = TRUE;
 	return TRUE;
@@ -1901,7 +1906,7 @@ void RemoveGroupWaypoints(GROUP& g)
 	{
 		WAYPOINT* const del = i;
 		i = i->next;
-		MemFree(del);
+		delete del;
 	}
 
 	g.ubNextWaypointID = 0;
@@ -1926,7 +1931,7 @@ void RemoveGroup(GROUP& g)
 	{
 		CancelEmptyPersistentGroupMovement(g);
 		return;
-		DoScreenIndependantMessageBox(L"Strategic Info Warning:  Attempting to delete a persistant group.", MSG_BOX_FLAG_OK, NULL);
+		DoScreenIndependantMessageBox("Strategic Info Warning:  Attempting to delete a persistant group.", MSG_BOX_FLAG_OK, NULL);
 	}
 
 	RemoveGroupWaypoints(g);
@@ -1941,13 +1946,13 @@ void RemoveGroup(GROUP& g)
 		{
 			PLAYERGROUP* const pPlayer = g.pPlayerList;
 			g.pPlayerList = g.pPlayerList->next;
-			MemFree(pPlayer);
+			delete pPlayer;
 		}
 	}
 	else
 	{
 		RemoveGroupFromStrategicAILists(g);
-		MemFree(g.pEnemyGroup);
+		delete g.pEnemyGroup;
 	}
 
 	RemoveGroupFromList(&g);
@@ -2157,7 +2162,7 @@ INT32 FindTravelTimeBetweenWaypoints(WAYPOINT const* const pSource, WAYPOINT con
 		// find diff between current and next
 		iThisCostInTime = GetSectorMvtTimeForGroup( ubCurrentSector, ubDirection, pGroup );
 
-		AssertMsg(iThisCostInTime != TRAVERSE_TIME_IMPOSSIBLE, String("Group %d (%s) attempting illegal move from sector %d, dir %d (%s).",
+		AssertMsg(iThisCostInTime != static_cast<INT32>(TRAVERSE_TIME_IMPOSSIBLE), String("Group %d (%s) attempting illegal move from sector %d, dir %d (%s).",
 					pGroup->ubGroupID, ( pGroup->fPlayer ) ? "Player" : "AI",
 					ubCurrentSector, ubDirection,
 					gszTerrain[SectorInfo[ubCurrentSector].ubTraversability[ubDirection]] ) );
@@ -2517,7 +2522,7 @@ void SaveStrategicMovementGroupsToSaveGameFile(HWFILE const f)
 	CFOR_EACH_GROUP(g)
 	{
 		BYTE data[84];
-		BYTE* d = data;
+		DataWriter d{data};
 		INJ_BOOL(d, g->fDebugGroup)
 		INJ_BOOL(d, g->fPlayer)
 		INJ_BOOL(d, g->fVehicle)
@@ -2545,7 +2550,7 @@ void SaveStrategicMovementGroupsToSaveGameFile(HWFILE const f)
 		INJ_U8(d, g->ubCreatedSectorID)
 		INJ_U8(d, g->ubSectorIDOfLastReassignment)
 		INJ_SKIP(d, 38)
-		Assert(d == endof(data));
+		Assert(d.getConsumed() == lengthof(data));
 
 		FileWrite(f, data, sizeof(data));
 
@@ -2584,12 +2589,12 @@ void LoadStrategicMovementGroupsFromSavedGameFile(HWFILE const f)
 	GROUP** anchor = &gpGroupList;
 	for (UINT32 i = uiNumberOfGroups; i != 0; --i)
 	{
-		GROUP* const g = MALLOCZ(GROUP);
+		GROUP* const g = new GROUP{};
 
 		BYTE data[84];
 		FileRead(f, data, sizeof(data));
 
-		BYTE const* d = data;
+		DataReader d{data};
 		EXTR_BOOL(d, g->fDebugGroup)
 		EXTR_BOOL(d, g->fPlayer)
 		EXTR_BOOL(d, g->fVehicle)
@@ -2617,7 +2622,7 @@ void LoadStrategicMovementGroupsFromSavedGameFile(HWFILE const f)
 		EXTR_U8(d, g->ubCreatedSectorID)
 		EXTR_U8(d, g->ubSectorIDOfLastReassignment)
 		EXTR_SKIP(d, 38)
-		Assert(d == endof(data));
+		Assert(d.getConsumed() == lengthof(data));
 
 		if (g->fPlayer)
 		{
@@ -2638,7 +2643,7 @@ void LoadStrategicMovementGroupsFromSavedGameFile(HWFILE const f)
 
 	//@@@ TEMP!
 	//Rebuild the uniqueIDMask as a very old bug broke the uniqueID assignments in extremely rare cases.
-	memset(uniqueIDMask, 0, sizeof(uniqueIDMask));
+	std::fill(std::begin(uniqueIDMask), std::end(uniqueIDMask), 0);
 	CFOR_EACH_GROUP(g)
 	{
 		const UINT32 index = g->ubGroupID / 32;
@@ -2680,7 +2685,7 @@ static void LoadPlayerGroupList(HWFILE const f, GROUP* const g)
 	PLAYERGROUP** anchor = &g->pPlayerList;
 	for (UINT32 i = node_count; i != 0; --i)
 	{
-		PLAYERGROUP* const pg = MALLOC(PLAYERGROUP);
+		PLAYERGROUP* const pg = new PLAYERGROUP{};
 
 		UINT32 profile_id;
 		FileRead(f, &profile_id, sizeof(UINT32));
@@ -2701,7 +2706,7 @@ static void LoadPlayerGroupList(HWFILE const f, GROUP* const g)
 static void SaveEnemyGroupStruct(HWFILE const f, GROUP const& g)
 {
 	BYTE              data[29];
-	BYTE*             d  = data;
+	DataWriter d{data};
 	ENEMYGROUP const& eg = *g.pEnemyGroup;
 	INJ_U8(  d, eg.ubNumTroops)
 	INJ_U8(  d, eg.ubNumElites)
@@ -2713,7 +2718,7 @@ static void SaveEnemyGroupStruct(HWFILE const f, GROUP const& g)
 	INJ_U8(  d, eg.ubTroopsInBattle)
 	INJ_U8(  d, eg.ubElitesInBattle)
 	INJ_SKIP(d, 20)
-	Assert(d == endof(data));
+	Assert(d.getConsumed() == lengthof(data));
 
 	FileWrite(f, data, sizeof(data));
 }
@@ -2725,8 +2730,8 @@ static void LoadEnemyGroupStructFromSavedGame(HWFILE const f, GROUP& g)
 	BYTE data[29];
 	FileRead(f, data, sizeof(data));
 
-	ENEMYGROUP* const eg = MALLOCZ(ENEMYGROUP);
-	BYTE*             d  = data;
+	ENEMYGROUP* const eg = new ENEMYGROUP{};
+	DataReader d{data};
 	EXTR_U8(  d, eg->ubNumTroops)
 	EXTR_U8(  d, eg->ubNumElites)
 	EXTR_U8(  d, eg->ubNumAdmins)
@@ -2737,7 +2742,7 @@ static void LoadEnemyGroupStructFromSavedGame(HWFILE const f, GROUP& g)
 	EXTR_U8(  d, eg->ubTroopsInBattle)
 	EXTR_U8(  d, eg->ubElitesInBattle)
 	EXTR_SKIP(d, 20)
-	Assert(d == endof(data));
+	Assert(d.getConsumed() == lengthof(data));
 
 	g.pEnemyGroup = eg;
 }
@@ -2756,11 +2761,11 @@ static void SaveWayPointList(HWFILE const f, GROUP const* const g)
 	for (const WAYPOINT* w = g->pWaypoints; w != NULL; w = w->next)
 	{
 		BYTE  data[8];
-		BYTE* d = data;
+		DataWriter d{data};
 		INJ_U8(  d, w->x)
 		INJ_U8(  d, w->y)
 		INJ_SKIP(d, 6)
-		Assert(d == endof(data));
+		Assert(d.getConsumed() == lengthof(data));
 
 		FileWrite(f, data, sizeof(data));
 	}
@@ -2776,16 +2781,16 @@ static void LoadWayPointList(HWFILE const f, GROUP* const g)
 	WAYPOINT** anchor = &g->pWaypoints;
 	for (UINT32 i = uiNumberOfWayPoints; i != 0; --i)
 	{
-		WAYPOINT* const w = MALLOCZ(WAYPOINT);
+		WAYPOINT* const w = new WAYPOINT{};
 
 		BYTE data[8];
 		FileRead(f, data, sizeof(data));
 
-		BYTE const* d = data;
+		DataReader d{data};
 		EXTR_U8(  d, w->x)
 		EXTR_U8(  d, w->y)
 		EXTR_SKIP(d, 6)
-		Assert(d == endof(data));
+		Assert(d.getConsumed() == lengthof(data));
 
 		// Add the node to the list
 		*anchor = w;
@@ -3251,8 +3256,7 @@ void AddFuelToVehicle(SOLDIERTYPE* pSoldier, SOLDIERTYPE* pVehicle)
 static void ReportVehicleOutOfGas(VEHICLETYPE const& v, UINT8 const x, UINT8 const y)
 {
 	// Report that the vehicle that just arrived is out of gas
-	wchar_t str[255];
-	swprintf(str, lengthof(str), gzLateLocalizedString[STR_LATE_05], pVehicleStrings[v.ubVehicleType], y + 'A' - 1, x);
+	ST::string str = st_format_printf(gzLateLocalizedString[STR_LATE_05], pVehicleStrings[v.ubVehicleType], y + 'A' - 1, x);
 	DoScreenIndependantMessageBox(str, MSG_BOX_FLAG_OK, 0);
 }
 
@@ -3386,8 +3390,15 @@ static BOOLEAN TestForBloodcatAmbush(GROUP const* const pGroup)
 
 	ubChance = 5 * gGameOptions.ubDifficultyLevel;
 
+	bool bIsLair = false, bIsArena = false;
+	auto spawns = GCM->getBloodCatSpawnsOfSector( ubSectorID );
+	if (spawns != NULL) {
+		bIsLair = spawns->isLair;   // SEC_I16
+		bIsArena = spawns->isArena; // SEC_N5
+	}
+
 	iHoursElapsed = (GetWorldTotalMin() - pSector->uiTimeCurrentSectorWasLastLoaded) / 60;
-	if( ubSectorID == SEC_N5 || ubSectorID == SEC_I16 )
+	if( bIsLair || bIsArena )
 	{ //These are special maps -- we use all placements.
 		if( pSector->bBloodCats == -1 )
 		{
@@ -3428,7 +3439,7 @@ static BOOLEAN TestForBloodcatAmbush(GROUP const* const pGroup)
 			pSector->bBloodCats = (INT8)MIN( pSector->bBloodCats, pSector->bBloodCatPlacements );
 		}
 	}
-	else if( ubSectorID != SEC_I16 )
+	else if( !bIsLair )
 	{
 		if( !gfAutoAmbush && PreChance( 95 ) )
 		{ //already ambushed here.  But 5% chance of getting ambushed again!
@@ -3436,10 +3447,10 @@ static BOOLEAN TestForBloodcatAmbush(GROUP const* const pGroup)
 		}
 	}
 
-	if( !fAlreadyAmbushed && ubSectorID != SEC_N5 && pSector->bBloodCats > 0 &&
+	if( !fAlreadyAmbushed && !bIsArena && pSector->bBloodCats > 0 &&
 			!pGroup->fVehicle && !NumEnemiesInSector( pGroup->ubSectorX, pGroup->ubSectorY ) )
 	{
-		if( ubSectorID != SEC_I16 || !gubFact[ FACT_PLAYER_KNOWS_ABOUT_BLOODCAT_LAIR ] )
+		if( !bIsLair || !gubFact[ FACT_PLAYER_KNOWS_ABOUT_BLOODCAT_LAIR ] )
 		{
 			gubEnemyEncounterCode = BLOODCAT_AMBUSH_CODE;
 		}
@@ -3459,16 +3470,16 @@ static BOOLEAN TestForBloodcatAmbush(GROUP const* const pGroup)
 
 static void NotifyPlayerOfBloodcatBattle(UINT8 ubSectorX, UINT8 ubSectorY)
 {
-	wchar_t str[ 256 ];
-	wchar_t zTempString[ 128 ];
+	ST::string str;
+	ST::string zTempString;
 	if( gubEnemyEncounterCode == BLOODCAT_AMBUSH_CODE )
 	{
-		GetSectorIDString( ubSectorX, ubSectorY, 0, zTempString, lengthof(zTempString), TRUE );
-		swprintf( str, lengthof(str), pMapErrorString[ 12 ], zTempString );
+		zTempString = GetSectorIDString(ubSectorX, ubSectorY, 0, TRUE);
+		str = st_format_printf(pMapErrorString[ 12 ], zTempString);
 	}
 	else if( gubEnemyEncounterCode == ENTERING_BLOODCAT_LAIR_CODE )
 	{
-		wcscpy( str, pMapErrorString[ 13 ] );
+		str = pMapErrorString[ 13 ];
 	}
 
 	if( guiCurrentScreen == MAP_SCREEN )
@@ -3604,7 +3615,6 @@ void PlayerGroupArrivedSafelyInSector(GROUP& g, BOOLEAN const fCheckForNPCs)
 
 
 static void HandlePlayerGroupEnteringSectorToCheckForNPCsOfNoteCallback(MessageBoxReturnValue);
-static bool WildernessSectorWithAllProfiledNPCsNotSpokenWith(INT16 x, INT16 y, INT8 z);
 
 
 static bool HandlePlayerGroupEnteringSectorToCheckForNPCsOfNote(GROUP& g)
@@ -3625,15 +3635,6 @@ static bool HandlePlayerGroupEnteringSectorToCheckForNPCsOfNote(GROUP& g)
 	INT16 const y = g.ubSectorY;
 	INT8  const z = g.ubSectorZ;
 
-	// Don't do this for underground sectors.
-	if (z != 0) return false;
-
-	// Skip towns/pseudo-towns (anything that shows up on the map as being special).
-	if (StrategicMap[CALCULATE_STRATEGIC_INDEX(x, y)].bNameId != BLANK_SECTOR) return false;
-
-	// Skip SAM sites.
-	if (IsThisSectorASAMSector(x, y, z)) return false;
-
 	// Check for profiled NPCs in sector.
 	if (!WildernessSectorWithAllProfiledNPCsNotSpokenWith(x, y, z)) return false;
 
@@ -3641,10 +3642,8 @@ static bool HandlePlayerGroupEnteringSectorToCheckForNPCsOfNote(GROUP& g)
 	gpGroupPrompting = &g;
 
 	// Build string for squad.
-	wchar_t sector_name[128];
-	GetSectorIDString(x, y, z, sector_name, lengthof(sector_name), FALSE);
-	wchar_t msg[128];
-	swprintf(msg, lengthof(msg), pLandMarkInSectorString, g.pPlayerList->pSoldier->bAssignment + 1, sector_name);
+	ST::string sector_name = GetSectorIDString(x, y, z, FALSE);
+	ST::string msg = st_format_printf(pLandMarkInSectorString, g.pPlayerList->pSoldier->bAssignment + 1, sector_name);
 
 	MessageBoxFlags const flags =
 		GroupAtFinalDestination(&g) ? MSG_BOX_FLAG_OK :
@@ -3655,9 +3654,19 @@ static bool HandlePlayerGroupEnteringSectorToCheckForNPCsOfNote(GROUP& g)
 }
 
 
-static bool WildernessSectorWithAllProfiledNPCsNotSpokenWith(INT16 const x, INT16 const y, INT8 const z)
+bool WildernessSectorWithAllProfiledNPCsNotSpokenWith(INT16 const x, INT16 const y, INT8 const z)
 {
 	bool found_somebody = false;
+
+	// Don't do this for underground sectors.
+	if (z != 0) return false;
+
+	// Skip towns/pseudo-towns (anything that shows up on the map as being special).
+	if (StrategicMap[CALCULATE_STRATEGIC_INDEX(x, y)].bNameId != BLANK_SECTOR) return false;
+
+	// Skip SAM sites.
+	if (IsThisSectorASAMSector(x, y, z)) return false;
+
 	for (UINT8 pid = FIRST_RPC; pid != NUM_PROFILES; ++pid)
 	{
 		MERCPROFILESTRUCT const& p = GetProfile(pid);

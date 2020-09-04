@@ -603,15 +603,17 @@ void GetTargetWorldPositions( SOLDIERTYPE *pSoldier, INT16 sTargetGridNo, FLOAT 
 			UINT32 const cth_aim_shot_torso = SoldierToSoldierBodyPartChanceToGetThrough( pSoldier, pTargetSoldier, AIM_SHOT_TORSO );
 			UINT32 const cth_aim_shot_legs = SoldierToSoldierBodyPartChanceToGetThrough( pSoldier, pTargetSoldier, AIM_SHOT_LEGS );
 
+			UINT32 cth_choice = cth_aim_shot_torso;
 			pSoldier->bAimShotLocation = AIM_SHOT_TORSO; // default
 
-			if( cth_aim_shot_legs >= threshold_cth_legs || cth_aim_shot_legs > cth_aim_shot_torso )
+			if (cth_aim_shot_legs >= threshold_cth_legs || (cth_aim_shot_legs + 5) > cth_choice)
 			{
-				pSoldier->bAimShotLocation = AIM_SHOT_HEAD;
+				pSoldier->bAimShotLocation = AIM_SHOT_LEGS;
+				cth_choice = cth_aim_shot_legs;
 			}
 
-			if( cth_aim_shot_head >= threshold_cth_head ||   // good enough, override
-				((cth_aim_shot_head+5) >= cth_aim_shot_torso)) // close enough
+			if (cth_aim_shot_head >= threshold_cth_head ||   // good enough, override
+				cth_aim_shot_head >= cth_choice) // close enough, better if extra damage
 			{
 				pSoldier->bAimShotLocation = AIM_SHOT_HEAD;
 			}
@@ -732,7 +734,7 @@ static BOOLEAN UseGun(SOLDIERTYPE* pSoldier, INT16 sTargetGridNo)
 					sprintf( zBurstString, SOUNDSDIR "/weapons/silencer burst %d.wav", pSoldier->bBulletsLeft );
 
 					// Try playing sound...
-					pSoldier->iBurstSoundID = PlayLocationJA2SampleFromFile(pSoldier->sGridNo, zBurstString, HIGHVOLUME, 1);
+					pSoldier->uiBurstSoundID = PlayLocationJA2SampleFromFile(pSoldier->sGridNo, zBurstString, HIGHVOLUME, 1);
 				}
 				else
 				{
@@ -742,13 +744,13 @@ static BOOLEAN UseGun(SOLDIERTYPE* pSoldier, INT16 sTargetGridNo)
 							pSoldier->bBulletsLeft);
 
 					// Try playing sound...
-					pSoldier->iBurstSoundID = PlayLocationJA2SampleFromFile(pSoldier->sGridNo, zBurstString, HIGHVOLUME, 1);
+					pSoldier->uiBurstSoundID = PlayLocationJA2SampleFromFile(pSoldier->sGridNo, zBurstString, HIGHVOLUME, 1);
 				}
 
-				if ( pSoldier->iBurstSoundID == NO_SAMPLE )
+				if ( pSoldier->uiBurstSoundID == NO_SAMPLE )
 				{
 					// If failed, play normal default....
-					pSoldier->iBurstSoundID = PlayLocationJA2Sample(pSoldier->sGridNo, GCM->getWeapon(usItemNum)->burstSound, HIGHVOLUME, 1);
+					pSoldier->uiBurstSoundID = PlayLocationJA2Sample(pSoldier->sGridNo, GCM->getWeapon(usItemNum)->burstSound, HIGHVOLUME, 1);
 				}
 			}
 
@@ -797,7 +799,7 @@ static BOOLEAN UseGun(SOLDIERTYPE* pSoldier, INT16 sTargetGridNo)
 	}
 	else
 	{
-		uiHitChance = CalcChanceToHitGun( pSoldier, sTargetGridNo, pSoldier->bAimTime, pSoldier->bAimShotLocation );
+		uiHitChance = CalcChanceToHitGun( pSoldier, sTargetGridNo, pSoldier->bAimTime, pSoldier->bAimShotLocation, true );
 	}
 
 	//ATE: Added if we are in meanwhile, we always hit...
@@ -940,7 +942,7 @@ static BOOLEAN UseGun(SOLDIERTYPE* pSoldier, INT16 sTargetGridNo)
 			// Reduce again for attack end 'cause it has been incremented for a normal attack
 			//
 			SLOGD(
-				"Freeing up attacker - ATTACK ANIMATION %hs ENDED BY BAD EXPLOSIVE CHECK, Now %d",
+				"Freeing up attacker - ATTACK ANIMATION %s ENDED BY BAD EXPLOSIVE CHECK, Now %d",
 				gAnimControl[pSoldier->usAnimState].zAnimStr, gTacticalStatus.ubAttackBusyCount);
 			ReduceAttackBusyCount(pSoldier, FALSE);
 
@@ -987,8 +989,8 @@ static BOOLEAN UseGun(SOLDIERTYPE* pSoldier, INT16 sTargetGridNo)
 			{
 				// Increment attack counter...
 				gTacticalStatus.ubAttackBusyCount++;
-				SLOGD("Incrementing Attack: Exaust from LAW",
-					gTacticalStatus.ubAttackBusyCount);
+				SLOGD(ST::format("Incrementing Attack: Exhaust from LAW ({})",
+					gTacticalStatus.ubAttackBusyCount));
 				EVENT_SoldierGotHit(tgt, MINI_GRENADE, 10, 200, pSoldier->bDirection, 0, pSoldier, 0, ANIM_CROUCH, sNewGridNo);
 			}
 		}
@@ -1123,7 +1125,7 @@ static void UseBlade(SOLDIERTYPE* const pSoldier, INT16 const sTargetGridNo)
 			}
 
 			// Send event for getting hit
-			memset( &(SWeaponHit), 0, sizeof( SWeaponHit ) );
+			SWeaponHit = EV_S_WEAPONHIT{};
 			SWeaponHit.usSoldierID = pTargetSoldier->ubID;
 			SWeaponHit.usWeaponIndex = pSoldier->usAttackingWeapon;
 			SWeaponHit.sDamage = (INT16) iImpact;
@@ -1258,7 +1260,7 @@ void UseHandToHand(SOLDIERTYPE* const pSoldier, INT16 const sTargetGridNo, BOOLE
 				if ( iDiceRoll <= iHitChance )
 				{
 					// Was a good steal!
-					ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, g_langRes->Message[ STR_STOLE_SOMETHING ], pSoldier->name, ShortItemNames[ pTargetSoldier->inv[HANDPOS].usItem ] );
+					ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(g_langRes->Message[ STR_STOLE_SOMETHING ], pSoldier->name, ShortItemNames[ pTargetSoldier->inv[HANDPOS].usItem ]) );
 
 					usOldItem = pTargetSoldier->inv[HANDPOS].usItem;
 
@@ -1313,8 +1315,8 @@ void UseHandToHand(SOLDIERTYPE* const pSoldier, INT16 const sTargetGridNo, BOOLE
 				else
 				{
 					ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE,
-						g_langRes->Message[ STR_FAILED_TO_STEAL_SOMETHING ],
-						pSoldier->name, ShortItemNames[ pTargetSoldier->inv[HANDPOS].usItem ] );
+						st_format_printf(g_langRes->Message[ STR_FAILED_TO_STEAL_SOMETHING ],
+						pSoldier->name, ShortItemNames[ pTargetSoldier->inv[HANDPOS].usItem ]) );
 					if ( pSoldier->bTeam == OUR_TEAM )
 					{
 						DoMercBattleSound( pSoldier, BATTLE_SOUND_CURSE1 );
@@ -1374,7 +1376,7 @@ void UseHandToHand(SOLDIERTYPE* const pSoldier, INT16 const sTargetGridNo, BOOLE
 				iImpact = HTHImpact( pSoldier, pTargetSoldier, (iHitChance - iDiceRoll), FALSE );
 
 				// Send event for getting hit
-				memset( &(SWeaponHit), 0, sizeof( SWeaponHit ) );
+				SWeaponHit = EV_S_WEAPONHIT{};
 				SWeaponHit.usSoldierID = pTargetSoldier->ubID;
 				SWeaponHit.usWeaponIndex = pSoldier->usAttackingWeapon;
 				SWeaponHit.sDamage = (INT16) iImpact;
@@ -1528,7 +1530,7 @@ static BOOLEAN UseLauncher(SOLDIERTYPE* pSoldier, INT16 sTargetGridNo)
 
 		// Reduce again for attack end 'cause it has been incremented for a normal attack
 		SLOGD(
-			"Freeing up attacker - ATTACK ANIMATION %hs ENDED BY BAD EXPLOSIVE CHECK, Now %d",
+			"Freeing up attacker - ATTACK ANIMATION %s ENDED BY BAD EXPLOSIVE CHECK, Now %d",
 			gAnimControl[pSoldier->usAnimState].zAnimStr, gTacticalStatus.ubAttackBusyCount);
 		ReduceAttackBusyCount(pSoldier, FALSE);
 
@@ -1566,10 +1568,10 @@ static BOOLEAN UseLauncher(SOLDIERTYPE* pSoldier, INT16 sTargetGridNo)
 	const THROW_PARAMS* const t = pSoldier->pThrowParams;
 	CreatePhysicalObject(pSoldier->pTempObject, t->dLifeSpan, t->dX, t->dY, t->dZ, t->dForceX, t->dForceY, t->dForceZ, pSoldier, t->ubActionCode, t->target);
 
-	MemFree( pSoldier->pTempObject );
+	delete pSoldier->pTempObject;
 	pSoldier->pTempObject = NULL;
 
-	MemFree( pSoldier->pThrowParams );
+	delete pSoldier->pThrowParams;
 	pSoldier->pThrowParams = NULL;
 
 	return( TRUE );
@@ -1585,7 +1587,7 @@ static BOOLEAN DoSpecialEffectAmmoMiss(SOLDIERTYPE* const attacker, const INT16 
 	ubAmmoType = attacker->inv[attacker->ubAttackingHand].ubGunAmmoType;
 	usItem     = attacker->inv[attacker->ubAttackingHand].usItem;
 
-	memset( &AniParams, 0, sizeof( ANITILE_PARAMS ) );
+	AniParams = ANITILE_PARAMS{};
 
 	if ( ubAmmoType == AMMO_HE || ubAmmoType == AMMO_HEAT )
 	{
@@ -1621,16 +1623,12 @@ static BOOLEAN DoSpecialEffectAmmoMiss(SOLDIERTYPE* const attacker, const INT16 
 
 		return( TRUE );
 	}
-	else
+	else if (ubAmmoType == AMMO_MONSTER)
 	{
-		UINT16 gas;
-		switch (usItem)
+		UINT16 gas = GCM->getWeapon(usItem)->usSmokeEffect;
+		if (gas == NONE) 
 		{
-			case CREATURE_YOUNG_MALE_SPIT:
-			case CREATURE_INFANT_SPIT:     gas = VERY_SMALL_CREATURE_GAS; break;
-			case CREATURE_OLD_MALE_SPIT:   gas = SMALL_CREATURE_GAS;      break;
-			case CREATURE_QUEEN_SPIT:      gas = LARGE_CREATURE_GAS;      break;
-			default: return FALSE;
+			return FALSE;
 		}
 
 		// Increment attack busy...
@@ -1863,7 +1861,7 @@ void StructureHit(BULLET* const pBullet, const INT16 sXPos, const INT16 sYPos, c
 					usMissTileIndex = SECONDMISS1;
 
 					// Add ripple
-					memset( &AniParams, 0, sizeof( ANITILE_PARAMS ) );
+					AniParams = ANITILE_PARAMS{};
 					AniParams.sGridNo = sGridNo;
 					AniParams.ubLevelID = ANI_STRUCT_LEVEL;
 					AniParams.usTileIndex = THIRDMISS1;
@@ -1881,7 +1879,7 @@ void StructureHit(BULLET* const pBullet, const INT16 sXPos, const INT16 sYPos, c
 
 				}
 
-				memset( &AniParams, 0, sizeof( ANITILE_PARAMS ) );
+				AniParams = ANITILE_PARAMS{};
 				AniParams.sGridNo = sGridNo;
 				AniParams.ubLevelID = ANI_STRUCT_LEVEL;
 				AniParams.usTileIndex = usMissTileIndex;
@@ -1925,7 +1923,6 @@ void WindowHit( INT16 sGridNo, UINT16 usStructureID, BOOLEAN fBlowWindowSouth, B
 	DB_STRUCTURE   *pWallAndWindowInDB;
 	INT16          sShatterGridNo;
 	UINT16         usTileIndex;
-	ANITILE        *pNode;
 	ANITILE_PARAMS AniParams;
 
 
@@ -2029,7 +2026,7 @@ void WindowHit( INT16 sGridNo, UINT16 usStructureID, BOOLEAN fBlowWindowSouth, B
 		}
 	}
 
-	memset( &AniParams, 0, sizeof( ANITILE_PARAMS ) );
+	AniParams = ANITILE_PARAMS{};
 	AniParams.sGridNo = sShatterGridNo;
 	AniParams.ubLevelID = ANI_STRUCT_LEVEL;
 	AniParams.usTileIndex = usTileIndex;
@@ -2037,7 +2034,7 @@ void WindowHit( INT16 sGridNo, UINT16 usStructureID, BOOLEAN fBlowWindowSouth, B
 	AniParams.sStartFrame = 0;
 	AniParams.uiFlags = ANITILE_FORWARD;
 
-	pNode = CreateAnimationTile( &AniParams );
+	CreateAnimationTile( &AniParams );
 
 	PlayJA2Sample(SoundRange<GLASS_SHATTER1, GLASS_SHATTER2>(), MIDVOLUME, 1, SoundDir(sGridNo));
 }
@@ -2076,7 +2073,7 @@ BOOLEAN InRange(const SOLDIERTYPE* pSoldier, INT16 sGridNo)
 	return( FALSE );
 }
 
-UINT32 CalcChanceToHitGun(SOLDIERTYPE *pSoldier, UINT16 sGridNo, UINT8 ubAimTime, UINT8 ubAimPos )
+UINT32 CalcChanceToHitGun(SOLDIERTYPE *pSoldier, UINT16 sGridNo, UINT8 ubAimTime, UINT8 ubAimPos, BOOLEAN fModify )
 {
 	INT32 iChance, iRange, iSightRange, iMaxRange, iScopeBonus, iBonus; //, minRange;
 	INT32 iGunCondition, iMarksmanship;
@@ -2299,7 +2296,7 @@ UINT32 CalcChanceToHitGun(SOLDIERTYPE *pSoldier, UINT16 sGridNo, UINT8 ubAimTime
 	if ( GCM->getItem(usInHand)->getItemClass() == IC_GUN )
 	{
 		bAttachPos = FindAttachment( pInHand, GUN_BARREL_EXTENDER );
-		if ( bAttachPos != ITEM_NOT_FOUND )
+		if ( bAttachPos != ITEM_NOT_FOUND && fModify)
 		{
 			// reduce status and see if it falls off
 			pInHand->bAttachStatus[ bAttachPos ] -= (INT8) Random( 2 );
@@ -2326,7 +2323,7 @@ UINT32 CalcChanceToHitGun(SOLDIERTYPE *pSoldier, UINT16 sGridNo, UINT8 ubAimTime
 				{
 					DoMercBattleSound( pSoldier, BATTLE_SOUND_CURSE1 );
 
-					ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, gzLateLocalizedString[STR_LATE_46], pSoldier->name);
+					ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(gzLateLocalizedString[STR_LATE_46], pSoldier->name));
 				}
 			}
 		}
@@ -2659,7 +2656,7 @@ UINT32 AICalcChanceToHitGun(SOLDIERTYPE *pSoldier, UINT16 sGridNo, UINT8 ubAimTi
 	// same as CCTHG but fakes the attacker always standing
 	usTrueState = pSoldier->usAnimState;
 	pSoldier->usAnimState = STANDING;
-	uiChance = CalcChanceToHitGun( pSoldier, sGridNo, ubAimTime, ubAimPos );
+	uiChance = CalcChanceToHitGun( pSoldier, sGridNo, ubAimTime, ubAimPos, false );
 	pSoldier->usAnimState = usTrueState;
 	return( uiChance );
 }
@@ -2818,7 +2815,7 @@ INT32 TotalArmourProtection(SOLDIERTYPE& pTarget, const UINT8 ubHitLocation, con
 						if (pTarget.bTeam == OUR_TEAM)
 						{
 							// report plates destroyed!
-							ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, str_ceramic_plates_smashed, pTarget.name);
+							ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(str_ceramic_plates_smashed, pTarget.name));
 						}
 					}
 				}
@@ -3085,17 +3082,17 @@ INT32 BulletImpact( SOLDIERTYPE *pFirer, SOLDIERTYPE * pTarget, UINT8 ubHitLocat
 
 								if (bStatLoss == 1)
 								{
-									ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, g_langRes->Message[STR_LOSES_1_WISDOM], pTarget->name );
+									ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(g_langRes->Message[STR_LOSES_1_WISDOM], pTarget->name) );
 								}
 								else
 								{
-									ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, g_langRes->Message[STR_LOSES_WISDOM], pTarget->name, bStatLoss );
+									ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(g_langRes->Message[STR_LOSES_WISDOM], pTarget->name, bStatLoss) );
 								}
 							}
 						}
 						else if ( pTarget->bNumPelletsHitBy == 0 )
 						{
-							ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, g_langRes->Message[STR_HEAD_HIT], pTarget->name );
+							ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(g_langRes->Message[STR_HEAD_HIT], pTarget->name) );
 						}
 						break;
 					case AIM_SHOT_TORSO:
@@ -3123,11 +3120,11 @@ INT32 BulletImpact( SOLDIERTYPE *pFirer, SOLDIERTYPE * pTarget, UINT8 ubHitLocat
 
 									if (bStatLoss == 1)
 									{
-										ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, g_langRes->Message[STR_LOSES_1_DEX], pTarget->name );
+										ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(g_langRes->Message[STR_LOSES_1_DEX], pTarget->name) );
 									}
 									else
 									{
-										ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, g_langRes->Message[STR_LOSES_DEX], pTarget->name, bStatLoss );
+										ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(g_langRes->Message[STR_LOSES_DEX], pTarget->name, bStatLoss) );
 									}
 								}
 							}
@@ -3145,7 +3142,6 @@ INT32 BulletImpact( SOLDIERTYPE *pFirer, SOLDIERTYPE * pTarget, UINT8 ubHitLocat
 								if (pTarget->ubProfile != NO_PROFILE)
 								{
 									gMercProfiles[ pTarget->ubProfile ].bStrength = pTarget->bStrength;
-									gMercProfiles[pTarget->ubProfile].bStrengthDelta -= bStatLoss;
 								}
 
 								if (pTarget->name[0] && pTarget->bVisible == TRUE)
@@ -3156,11 +3152,11 @@ INT32 BulletImpact( SOLDIERTYPE *pFirer, SOLDIERTYPE * pTarget, UINT8 ubHitLocat
 
 									if (bStatLoss == 1)
 									{
-										ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, g_langRes->Message[STR_LOSES_1_STRENGTH], pTarget->name );
+										ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(g_langRes->Message[STR_LOSES_1_STRENGTH], pTarget->name) );
 									}
 									else
 									{
-										ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, g_langRes->Message[STR_LOSES_STRENGTH], pTarget->name, bStatLoss );
+										ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(g_langRes->Message[STR_LOSES_STRENGTH], pTarget->name, bStatLoss) );
 									}
 								}
 							}
@@ -3189,11 +3185,11 @@ INT32 BulletImpact( SOLDIERTYPE *pFirer, SOLDIERTYPE * pTarget, UINT8 ubHitLocat
 
 								if (bStatLoss == 1)
 								{
-									ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, g_langRes->Message[STR_LOSES_1_AGIL], pTarget->name );
+									ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(g_langRes->Message[STR_LOSES_1_AGIL], pTarget->name) );
 								}
 								else
 								{
-									ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, g_langRes->Message[STR_LOSES_AGIL], pTarget->name, bStatLoss );
+									ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(g_langRes->Message[STR_LOSES_AGIL], pTarget->name, bStatLoss) );
 								}
 							}
 						}
@@ -3202,7 +3198,7 @@ INT32 BulletImpact( SOLDIERTYPE *pFirer, SOLDIERTYPE * pTarget, UINT8 ubHitLocat
 			}
 			else if ( ubHitLocation == AIM_SHOT_HEAD && pTarget->bNumPelletsHitBy == 0 )
 			{
-				ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, g_langRes->Message[STR_HEAD_HIT], pTarget->name );
+				ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(g_langRes->Message[STR_HEAD_HIT], pTarget->name) );
 			}
 		}
 	}
@@ -3262,7 +3258,7 @@ INT32 HTHImpact(const SOLDIERTYPE* const att, const SOLDIERTYPE* const tgt, cons
 }
 
 
-void ShotMiss(const BULLET* const b)
+void ShotMiss(const BULLET* const b, bool bMute)
 {
 	SOLDIERTYPE* const pAttacker = b->pFirer;
 	SOLDIERTYPE* const opponent = pAttacker->opponent;
@@ -3284,7 +3280,7 @@ void ShotMiss(const BULLET* const b)
 
 			// PLAY SOUND AND FLING DEBRIS
 			// RANDOMIZE SOUND SYSTEM
-			if (!DoSpecialEffectAmmoMiss(pAttacker, NOWHERE, 0, 0, 0, TRUE, TRUE, NULL))
+			if (!DoSpecialEffectAmmoMiss(pAttacker, NOWHERE, 0, 0, 0, TRUE, TRUE, NULL) && !bMute)
 			{
 				PlayJA2Sample(SoundRange<MISS_1, MISS_8>(), HIGHVOLUME, 1, MIDDLEPAN);
 			}
@@ -3298,7 +3294,10 @@ void ShotMiss(const BULLET* const b)
 			break;
 
 		case MONSTERCLASS:
-			PlayJA2Sample(SPIT_RICOCHET, HIGHVOLUME, 1, MIDDLEPAN);
+			if (!bMute)
+			{
+				PlayJA2Sample(SPIT_RICOCHET, HIGHVOLUME, 1, MIDDLEPAN);
+			}
 			break;
 	}
 
@@ -3868,7 +3867,7 @@ void ChangeWeaponMode(SOLDIERTYPE* const s)
 			}
 			else
 			{
-				ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_UI_FEEDBACK, g_langRes->Message[STR_NOT_BURST_CAPABLE], s->name);
+				ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_UI_FEEDBACK, st_format_printf(g_langRes->Message[STR_NOT_BURST_CAPABLE], s->name));
 			}
 			break;
 

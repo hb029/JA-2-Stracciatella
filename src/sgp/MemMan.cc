@@ -37,11 +37,11 @@ void ShutdownMemoryManager(void)
 {
 	if (MemDebugCounter != 0)
 	{
-		SLOGE("Memory leak detected: \n\
-					%d memory blocks still allocated\n\
-					%d bytes memory total was allocated\n\
-					%d bytes memory total was freed",
-					MemDebugCounter, guiMemAlloced, guiMemFreed);
+		SLOGE(ST::format("Memory leak detected: \n\
+					{} memory blocks still allocated\n\
+					{} bytes memory total was allocated\n\
+					{} bytes memory total was freed",
+					MemDebugCounter, guiMemAlloced, guiMemFreed));
 	}
 	fMemManagerInit = FALSE;
 }
@@ -58,4 +58,26 @@ void* XRealloc(void* const ptr, size_t const size)
 	void* const p = realloc(ptr, size);
 	if (!p) throw std::bad_alloc();
 	return p;
+}
+
+/// Allocate memory in C++.
+///
+/// This is a global replacement of `operator new`.
+/// The other versions of `operator new` call this replacement by default in C++11.
+///
+/// @see https://en.cppreference.com/w/cpp/memory/new/operator_new
+void* operator new(std::size_t size)
+{
+	return MemAlloc(size);
+}
+
+/// Deallocate memory in C++.
+///
+/// This is a global replacement of `operator delete`.
+/// The other versions of `operator delete` call this replacement by default in C++11.
+///
+/// @see https://en.cppreference.com/w/cpp/memory/new/operator_delete
+void operator delete(void* ptr) noexcept
+{
+	MemFree(ptr);
 }

@@ -21,9 +21,16 @@
 #include "VSurface.h"
 #include "Font_Control.h"
 #include "Meanwhile.h"
+#include "StrategicMap.h"
+#include "MapScreen.h"
 
 #include "ContentManager.h"
 #include "GameInstance.h"
+#include "ShippingDestinationModel.h"
+
+#include <string_theory/format>
+#include <string_theory/string>
+
 
 #define FLOWER_ORDEER_TINY_FONT				FONT10ARIAL
 #define FLOWER_ORDEER_SMALL_FONT			FONT12ARIAL
@@ -144,34 +151,6 @@
 // the screen size.
 static SGPPoint g_order_check_box_pos[6];
 
-struct FlowerOrderLocationStruct
-{
-	UINT8 ubNextDayDeliveryCost;
-	UINT8 ubWhenItGetsThereCost;
-};
-
-#define FLOWER_ORDER_NUMBER_OF_DROP_DOWN_LOCATIONS (pDeliveryLocationStrings_SIZE)
-
-FlowerOrderLocationStruct FlowerOrderLocations[FLOWER_ORDER_NUMBER_OF_DROP_DOWN_LOCATIONS]={
-	{20, 15},
-	{95, 70},
-	{100, 75},
-	{50, 35},
-	{70, 50},
-	{45, 35},
-	{30, 25},
-	{100, 75},
-	{100, 75},
-	{30, 25},
-	{95, 70},
-	{30, 25},
-	{40, 30},
-	{45, 35},
-	{95, 70},
-	{50, 40},
-	{40, 30}
-};
-
 static SGPVObject* guiDeliveryLocation;
 static SGPVObject* guiFlowerFrame;
 static SGPVObject* guiCurrentlySelectedFlowerImage;
@@ -203,8 +182,8 @@ static UINT8 gubFlowerDestDropDownMode;
 static UINT8 gubCurrentlySelectedFlowerLocation;
 
 
-static wchar_t gsSentimentTextField[FLOWER_ORDER_PERSONEL_SENTIMENT_NUM_CHARS];
-static wchar_t gsNameTextField[FLOWER_ORDER_NAME_FIELD_NUM_CHARS];
+static ST::string gsSentimentTextField;
+static ST::string gsNameTextField;
 
 
 //buttons
@@ -243,10 +222,10 @@ static MOUSE_REGION gSelectedFloristDisableDropDownRegion;
 
 
 //mouse region for the drop down city location area
-static MOUSE_REGION gSelectedFlowerDropDownRegion[FLOWER_ORDER_NUMBER_OF_DROP_DOWN_LOCATIONS];
+static std::vector<MOUSE_REGION> gSelectedFlowerDropDownRegion;
 
 
-static GUIButtonRef MakeButton(const wchar_t* text, INT16 x, INT16 y, GUI_CALLBACK click)
+static GUIButtonRef MakeButton(const ST::string& text, INT16 x, INT16 y, GUI_CALLBACK click)
 {
 	const INT16 shadow_col = FLORIST_BUTTON_TEXT_SHADOW_COLOR;
 	GUIButtonRef const btn = CreateIconAndTextButton(guiFlowerOrderButtonImage, text, FLORIST_BUTTON_TEXT_FONT, FLORIST_BUTTON_TEXT_UP_COLOR, shadow_col, FLORIST_BUTTON_TEXT_DOWN_COLOR, shadow_col, x, y, MSYS_PRIORITY_HIGH, click);
@@ -373,8 +352,8 @@ void ExitFloristOrderForm()
 	RemoveButton( guiFlowerOrderGalleryButton );
 
 	//Store the text fields
-	wcslcpy(gsSentimentTextField, GetStringFromField(1), lengthof(gsSentimentTextField));
-	wcslcpy(gsNameTextField,      GetStringFromField(2), lengthof(gsNameTextField));
+	gsSentimentTextField = GetStringFromField(1);
+	gsNameTextField = GetStringFromField(2);
 	gbCurrentlySelectedCard = -1;
 
 
@@ -424,8 +403,7 @@ void RenderFloristOrderForm()
 	//The flower name
 	usPosX = StringPixLength( sOrderFormText[FLORIST_ORDER_NAME_BOUQUET], FLOWER_ORDEER_SMALL_FONT) + 5 + FLOWER_ORDER_FLOWER_NAME_X;
 	uiStartLoc = FLOR_GALLERY_TEXT_TOTAL_SIZE * guiCurrentlySelectedFlower;
-	wchar_t sTemp[FLOR_GALLERY_TEXT_TITLE_SIZE];
-	GCM->loadEncryptedString(FLOR_GALLERY_TEXT_FILE, sTemp, uiStartLoc, FLOR_GALLERY_TEXT_TITLE_SIZE);
+	ST::string sTemp = GCM->loadEncryptedString(FLOR_GALLERY_TEXT_FILE, uiStartLoc, FLOR_GALLERY_TEXT_TITLE_SIZE);
 	DrawTextToScreen(sTemp, usPosX, FLOWER_ORDER_FLOWER_NAME_Y, 0, FLOWER_ORDEER_SMALL_FONT, FLOWER_ORDEER_SMALL_COLOR, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 
 
@@ -503,7 +481,8 @@ static void BtnFlowerOrderSendButtonCallback(GUI_BUTTON *btn, INT32 reason)
 		//add an entry in the finacial page for the medical deposit
 		AddTransactionToPlayersBook(PURCHASED_FLOWERS, 0, GetWorldTotalMin(), -(INT32)guiFlowerPrice);
 
-		if (gubCurrentlySelectedFlowerLocation == 7)
+		auto destination = GCM->getShippingDestination(gubCurrentlySelectedFlowerLocation);
+		if (GetTownIdForSector(destination->getDeliverySector()) == MEDUNA)
 		{
 			// sent to meduna!
 			if (gfFLoristCheckBox0Down)
@@ -638,12 +617,12 @@ static void DisplayFlowerDynamicItems(void)
 {
 	UINT32	uiStartLoc=0;
 	UINT16	usPosX;
-	wchar_t	sTemp[ 640 ];
+	ST::string sTemp;
 	UINT16	usPrice;
 
 	//order number
 	usPosX = StringPixLength( sOrderFormText[FLORIST_ORDER_ORDER_NUMBER], FLOWER_ORDEER_SMALL_FONT) + 5 + FLOWER_ORDER_ORDER_NUM_NAME_X;
-	swprintf(sTemp, lengthof(sTemp), L"%d", LaptopSaveInfo.uiFlowerOrderNumber );
+	sTemp = ST::format("{}", LaptopSaveInfo.uiFlowerOrderNumber);
 	DrawTextToScreen(sTemp, usPosX, FLOWER_ORDER_ORDER_NUM_NAME_Y, 0, FLOWER_ORDEER_SMALL_FONT, FLOWER_ORDEER_SMALL_COLOR, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 
 	guiFlowerPrice = 0;
@@ -666,17 +645,18 @@ static void DisplayFlowerDynamicItems(void)
 	//price
 	usPosX = StringPixLength( sOrderFormText[FLORIST_ORDER_PRICE], FLOWER_ORDEER_SMALL_FONT) + 5 + FLOWER_ORDER_BOUQUET_NAME_X;
 	uiStartLoc = FLOR_GALLERY_TEXT_TOTAL_SIZE * guiCurrentlySelectedFlower + FLOR_GALLERY_TEXT_TITLE_SIZE;
-	GCM->loadEncryptedString(FLOR_GALLERY_TEXT_FILE, sTemp, uiStartLoc, FLOR_GALLERY_TEXT_PRICE_SIZE);
-	swscanf( sTemp, L"%hu", &usPrice);
+	sTemp = GCM->loadEncryptedString(FLOR_GALLERY_TEXT_FILE, uiStartLoc, FLOR_GALLERY_TEXT_PRICE_SIZE);
+	sscanf(sTemp.c_str(), "%hu", &usPrice);
 
 	//if its the next day delivery
+	auto destination = GCM->getShippingDestination(gubCurrentlySelectedFlowerLocation);
 	if( gfFLoristCheckBox0Down )
-		guiFlowerPrice += usPrice + FlowerOrderLocations[ gubCurrentlySelectedFlowerLocation ].ubNextDayDeliveryCost;
+		guiFlowerPrice += usPrice + destination->flowersNextDayDeliveryCost;
 	//else its the 'when it gets there' delivery
 	else
-		guiFlowerPrice += usPrice + FlowerOrderLocations[ gubCurrentlySelectedFlowerLocation ].ubWhenItGetsThereCost;
+		guiFlowerPrice += usPrice + destination->flowersWhenItGetsThereCost;
 
-	swprintf(sTemp, lengthof(sTemp), L"$%d.00 %ls", guiFlowerPrice, pMessageStrings[MSG_USDOLLAR_ABBREVIATION]);
+	sTemp = ST::format("${}.00 {}", guiFlowerPrice, pMessageStrings[MSG_USDOLLAR_ABBREVIATION]);
 	DrawTextToScreen(sTemp, usPosX, FLOWER_ORDER_BOUQUET_NAME_Y, 0, FLOWER_ORDEER_SMALL_FONT, FLOWER_ORDEER_SMALL_COLOR, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 }
 
@@ -744,11 +724,11 @@ static void GetInputText()
 	UINT8 const text_field_id = GetActiveFieldID();
 	if (text_field_id == 1)
 	{ // The personel sentiment field
-		wcslcpy(gsSentimentTextField, GetStringFromField(text_field_id), lengthof(gsSentimentTextField));
+		gsSentimentTextField = GetStringFromField(text_field_id);
 	}
 	else if (text_field_id == 2)
 	{ // The name field
-		wcslcpy(gsNameTextField, GetStringFromField(text_field_id), lengthof(gsNameTextField));
+		gsNameTextField = GetStringFromField(text_field_id);
 	}
 
 	SetActiveField(0);
@@ -786,7 +766,9 @@ static BOOLEAN CreateDestroyFlowerOrderDestDropDown(UINT8 ubDropDownMode)
 
 			usPosX = FLOWER_ORDER_DROP_DOWN_CITY_START_X;
 			usPosY = FLOWER_ORDER_DROP_DOWN_CITY_START_Y;
-			for( i=0; i< FLOWER_ORDER_NUMBER_OF_DROP_DOWN_LOCATIONS; i++)
+
+			gSelectedFlowerDropDownRegion.resize(GCM->getShippingDestinations().size(),	{});
+			for (i = 0; i < gSelectedFlowerDropDownRegion.size(); i++)
 			{
 				MSYS_DefineRegion(&gSelectedFlowerDropDownRegion[i], usPosX, usPosY + 4, usPosX + FLOWER_ORDER_DROP_DOWN_LOCATION_WIDTH, usPosY + usFontHeight, MSYS_PRIORITY_HIGH + 3, CURSOR_WWW, SelectFlowerDropDownMovementCallBack, SelectFlowerDropDownRegionCallBack);
 				MSYS_SetRegionUserData( &gSelectedFlowerDropDownRegion[ i ], 0, i);
@@ -803,7 +785,7 @@ static BOOLEAN CreateDestroyFlowerOrderDestDropDown(UINT8 ubDropDownMode)
 
 				//disable the text entry fields
 				//DisableAllTextFields();
-				wcslcpy(gsSentimentTextField, GetStringFromField(1), lengthof(gsSentimentTextField));
+				gsSentimentTextField = GetStringFromField(1);
 				KillTextInputMode();
 
 				//disable the clear order and accept order buttons, (their rendering interferes with the drop down graphics)
@@ -812,17 +794,17 @@ static BOOLEAN CreateDestroyFlowerOrderDestDropDown(UINT8 ubDropDownMode)
 
 		case FLOWER_ORDER_DROP_DOWN_DESTROY:
 		{
-			UINT8 i;
-
 			if( !fMouseRegionsCreated )
 				break;
 
-			for( i=0; i< FLOWER_ORDER_NUMBER_OF_DROP_DOWN_LOCATIONS; i++)
-				MSYS_RemoveRegion( &gSelectedFlowerDropDownRegion[i]);
+			for (auto& region : gSelectedFlowerDropDownRegion)
+			{
+				MSYS_RemoveRegion(&region);
+			}
 
 			//display the name on the title bar
 			ColorFillVideoSurfaceArea( FRAME_BUFFER, FLOWER_ORDER_DROP_DOWN_LOCATION_X+3, FLOWER_ORDER_DELIVERY_LOCATION_Y+3, FLOWER_ORDER_DROP_DOWN_LOCATION_X+FLOWER_ORDER_DROP_DOWN_LOCATION_WIDTH,	FLOWER_ORDER_DELIVERY_LOCATION_Y+FLOWER_ORDER_DELIVERY_LOCATION_HEIGHT-2, Get16BPPColor( FROMRGB( 0, 0, 0 ) ) );
-			DrawTextToScreen((pDeliveryLocationStrings[gubCurrentlySelectedFlowerLocation]), FLOWER_ORDER_DROP_DOWN_CITY_START_X + 6, FLOWER_ORDER_DROP_DOWN_CITY_START_Y + 3, 0, FLOWER_ORDEER_DROP_DOWN_FONT, FLOWER_ORDEER_DROP_DOWN_COLOR, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
+			DrawTextToScreen(*(GCM->getShippingDestinationName(gubCurrentlySelectedFlowerLocation)), FLOWER_ORDER_DROP_DOWN_CITY_START_X + 6, FLOWER_ORDER_DROP_DOWN_CITY_START_Y + 3, 0, FLOWER_ORDEER_DROP_DOWN_FONT, FLOWER_ORDEER_DROP_DOWN_COLOR, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 
 			//enable the drop down region
 			gSelectedFloristDisableDropDownRegion.Disable();
@@ -883,9 +865,9 @@ static BOOLEAN CreateDestroyFlowerOrderDestDropDown(UINT8 ubDropDownMode)
 
 			//Display the list of cities
 			usPosY = FLOWER_ORDER_DROP_DOWN_CITY_START_Y + 3;
-			for( i=0; i< FLOWER_ORDER_NUMBER_OF_DROP_DOWN_LOCATIONS; i++)
+			for (i = 0; i < GCM->getShippingDestinations().size(); i++)
 			{
-				DrawTextToScreen((pDeliveryLocationStrings[i]), FLOWER_ORDER_DROP_DOWN_CITY_START_X + 6, usPosY, 0, FLOWER_ORDEER_DROP_DOWN_FONT, FLOWER_ORDEER_DROP_DOWN_COLOR, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
+				DrawTextToScreen(*(GCM->getShippingDestinationName(i)), FLOWER_ORDER_DROP_DOWN_CITY_START_X + 6, usPosY, 0, FLOWER_ORDEER_DROP_DOWN_FONT, FLOWER_ORDEER_DROP_DOWN_COLOR, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 				usPosY += usFontHeight + 2;
 			}
 
@@ -910,7 +892,7 @@ static void FlowerOrderDrawSelectedCity(UINT8 ubNumber)
 	ColorFillVideoSurfaceArea( FRAME_BUFFER, FLOWER_ORDER_DROP_DOWN_CITY_START_X, usPosY+2, FLOWER_ORDER_DROP_DOWN_CITY_START_X+FLOWER_ORDER_DROP_DOWN_LOCATION_WIDTH-9,	usPosY+usFontHeight+4, Get16BPPColor( FROMRGB( 255, 255, 255 ) ) );
 
 	SetFontShadow(NO_SHADOW);
-	DrawTextToScreen((pDeliveryLocationStrings[ubNumber]), FLOWER_ORDER_DROP_DOWN_CITY_START_X + 6, usPosY + 3, 0, FLOWER_ORDEER_DROP_DOWN_FONT, 2, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
+	DrawTextToScreen(*(GCM->getShippingDestinationName(ubNumber)), FLOWER_ORDER_DROP_DOWN_CITY_START_X + 6, usPosY + 3, 0, FLOWER_ORDEER_DROP_DOWN_FONT, 2, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 	SetFontShadow(DEFAULT_SHADOW);
 
 	FlowerOrderDisplayShippingLocationCity();
@@ -921,7 +903,7 @@ static void FlowerOrderDisplayShippingLocationCity(void)
 {
 	//display the name on the title bar
 	ColorFillVideoSurfaceArea( FRAME_BUFFER, FLOWER_ORDER_DROP_DOWN_LOCATION_X+3, FLOWER_ORDER_DELIVERY_LOCATION_Y+3, FLOWER_ORDER_DROP_DOWN_LOCATION_X+FLOWER_ORDER_DROP_DOWN_LOCATION_WIDTH,	FLOWER_ORDER_DELIVERY_LOCATION_Y+FLOWER_ORDER_DELIVERY_LOCATION_HEIGHT-2, Get16BPPColor( FROMRGB( 0, 0, 0 ) ) );
-	DrawTextToScreen((pDeliveryLocationStrings[gubCurrentlySelectedFlowerLocation]), FLOWER_ORDER_DELIVERY_LOCATION_X + 5, FLOWER_ORDER_DELIVERY_LOCATION_Y + 5, 0, FLOWER_ORDEER_SMALL_FONT, FLOWER_ORDEER_SMALL_COLOR, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
+	DrawTextToScreen(*(GCM->getShippingDestinationName(gubCurrentlySelectedFlowerLocation)), FLOWER_ORDER_DELIVERY_LOCATION_X + 5, FLOWER_ORDER_DELIVERY_LOCATION_Y + 5, 0, FLOWER_ORDEER_SMALL_FONT, FLOWER_ORDEER_SMALL_COLOR, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 }
 
 
@@ -942,13 +924,11 @@ static void InitFlowerOrderTextInputBoxes(void)
 		//Get and display the card saying
 		//Display Flower Desc
 
-		wchar_t	sTemp[FLOR_CARD_TEXT_TITLE_SIZE];
 		const UINT32 uiStartLoc = FLOR_CARD_TEXT_TITLE_SIZE * gbCurrentlySelectedCard;
-		GCM->loadEncryptedString( FLOR_CARD_TEXT_FILE, sTemp, uiStartLoc, FLOR_CARD_TEXT_TITLE_SIZE);
-		wchar_t	sText[FLOR_CARD_TEXT_TITLE_SIZE];
-		CleanOutControlCodesFromString(sTemp, sText);
+		ST::string sTemp = GCM->loadEncryptedString( FLOR_CARD_TEXT_FILE, uiStartLoc, FLOR_CARD_TEXT_TITLE_SIZE);
+		ST::string sText = CleanOutControlCodesFromString(sTemp);
 
-		wcslcpy(gsSentimentTextField, sText, lengthof(gsSentimentTextField));
+		gsSentimentTextField = sText;
 
 		gbCurrentlySelectedCard = -1;
 
@@ -995,8 +975,6 @@ static void HandleFloristOrderKeyBoardInput(void)
 //Initialize the Florsit Order Page (reset some variables)
 void InitFloristOrderForm()
 {
-	gsSentimentTextField[0] = 0;
-
 	gfFLoristCheckBox0Down = FALSE; // next day delviery
 	gfFLoristCheckBox1Down = TRUE; // when it gets there delivery
 	gfFLoristCheckBox2Down = FALSE;
@@ -1009,7 +987,6 @@ void InitFloristOrderForm()
 	gubCurrentlySelectedFlowerLocation = 0;
 	gbCurrentlySelectedCard = -1;
 
-	gsSentimentTextField[0] = 0;
-	gsNameTextField[0] = 0;
-
+	gsSentimentTextField = ST::null;
+	gsNameTextField = ST::null;
 }

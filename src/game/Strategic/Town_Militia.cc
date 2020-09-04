@@ -26,7 +26,15 @@
 #include "Debug.h"
 #include "ScreenIDs.h"
 #include "UILayout.h"
+#include "ContentManager.h"
+#include "GameInstance.h"
+#include "TownModel.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
+#include <algorithm>
+#include <iterator>
 
 #define SIZE_OF_MILITIA_COMPLETED_TRAINING_LIST 50
 
@@ -420,7 +428,7 @@ static void PayMilitiaTrainingYesNoBoxCallback(MessageBoxReturnValue);
 
 void HandleInterfaceMessageForCostOfTrainingMilitia( SOLDIERTYPE *pSoldier )
 {
-	wchar_t sString[ 128 ];
+	ST::string sString;
 	INT32 iNumberOfSectors = 0;
 
 	pMilitiaTrainerSoldier = pSoldier;
@@ -437,7 +445,7 @@ void HandleInterfaceMessageForCostOfTrainingMilitia( SOLDIERTYPE *pSoldier )
 
 	if( LaptopSaveInfo.iCurrentBalance < giTotalCostOfTraining )
 	{
-		swprintf(sString, lengthof(sString), pMilitiaConfirmStrings[7], giTotalCostOfTraining);
+		sString = st_format_printf(pMilitiaConfirmStrings[7], giTotalCostOfTraining);
 		DoScreenIndependantMessageBox( sString, MSG_BOX_FLAG_OK, CantTrainMilitiaOkBoxCallback );
 		return;
 	}
@@ -447,11 +455,11 @@ void HandleInterfaceMessageForCostOfTrainingMilitia( SOLDIERTYPE *pSoldier )
 
 	if( iNumberOfSectors > 1 )
 	{
-		swprintf(sString, lengthof(sString), pMilitiaConfirmStrings[6], iNumberOfSectors, giTotalCostOfTraining, pMilitiaConfirmStrings[1]);
+		sString = st_format_printf(pMilitiaConfirmStrings[6], iNumberOfSectors, giTotalCostOfTraining, pMilitiaConfirmStrings[1]);
 	}
 	else
 	{
-		swprintf( sString, lengthof(sString), L"%ls%d. %ls", pMilitiaConfirmStrings[ 0 ], giTotalCostOfTraining, pMilitiaConfirmStrings[ 1 ] );
+		sString = ST::format("{}{}. {}", pMilitiaConfirmStrings[ 0 ], giTotalCostOfTraining, pMilitiaConfirmStrings[ 1 ]);
 	}
 
 	// if we are in mapscreen, make a pop up
@@ -469,9 +477,9 @@ void HandleInterfaceMessageForCostOfTrainingMilitia( SOLDIERTYPE *pSoldier )
 // continue training?
 static void HandleInterfaceMessageForContinuingTrainingMilitia(SOLDIERTYPE* const pSoldier)
 {
-	wchar_t sString[ 128 ];
+	ST::string sString;
 	INT16 sSectorX = 0, sSectorY = 0;
-	wchar_t sStringB[ 128 ];
+	ST::string sStringB;
 
 	sSectorX = pSoldier->sSectorX;
 	sSectorY = pSoldier->sSectorY;
@@ -487,7 +495,7 @@ static void HandleInterfaceMessageForContinuingTrainingMilitia(SOLDIERTYPE* cons
 	if (!DoesSectorMercIsInHaveSufficientLoyaltyToTrainMilitia(pSoldier))
 	{
 		// loyalty too low to continue training
-		swprintf(sString, lengthof(sString), pMilitiaConfirmStrings[8], pTownNames[GetTownIdForSector(sector)], MIN_RATING_TO_TRAIN_TOWN);
+		sString = st_format_printf(pMilitiaConfirmStrings[8], GCM->getTownName(GetTownIdForSector(sector)), MIN_RATING_TO_TRAIN_TOWN);
 		DoScreenIndependantMessageBox( sString, MSG_BOX_FLAG_OK, CantTrainMilitiaOkBoxCallback );
 		return;
 	}
@@ -499,13 +507,13 @@ static void HandleInterfaceMessageForContinuingTrainingMilitia(SOLDIERTYPE* cons
 		if ( bTownId == BLANK_SECTOR )
 		{
 			// wilderness SAM site
-			GetSectorIDString( sSectorX, sSectorY, 0, sStringB, lengthof(sStringB), TRUE );
-			swprintf(sString, lengthof(sString), pMilitiaConfirmStrings[9], sStringB);
+			sStringB = GetSectorIDString(sSectorX, sSectorY, 0, TRUE);
+			sString = st_format_printf(pMilitiaConfirmStrings[9], sStringB);
 		}
 		else
 		{
 			// town
-			swprintf(sString, lengthof(sString), pMilitiaConfirmStrings[9], pTownNames[bTownId], MIN_RATING_TO_TRAIN_TOWN);
+			sString = st_format_printf(pMilitiaConfirmStrings[9], GCM->getTownName(bTownId), MIN_RATING_TO_TRAIN_TOWN);
 		}
 		DoScreenIndependantMessageBox( sString, MSG_BOX_FLAG_OK, CantTrainMilitiaOkBoxCallback );
 		return;
@@ -518,15 +526,15 @@ static void HandleInterfaceMessageForContinuingTrainingMilitia(SOLDIERTYPE* cons
 	if( LaptopSaveInfo.iCurrentBalance < giTotalCostOfTraining )
 	{
 		// can't afford to continue training
-		swprintf(sString, lengthof(sString), pMilitiaConfirmStrings[7], giTotalCostOfTraining);
+		sString = st_format_printf(pMilitiaConfirmStrings[7], giTotalCostOfTraining);
 		DoScreenIndependantMessageBox( sString, MSG_BOX_FLAG_OK, CantTrainMilitiaOkBoxCallback );
 		return;
 	}
 
 	// ok to continue, ask player
 
-	GetSectorIDString( sSectorX, sSectorY, 0, sStringB, lengthof(sStringB), TRUE );
-	swprintf( sString, lengthof(sString), pMilitiaConfirmStrings[ 3 ], sStringB, pMilitiaConfirmStrings[ 4 ], giTotalCostOfTraining );
+	sStringB = GetSectorIDString(sSectorX, sSectorY, 0, TRUE);
+	sString = st_format_printf(pMilitiaConfirmStrings[ 3 ], sStringB, pMilitiaConfirmStrings[ 4 ], giTotalCostOfTraining);
 
 	// ask player whether he'd like to continue training
 	//DoScreenIndependantMessageBox( sString, MSG_BOX_FLAG_YESNO, PayMilitiaTrainingYesNoBoxCallback );
@@ -814,7 +822,7 @@ static void AddIfTrainingUnpaidSector(SOLDIERTYPE const& s)
 
 static void BuildListOfUnpaidTrainableSectors()
 {
-	memset(gsUnpaidStrategicSector, 0, sizeof(gsUnpaidStrategicSector));
+	std::fill(std::begin(gsUnpaidStrategicSector), std::end(gsUnpaidStrategicSector), 0);
 
 	if (fInMapMode)
 	{
@@ -932,66 +940,46 @@ BOOLEAN MilitiaTrainingAllowedInSector( INT16 sSectorX, INT16 sSectorY, INT8 bSe
 
 BOOLEAN MilitiaTrainingAllowedInTown( INT8 bTownId )
 {
-	switch ( bTownId )
-	{
-		case DRASSEN:
-		case ALMA:
-		case GRUMM:
-		case CAMBRIA:
-		case BALIME:
-		case MEDUNA:
-		case CHITZENA:
-			return(TRUE);
-
-		case OMERTA:
-		case ESTONI:
-		case SAN_MONA:
-		case TIXA:
-		case ORTA:
-			// can't keep militia in these towns
-			return(FALSE);
-
-		case BLANK_SECTOR:
-		default:
-			// not a town sector!
-			return(FALSE);
-
+	auto town = GCM->getTown(bTownId);
+	if (town == NULL) {
+		return false;
 	}
+	return town->isMilitiaTrainingAllowed;
 }
 
 
-static size_t PromoteMilitia(wchar_t* const str, size_t const length, size_t n, INT8 const count, wchar_t const* const singular, wchar_t const* const plural)
+static void PromoteMilitia(ST::string& str, INT8 count, const ST::string& singular, const ST::string& plural)
 {
 	if (count > 0)
 	{
-		if (n != 0) n += swprintf(str + n, length - n, L" ");
+		if (!str.empty()) str += " ";
 		if (count == 1)
 		{
-			n += swprintf(str + n, length - n, singular);
+			str += singular;
 		}
 		else
 		{
-			n += swprintf(str + n, length - n, plural, count);
+			str += st_format_printf(plural, count);
 		}
 	}
-	return n;
 }
 
 
-void BuildMilitiaPromotionsString(wchar_t* const str, size_t const length)
+ST::string BuildMilitiaPromotionsString()
 {
-	str[0] = L'\0';
+	ST::string str;
 
-	if (gbMilitiaPromotions == 0) return;
+	if (gbMilitiaPromotions == 0) return ST::null;
 
-	size_t n = 0;
-	n = PromoteMilitia(str, length, n, gbGreenToElitePromotions, gzLateLocalizedString[STR_LATE_29], gzLateLocalizedString[STR_LATE_22]);
-	n = PromoteMilitia(str, length, n, gbGreenToRegPromotions,   gzLateLocalizedString[STR_LATE_30], gzLateLocalizedString[STR_LATE_23]);
-	n = PromoteMilitia(str, length, n, gbRegToElitePromotions,   gzLateLocalizedString[STR_LATE_31], gzLateLocalizedString[STR_LATE_24]);
+	PromoteMilitia(str, gbGreenToElitePromotions, gzLateLocalizedString[STR_LATE_29], gzLateLocalizedString[STR_LATE_22]);
+	PromoteMilitia(str, gbGreenToRegPromotions,  gzLateLocalizedString[STR_LATE_30], gzLateLocalizedString[STR_LATE_23]);
+	PromoteMilitia(str, gbRegToElitePromotions,  gzLateLocalizedString[STR_LATE_31], gzLateLocalizedString[STR_LATE_24]);
 
 	// Clear the fields
 	gbGreenToElitePromotions = 0;
 	gbGreenToRegPromotions   = 0;
 	gbRegToElitePromotions   = 0;
 	gbMilitiaPromotions      = 0;
+
+	return str;
 }

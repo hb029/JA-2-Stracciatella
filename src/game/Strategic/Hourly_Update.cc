@@ -19,22 +19,16 @@
 #include "History.h"
 #include "Dialogue_Control.h"
 #include "ScreenIDs.h"
-#include "Queen_Command.h"
-#include "Tactical_Save.h"
-#include "MapScreen.h"
-#include "Town_Militia.h"
 
 #include "ContentManager.h"
 #include "GameInstance.h"
 
 
-#define MAX_HOURLY_THEFT_CHANCE (90)
-
 static void HourlyCheckIfSlayAloneSoHeCanLeave(void);
 static void HourlyLarryUpdate(void);
 static void HourlyQuestUpdate(void);
 static void UpdateRegenCounters(void);
-void HourlyLooseItemsFromSectorInventory(void);
+
 
 // This function gets called every hour, on the hour.
 // It spawns the handling of all sorts of stuff:
@@ -72,7 +66,6 @@ void HandleHourlyUpdate()
 
 	PayOffSkyriderDebtIfAny();
 
-	HourlyLooseItemsFromSectorInventory();
 
 	if ( GetWorldHour() % 6 == 0 ) // 4 times a day
 	{
@@ -80,44 +73,6 @@ void HandleHourlyUpdate()
 	}
 }
 
-void HourlyLooseItemsFromSectorInventory()
-{
-	UINT8 ubTheftChance;
-
-	for (INT32 y = 1; y <= 16; ++y)
-	{
-		for (INT32 x = 1; x <= 16; ++x)
-		{
-			SECTORINFO& s = SectorInfo[SECTOR(x, y)];
-			if (!GetSectorFlagStatus(x, y, 0, SF_ALREADY_VISITED)) continue;
-			if (PlayerMercsInSector(x, y, 0)) continue;
-			if (CountAllMilitiaInSector(x, y)) continue;
-
-			if (s.fSurfaceWasEverPlayerControlled &&
-				GetWorldTotalSeconds() - s.uiTimeLastPlayerLiberated > NUM_SEC_IN_HOUR)
-			{
-				// Count the people that might be interested in theft
-				ubTheftChance = s.ubTravelRating + 5 * NumEnemiesInAnySector(x, y, 0);
-
-				// Adjust for loyalty, 100% - no theft chance, 0% maximal theft chance
-				UINT8 const town = GetTownIdForSector(SECTOR(x, y));
-				if (town != BLANK_SECTOR)
-				{
-					ubTheftChance = ((UINT16)ubTheftChance * (MAX_LOYALTY_VALUE - gTownLoyalty[town].ubRating)) / MAX_LOYALTY_VALUE;
-				}
-
-				// Cut a the maximum of 90% chance
-				if (ubTheftChance > MAX_HOURLY_THEFT_CHANCE)
-				{
-					ubTheftChance = MAX_HOURLY_THEFT_CHANCE;
-				}
-
-				// Roll over every admissible item
-				RemoveRandomItemsInSector(x, y, 0, ubTheftChance);
-			}
-		}
-	}
-}
 
 static void UpdateRegenCounters(void)
 {

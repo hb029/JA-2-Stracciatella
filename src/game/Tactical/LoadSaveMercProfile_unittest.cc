@@ -1,4 +1,4 @@
-﻿// -*-coding: utf-8-with-signature-unix;-*-
+﻿// -*-coding: utf-8-unix;-*-
 
 #include "gtest/gtest.h"
 
@@ -21,13 +21,13 @@ TEST(LoadSaveMercProfileTest, vanillaProfile)
 	ExtractImpProfileFromFile(f, &profileId, &portraitNumber, p);
 	EXPECT_EQ(profileId, PLAYER_GENERATED_CHARACTER_ID);
 	EXPECT_EQ(portraitNumber, 0);
-	EXPECT_STREQ(p.zName,         L"Foo Bar .....................");
-	EXPECT_STREQ(p.zNickname,     L".FooBar.");
+	EXPECT_EQ(p.zName, "Foo Bar .....................");
+	EXPECT_EQ(p.zNickname, ".FooBar.");
 	// UINT8 ubFaceIndex;
-	// PaletteRepID PANTS;
-	// PaletteRepID VEST;
-	// PaletteRepID SKIN;
-	// PaletteRepID HAIR;
+	// ST::string PANTS;
+	// ST::string VEST;
+	// ST::string SKIN;
+	// ST::string HAIR;
 	EXPECT_EQ(p.bSex, MALE);
 	// INT8 bArmourAttractiveness;
 	// UINT8 ubMiscFlags2;
@@ -173,13 +173,13 @@ TEST(LoadSaveMercProfileTest, stracLinuxProfile)
 	ExtractImpProfileFromFile(f, &profileId, &portraitNumber, p);
 	EXPECT_EQ(profileId, PLAYER_GENERATED_CHARACTER_ID);
 	EXPECT_EQ(portraitNumber, 0);
-	EXPECT_STREQ(p.zName, L"Vasya Вася Курочкин Kurochki");
-	EXPECT_STREQ(p.zNickname, L"ВАСЯКУРА");
+	EXPECT_EQ(p.zName, "Vasya Вася Курочкин Kurochki");
+	EXPECT_EQ(p.zNickname, "ВАСЯКУРА");
 	// UINT8 ubFaceIndex;
-	// PaletteRepID PANTS;
-	// PaletteRepID VEST;
-	// PaletteRepID SKIN;
-	// PaletteRepID HAIR;
+	// ST::string PANTS;
+	// ST::string VEST;
+	// ST::string SKIN;
+	// ST::string HAIR;
 	EXPECT_EQ(p.bSex, MALE);
 	// INT8 bArmourAttractiveness;
 	// UINT8 ubMiscFlags2;

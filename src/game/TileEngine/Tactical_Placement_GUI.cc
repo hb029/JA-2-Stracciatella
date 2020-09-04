@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "Directories.h"
 #include "Font.h"
 #include "HImage.h"
@@ -43,8 +41,14 @@
 #include "MemMan.h"
 #include "JAScreens.h"
 #include "UILayout.h"
-#include "WorldMan.h"
 #include "Animation_Data.h"
+#include "WorldMan.h"
+
+#include <string_theory/format>
+#include <string_theory/string>
+
+#include <stdexcept>
+
 
 struct MERCPLACEMENT
 {
@@ -99,7 +103,7 @@ static bool gfSouth;
 static bool gfWest;
 
 
-static void MakeButton(UINT idx, INT16 y, GUI_CALLBACK click, const wchar_t* text, const wchar_t* help)
+static void MakeButton(UINT idx, INT16 y, GUI_CALLBACK click, const ST::string& text, const ST::string& help)
 {
 	GUIButtonRef const btn = QuickCreateButton(giOverheadButtonImages[idx], STD_SCREEN_X + 11, STD_SCREEN_Y + y, MSYS_PRIORITY_HIGH, click);
 	iTPButtons[idx] = btn;
@@ -160,7 +164,7 @@ void InitTacticalPlacementGUI()
 		++n;
 	}
 	// Allocate the array based on how many mercs there are.
-	gMercPlacement = MALLOCNZ(MERCPLACEMENT, n);
+	gMercPlacement = new MERCPLACEMENT[n]{};
 
 	// Second pass: Assign the mercs to their respective slots.
 	giPlacements = 0;
@@ -284,9 +288,8 @@ static void RenderTacticalPlacementGUI()
 		}
 
 		SetFontAttributes(BLOCKFONT, FONT_BEIGE);
-		wchar_t str[128];
-		GetSectorIDString(gubPBSectorX, gubPBSectorY, gubPBSectorZ, str, lengthof(str), TRUE);
-		mprintf(STD_SCREEN_X + 120, STD_SCREEN_Y + 335, L"%ls %ls -- %ls...", gpStrategicString[STR_TP_SECTOR], str, gpStrategicString[STR_TP_CHOOSEENTRYPOSITIONS]);
+		ST::string str = GetSectorIDString(gubPBSectorX, gubPBSectorY, gubPBSectorZ, TRUE);
+		MPrint(STD_SCREEN_X + 120, STD_SCREEN_Y + 335, ST::format("{} {} -- {}...", gpStrategicString[STR_TP_SECTOR], str, gpStrategicString[STR_TP_CHOOSEENTRYPOSITIONS]));
 
 		// Shade out the part of the tactical map that isn't considered placable.
 		BlitBufferToBuffer(buf, guiSAVEBUFFER, STD_SCREEN_X + 0, STD_SCREEN_Y + 320, 640, 160);
@@ -356,7 +359,7 @@ static void RenderTacticalPlacementGUI()
 		else
 		{
 			SetFont(FONT10ARIALBOLD);
-			MPrint(qx, qy, L"?");
+			MPrint(qx, qy, "?");
 			InvalidateRegion(qx, qy, qx + 8, qy + 8);
 		}
 	}
@@ -560,13 +563,13 @@ static void ChooseRandomEdgepoints(void)
 			{
 				m.pSoldier->usStrategicInsertionData = ChooseMapEdgepoint(m.ubStrategicInsertionCode);
 				non_water_retry++;
-			} 
+			}
 			while (m.pSoldier->ubBodyType != REGMALE &&
 				m.pSoldier->ubBodyType != BIGMALE &&
 				m.pSoldier->ubBodyType != REGFEMALE &&
 				Water(m.pSoldier->usStrategicInsertionData) &&
 				non_water_retry < 128);
-
+				
 			if (m.pSoldier->usStrategicInsertionData != NOWHERE)
 			{
 				m.pSoldier->ubStrategicInsertionCode = INSERTION_CODE_GRIDNO;

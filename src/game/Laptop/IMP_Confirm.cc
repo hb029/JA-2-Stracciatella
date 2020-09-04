@@ -12,6 +12,7 @@
 #include "IMP_Compile_Character.h"
 #include "IMP_Text_System.h"
 #include "IMP_Confirm.h"
+#include "Items.h"
 #include "Finances.h"
 #include "Soldier_Profile.h"
 #include "Soldier_Profile_Type.h"
@@ -22,6 +23,7 @@
 #include "Game_Clock.h"
 #include "Game_Event_Hook.h"
 #include "LaptopSave.h"
+#include "SaveLoadGame.h"
 #include "Strategic.h"
 #include "Random.h"
 #include "Button_System.h"
@@ -33,6 +35,9 @@
 #include "policy/GamePolicy.h"
 #include "policy/IMPPolicy.h"
 #include "Logger.h"
+
+#include <string_theory/string>
+
 
 #define IMP_MERC_FILE "imp.dat"
 
@@ -68,8 +73,6 @@ static const FacePosInfo g_face_info[] =
 	{  5,  6,  5, 26 }
 };
 
-
-BOOLEAN fLoadingCharacterForPreviousImpProfile = FALSE;
 
 static void BtnIMPConfirmNo(GUI_BUTTON *btn, INT32 reason);
 static void BtnIMPConfirmYes(GUI_BUTTON *btn, INT32 reason);
@@ -112,7 +115,7 @@ void HandleIMPConfirm( void )
 }
 
 
-static void MakeButton(UINT idx, const wchar_t* text, INT16 y, GUI_CALLBACK click)
+static void MakeButton(UINT idx, const ST::string& text, INT16 y, GUI_CALLBACK click)
 {
 	BUTTON_PICS* const img = LoadButtonImage(LAPTOPDIR "/button_2.sti", 0, 1);
 	giIMPConfirmButtonImage[idx] = img;
@@ -154,12 +157,14 @@ static BOOLEAN AddCharacterToPlayersTeam(void)
 	MERC_HIRE_STRUCT HireMercStruct;
 
 
-	// last minute chage to make sure merc with right facehas not only the right body but body specific skills...
-	// ie..small mercs have martial arts..but big guys and women don't don't
+	// last minute change to make sure merc with right face has not only the right body, but body specific skills...
+	// ie. small mercs have martial arts, but big guys and women don't
+	if (!fLoadingCharacterForPreviousImpProfile)
+	{
+		HandleMercStatsForChangesInFace();
+	}
 
-	HandleMercStatsForChangesInFace( );
-
-	memset(&HireMercStruct, 0, sizeof(MERC_HIRE_STRUCT));
+	HireMercStruct = MERC_HIRE_STRUCT{};
 
 	HireMercStruct.ubProfileID = ( UINT8 )( PLAYER_GENERATED_CHARACTER_ID + LaptopSaveInfo.iVoiceId ) ;
 
@@ -217,12 +222,24 @@ static void BtnIMPConfirmYes(GUI_BUTTON *btn, INT32 reason)
 		}
 
 		// line moved by CJC Nov 28 2002 to AFTER the check for money
-		LaptopSaveInfo.fIMPCompletedFlag = TRUE;
+		LaptopSaveInfo.fIMPCompletedFlag = AddCharacterToPlayersTeam();
+		if (!LaptopSaveInfo.fIMPCompletedFlag) return; // only if merc hiring failed: no charge, give it another go
+
+		SOLDIERTYPE* const pSoldier = FindSoldierByProfileID(PLAYER_GENERATED_CHARACTER_ID + LaptopSaveInfo.iVoiceId);
+		if (!pSoldier) return;
+
+		if (fLoadingCharacterForPreviousImpProfile && gamepolicy(imp_load_keep_inventory))
+		{
+			IMPSavedProfileLoadInventory(gMercProfiles[PLAYER_GENERATED_CHARACTER_ID + LaptopSaveInfo.iVoiceId].zNickname, pSoldier);
+			// re-add letter, since it just got wiped and almost certainly is not present in the import
+			if (pSoldier->ubID == 0 && FindObj(pSoldier, LETTER) == NO_SLOT) {
+				CreateSpecialItem(pSoldier, LETTER);
+			}
+		}
 
 		// charge the player
 		AddTransactionToPlayersBook(IMP_PROFILE, (UINT8)(PLAYER_GENERATED_CHARACTER_ID + LaptopSaveInfo.iVoiceId), GetWorldTotalMin(), -COST_OF_PROFILE);
 		AddHistoryToPlayersLog(HISTORY_CHARACTER_GENERATED, 0, GetWorldTotalMin(), -1, -1);
-		AddCharacterToPlayersTeam();
 
 		// write the created imp merc
 		WriteOutCurrentImpCharacter((UINT8)(PLAYER_GENERATED_CHARACTER_ID + LaptopSaveInfo.iVoiceId));
@@ -364,11 +381,6 @@ static void GiveItemsToPC(UINT8 ubProfileId)
 	{
 		MakeProfileInvItemAnySlot(p, COMBAT_KNIFE, 100, 1);
 	}
-
-	if (HasSkillTrait(p, CAMOUFLAGED))
-	{
-		MakeProfileInvItemAnySlot(p, CAMOUFLAGEKIT, 100, 1);
-	}
 }
 
 
@@ -442,9 +454,8 @@ static void WriteOutCurrentImpCharacter(INT32 iProfileId)
 
 void ResetIMPCharactersEyesAndMouthOffsets(const UINT8 ubMercProfileID)
 {
-	// ATE: Check boundary conditions!
 	MERCPROFILESTRUCT& p = GetProfile(ubMercProfileID);
-	if (p.ubFaceIndex - 200 > 16 || ubMercProfileID >= PROF_HUMMER) return;
+	if (p.ubFaceIndex < 200 || p.ubFaceIndex >= 200 + lengthof(g_face_info) || ubMercProfileID >= PROF_HUMMER) return;
 
 	const FacePosInfo* const fi = &g_face_info[p.ubFaceIndex - 200];
 	p.usEyesX  = fi->eye_x;

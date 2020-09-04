@@ -7,7 +7,6 @@
 
 void InitCreatureQuest(void);
 void SpreadCreatures(void);
-void ClearCreatureQuest(void);
 void DeleteCreatureDirectives(void);
 
 void SaveCreatureDirectives(HWFILE);
@@ -15,7 +14,7 @@ void LoadCreatureDirectives(HWFILE, UINT32 uiSavedGameVersion);
 
 BOOLEAN PrepareCreaturesForBattle(void);
 void CreatureNightPlanning(void);
-void CreatureAttackTown( UINT8 ubSectorID, BOOLEAN fOverrideTest );
+void CreatureAttackTown(UINT8 ubSectorID, BOOLEAN fSpecificSector);
 
 void CheckConditionsForTriggeringCreatureQuest( INT16 sSectorX, INT16 sSectorY, INT8 bSectorZ );
 
@@ -41,6 +40,18 @@ enum{
 	CREATURE_BATTLE_CODE_PREBATTLEINTERFACE,
 	CREATURE_BATTLE_CODE_AUTORESOLVE,
 };
+
+enum
+{
+	QUEEN_LAIR,		//where the queen lives.  Highly protected
+	LAIR,			//part of the queen's lair -- lots of babies and defending mothers
+	LAIR_ENTRANCE,		//where the creatures access the mine.
+	INNER_MINE,		//parts of the mines that aren't close to the outside world
+	OUTER_MINE,		//area's where miners work, close to towns, creatures love to eat :)
+	FEEDING_GROUNDS,	//creatures love to populate these sectors :)
+	MINE_EXIT,		//the area that creatures can initiate town attacks if lots of monsters.
+};
+
 extern UINT8 gubCreatureBattleCode;
 
 void DetermineCreatureTownComposition(UINT8 ubNumCreatures,

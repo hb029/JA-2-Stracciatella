@@ -55,6 +55,8 @@
 #include "GameInstance.h"
 #include "Logger.h"
 
+#include <vector>
+
 static BOOLEAN gfWasInMeanwhile = FALSE;
 
 
@@ -213,13 +215,15 @@ void LoadMapTempFilesFromSavedGameFile(HWFILE const f, UINT32 const savegame_ver
 }
 
 
-void SaveWorldItemsToTempItemFile(INT16 const sMapX, INT16 const sMapY, INT8 const bMapZ, UINT32 const uiNumberOfItems, WORLDITEM const* const pData)
+void SaveWorldItemsToTempItemFile(INT16 const sMapX, INT16 const sMapY, INT8 const bMapZ, const std::vector<WORLDITEM>& items)
 {
 	{
 		char filename[128];
 		GetMapTempFileName(SF_ITEM_TEMP_FILE_EXISTS, filename, sMapX, sMapY, bMapZ);
 		AutoSGPFile f(FileMan::openForWriting(filename));
-		FileWriteArray(f, uiNumberOfItems, pData);
+		Assert(items.size() <= UINT32_MAX);
+		UINT32 numItems = static_cast<UINT32>(items.size());
+		FileWriteArray(f, numItems, items.data());
 		// Close the file before
 		// SynchronizeItemTempFileVisbleItemsToSectorInfoVisbleItems() reads it
 	}
@@ -229,78 +233,69 @@ void SaveWorldItemsToTempItemFile(INT16 const sMapX, INT16 const sMapY, INT8 con
 }
 
 
-void LoadWorldItemsFromTempItemFile(INT16 const x, INT16 const y, INT8 const z, UINT32* const item_count, WORLDITEM** const items)
+std::vector<WORLDITEM> LoadWorldItemsFromTempItemFile(INT16 const x, INT16 const y, INT8 const z)
 {
 	char filename[128];
 	GetMapTempFileName(SF_ITEM_TEMP_FILE_EXISTS, filename, x, y, z);
 
-	UINT32                 l_item_count;
-	SGP::Buffer<WORLDITEM> l_items;
+	std::vector<WORLDITEM> l_items;
 	// If the file doesn't exists, it's no problem
 	if (GCM->doesGameResExists(filename))
 	{
 		AutoSGPFile f(GCM->openGameResForReading(filename));
 
-		FileRead(f, &l_item_count, sizeof(l_item_count));
-		if (l_item_count != 0)
+		UINT32 numItems = 0;
+		FileRead(f, &numItems, sizeof(UINT32));
+		if (numItems != 0)
 		{
-			l_items.Allocate(l_item_count);
-			FileRead(f, l_items, l_item_count * sizeof(*l_items));
+			l_items.assign(numItems, WORLDITEM{});
+			FileRead(f, l_items.data(), numItems * sizeof(WORLDITEM));
 		}
 	}
-	else
-	{
-		l_item_count = 0;
-	}
-	*item_count = l_item_count;
-	*items      = l_items.Release();
+	return l_items;
 }
 
 
 void AddItemsToUnLoadedSector(INT16 const sMapX, INT16 const sMapY, INT8 const bMapZ, INT16 const sGridNo, UINT32 const uiNumberOfItemsToAdd, OBJECTTYPE const* const pObject, UINT8 const ubLevel, UINT16 const usFlags, INT8 const bRenderZHeightAboveLevel, Visibility const bVisible)
 {
-	UINT32     uiNumberOfItems;
-	WORLDITEM* wis;
-	LoadWorldItemsFromTempItemFile(sMapX, sMapY, bMapZ, &uiNumberOfItems, &wis);
+	std::vector<WORLDITEM> wis = LoadWorldItemsFromTempItemFile(sMapX, sMapY, bMapZ);
 
 	//loop through all the objects to add
 	for (UINT32 uiLoop1 = 0; uiLoop1 < uiNumberOfItemsToAdd; ++uiLoop1)
 	{
 		// Loop through the array to see if there is a free spot to add an item to it
-		UINT32 cnt;
+		size_t cnt;
 		for (cnt = 0;; ++cnt)
 		{
-			if (cnt == uiNumberOfItems)
+			if (cnt == wis.size())
 			{
 				//Error, there wasnt a free spot.  Reallocate memory for the array
-				wis = REALLOC(wis, WORLDITEM, ++uiNumberOfItems);
+				wis.push_back(WORLDITEM{});
 				break;
 			}
 			if (!wis[cnt].fExists) break;
 		}
 
-		WORLDITEM* const wi = &wis[cnt];
-		wi->fExists                  = TRUE;
-		wi->sGridNo                  = sGridNo;
-		wi->ubLevel                  = ubLevel;
-		wi->usFlags                  = usFlags;
-		wi->bVisible                 = bVisible;
-		wi->bRenderZHeightAboveLevel = bRenderZHeightAboveLevel;
-		wi->o                        = pObject[uiLoop1];
+		WORLDITEM& wi = wis[cnt];
+		wi.fExists                  = TRUE;
+		wi.sGridNo                  = sGridNo;
+		wi.ubLevel                  = ubLevel;
+		wi.usFlags                  = usFlags;
+		wi.bVisible                 = bVisible;
+		wi.bRenderZHeightAboveLevel = bRenderZHeightAboveLevel;
+		wi.o                        = pObject[uiLoop1];
 
-		if (sGridNo == NOWHERE && !(wi->usFlags & WORLD_ITEM_GRIDNO_NOT_SET_USE_ENTRY_POINT))
+		if (sGridNo == NOWHERE && !(wi.usFlags & WORLD_ITEM_GRIDNO_NOT_SET_USE_ENTRY_POINT))
 		{
-			wi->usFlags |= WORLD_ITEM_GRIDNO_NOT_SET_USE_ENTRY_POINT;
+			wi.usFlags |= WORLD_ITEM_GRIDNO_NOT_SET_USE_ENTRY_POINT;
 			// Display warning.....
 			SLOGW(
-				"Trying to add item ( %d: %ls ) to invalid gridno in unloaded sector. Please Report.",
-				wi->o.usItem, ItemNames[wi->o.usItem]);
+				"Trying to add item ( %d: %s ) to invalid gridno in unloaded sector. Please Report.",
+				wi.o.usItem, ItemNames[wi.o.usItem].c_str());
 		}
 	}
 
-	SaveWorldItemsToTempItemFile(sMapX, sMapY, bMapZ, uiNumberOfItems, wis);
-
-	MemFree(wis);
+	SaveWorldItemsToTempItemFile(sMapX, sMapY, bMapZ, wis);
 }
 
 
@@ -340,7 +335,7 @@ void SaveCurrentSectorsInformationToTempItemFile()
 	// handle all reachable before save
 	HandleAllReachAbleItemsInTheSector(x, y, z);
 
-	SaveWorldItemsToTempItemFile(x, y, z, guiNumWorldItems, gWorldItems);
+	SaveWorldItemsToTempItemFile(x, y, z, gWorldItems);
 	SaveRottingCorpsesToTempCorpseFile(x, y, z);
 	SaveDoorTableToDoorTableTempFile(x, y, z);
 	SaveRevealedStatusArrayToRevealedTempFile(x, y, z);
@@ -362,7 +357,7 @@ void SaveCurrentSectorsInformationToTempItemFile()
 
 void HandleAllReachAbleItemsInTheSector(INT16 const x, INT16 const y, INT8 const z)
 { // Find out which items in the list are reachable
-	if (guiNumWorldItems == 0) return;
+	if (gWorldItems.size() == 0) return;
 
 	MAPCREATE_STRUCT const& m = gMapInformation;
 	GridNo grid_no = m.sCenterGridNo;
@@ -394,29 +389,29 @@ void HandleAllReachAbleItemsInTheSector(INT16 const x, INT16 const y, INT8 const
 	FOR_EACH_WORLD_ITEM(wi)
 	{
 		bool reachable;
-		if (wi->o.bTrap > 0)
+		if (wi.o.bTrap > 0)
 		{
 			// If the item is trapped, then flag it as unreachable
 			reachable = false;
 		}
-		else if (ItemTypeExistsAtLocation(wi->sGridNo, OWNERSHIP, wi->ubLevel, 0))
+		else if (ItemTypeExistsAtLocation(wi.sGridNo, OWNERSHIP, wi.ubLevel, 0))
 		{
 			reachable = false;
 		}
-		else if (wi->o.usItem == CHALICE)
+		else if (wi.o.usItem == CHALICE)
 		{
 			reachable = false;
 		}
-		else if (GCM->getItem(wi->o.usItem)->getItemClass() == IC_KEY)
+		else if (GCM->getItem(wi.o.usItem)->getItemClass() == IC_KEY)
 		{
 			reachable = false;
 		}
-		else if (gpWorldLevelData[wi->sGridNo].uiFlags & MAPELEMENT_REACHABLE)
+		else if (gpWorldLevelData[wi.sGridNo].uiFlags & MAPELEMENT_REACHABLE)
 		{
 			// The gridno itself is reachable, so the item is reachable
 			reachable = true;
 		}
-		else if (wi->ubLevel > 0)
+		else if (wi.ubLevel > 0)
 		{
 			// Items on roofs are always reachable
 			reachable = true;
@@ -427,14 +422,14 @@ void HandleAllReachAbleItemsInTheSector(INT16 const x, INT16 const y, INT8 const
 			reachable = false;
 			for (UINT8 dir = 0; dir != NUM_WORLD_DIRECTIONS; dir += 2)
 			{
-				GridNo const new_loc = NewGridNo(wi->sGridNo, DirectionInc(dir));
-				if (new_loc == wi->sGridNo) continue;
+				GridNo const new_loc = NewGridNo(wi.sGridNo, DirectionInc(dir));
+				if (new_loc == wi.sGridNo) continue;
 
 				// then it's a valid gridno, so test it
 				// requires non-wall movement cost from one location to the other!
 				if (!(gpWorldLevelData[new_loc].uiFlags & MAPELEMENT_REACHABLE)) continue;
 
-				UINT8 const movement_cost = gubWorldMovementCosts[wi->sGridNo][OppositeDirection(dir)][0];
+				UINT8 const movement_cost = gubWorldMovementCosts[wi.sGridNo][OppositeDirection(dir)][0];
 				// If we find a door movement cost, if the door is open the gridno
 				// should be accessible itself
 				if (movement_cost == TRAVELCOST_DOOR) continue;
@@ -447,11 +442,11 @@ void HandleAllReachAbleItemsInTheSector(INT16 const x, INT16 const y, INT8 const
 
 		if (reachable)
 		{
-			wi->usFlags |= WORLD_ITEM_REACHABLE;
+			wi.usFlags |= WORLD_ITEM_REACHABLE;
 		}
 		else
 		{
-			wi->usFlags &= ~WORLD_ITEM_REACHABLE;
+			wi.usFlags &= ~WORLD_ITEM_REACHABLE;
 		}
 	}
 }
@@ -504,42 +499,34 @@ void LoadCurrentSectorsInformationFromTempItemsFile()
 		return;
 	}
 
-	bool used_tempfile = false;
-
 	if (flags & SF_ITEM_TEMP_FILE_EXISTS)
 	{
 		LoadAndAddWorldItemsFromTempFile(x, y, z);
-		used_tempfile = true;
 	}
 
 	if (flags & SF_ROTTING_CORPSE_TEMP_FILE_EXISTS)
 	{
 		LoadRottingCorpsesFromTempCorpseFile(x, y, z);
-		used_tempfile = true;
 	}
 
 	if (flags & SF_MAP_MODIFICATIONS_TEMP_FILE_EXISTS)
 	{
 		LoadAllMapChangesFromMapTempFileAndApplyThem();
-		used_tempfile = true;
 	}
 
 	if (flags & SF_DOOR_TABLE_TEMP_FILES_EXISTS)
 	{
 		LoadDoorTableFromDoorTableTempFile();
-		used_tempfile = true;
 	}
 
 	if (flags & SF_REVEALED_STATUS_TEMP_FILE_EXISTS)
 	{
 		LoadRevealedStatusArrayFromRevealedTempFile();
-		used_tempfile = true;
 	}
 
 	if (flags & SF_DOOR_STATUS_TEMP_FILE_EXISTS)
 	{
 		LoadDoorStatusArrayFromDoorStatusTempFile();
-		used_tempfile = true;
 	}
 
 	// if the save is an older version, use the old way of loading it up
@@ -548,7 +535,6 @@ void LoadCurrentSectorsInformationFromTempItemsFile()
 		if (flags & SF_ENEMY_PRESERVED_TEMP_FILE_EXISTS)
 		{
 			LoadEnemySoldiersFromTempFile();
-			used_tempfile = true;
 		}
 	}
 	else
@@ -557,35 +543,27 @@ void LoadCurrentSectorsInformationFromTempItemsFile()
 		if (flags & SF_ENEMY_PRESERVED_TEMP_FILE_EXISTS)
 		{
 			NewWayOfLoadingEnemySoldiersFromTempFile();
-			used_tempfile = true;
 		}
 		if (flags & SF_CIV_PRESERVED_TEMP_FILE_EXISTS)
 		{
 			NewWayOfLoadingCiviliansFromTempFile();
-			used_tempfile = true;
 		}
 	}
 
 	if (flags & SF_SMOKE_EFFECTS_TEMP_FILE_EXISTS)
 	{
 		LoadSmokeEffectsFromMapTempFile(x, y, z);
-		used_tempfile = true;
 	}
 
 	if (flags & SF_LIGHTING_EFFECTS_TEMP_FILE_EXISTS)
 	{
 		LoadLightEffectsFromMapTempFile(x, y, z);
-		used_tempfile = true;
 	}
 
 	// Init the world since we have modified the map
 	InitLoadedWorld();
 
 	guiTimeCurrentSectorWasLastLoaded = GetLastTimePlayerWasInSector();
-
-#if 0 // XXX was commented out
-	if (used_tempfile) ValidateSoldierInitLinks(3);
-#endif
 
 	StripEnemyDetailedPlacementsIfSectorWasPlayerLiberated();
 }
@@ -632,9 +610,7 @@ static UINT32 GetLastTimePlayerWasInSector(void)
 
 static void LoadAndAddWorldItemsFromTempFile(INT16 const sMapX, INT16 const sMapY, INT8 const bMapZ)
 {
-	UINT32     n_items;
-	WORLDITEM* items;
-	LoadWorldItemsFromTempItemFile(sMapX, sMapY, bMapZ, &n_items, &items);
+	std::vector<WORLDITEM> items = LoadWorldItemsFromTempItemFile(sMapX, sMapY, bMapZ);
 
 	// Have we already been to the sector?
 	if (GetSectorFlagStatus(sMapX, sMapY, bMapZ, SF_ALREADY_LOADED))
@@ -644,21 +620,20 @@ static void LoadAndAddWorldItemsFromTempFile(INT16 const sMapX, INT16 const sMap
 		TrashWorldItems();
 	}
 
-	if (n_items == 0) return;
+	if (items.size() == 0) return;
 
 	// Add the items in the file to the current sector's item table
-	WORLDITEM const* const end = items + n_items;
-	for (WORLDITEM* i = items; i != end; ++i)
+	for (WORLDITEM& wi : items)
 	{
-		if (!i->fExists) continue;
+		if (!wi.fExists) continue;
 
-		GridNo pos = i->sGridNo;
-		if (i->usFlags & WORLD_ITEM_GRIDNO_NOT_SET_USE_ENTRY_POINT)
+		GridNo pos = wi.sGridNo;
+		if (wi.usFlags & WORLD_ITEM_GRIDNO_NOT_SET_USE_ENTRY_POINT)
 		{
 			// The item has an invalid gridno, use the maps entry point
 			pos = gMapInformation.sCenterGridNo;
 		}
-		else if (i->usFlags & WOLRD_ITEM_FIND_SWEETSPOT_FROM_GRIDNO)
+		else if (wi.usFlags & WOLRD_ITEM_FIND_SWEETSPOT_FROM_GRIDNO)
 		{
 			// Find a gridno to place the item at
 			GridNo new_pos = FindNearestAvailableGridNoForItem(pos, 5);
@@ -669,10 +644,8 @@ static void LoadAndAddWorldItemsFromTempFile(INT16 const sMapX, INT16 const sMap
 			if (new_pos != NOWHERE) pos = new_pos;
 		}
 
-		AddItemToPool(pos, &i->o, static_cast<Visibility>(i->bVisible), i->ubLevel, i->usFlags, i->bRenderZHeightAboveLevel);
+		AddItemToPool(pos, &wi.o, static_cast<Visibility>(wi.bVisible), wi.ubLevel, wi.usFlags, wi.bRenderZHeightAboveLevel);
 	}
-
-	MemFree(items);
 }
 
 
@@ -777,12 +750,12 @@ static void LoadRottingCorpsesFromTempCorpseFile(INT16 const x, INT16 const y, I
 }
 
 
-void AddWorldItemsToUnLoadedSector(const INT16 sMapX, const INT16 sMapY, const INT8 bMapZ, const UINT32 item_count, const WORLDITEM* const wis)
+void AddWorldItemsToUnLoadedSector(const INT16 sMapX, const INT16 sMapY, const INT8 bMapZ, const std::vector<WORLDITEM>& wis)
 {
-	for (const WORLDITEM* wi = wis; wi != wis + item_count; ++wi)
+	for (const WORLDITEM& wi : wis)
 	{
-		if (!wi->fExists) continue;
-		AddItemsToUnLoadedSector(sMapX, sMapY, bMapZ, wi->sGridNo, 1, &wi->o, wi->ubLevel, wi->usFlags, wi->bRenderZHeightAboveLevel, static_cast<Visibility>(wi->bVisible));
+		if (!wi.fExists) continue;
+		AddItemsToUnLoadedSector(sMapX, sMapY, bMapZ, wi.sGridNo, 1, &wi.o, wi.ubLevel, wi.usFlags, wi.bRenderZHeightAboveLevel, static_cast<Visibility>(wi.bVisible));
 	}
 }
 
@@ -972,15 +945,15 @@ void AddDeadSoldierToUnLoadedSector(INT16 const x, INT16 const y, UINT8 const z,
 
 	// Convert the soldier into a rotting corpse
 	ROTTING_CORPSE_DEFINITION c;
-	memset(&c, 0, sizeof(c));
+	c = ROTTING_CORPSE_DEFINITION{};
 	c.ubBodyType        = s->ubBodyType;
 	c.sGridNo           = grid_no;
 	c.sHeightAdjustment = s->sHeightAdjustment;
 	c.bVisible          = TRUE;
-	SET_PALETTEREP_ID(c.HeadPal,  s->HeadPal);
-	SET_PALETTEREP_ID(c.VestPal,  s->VestPal);
-	SET_PALETTEREP_ID(c.SkinPal,  s->SkinPal);
-	SET_PALETTEREP_ID(c.PantsPal, s->PantsPal);
+	c.HeadPal           = s->HeadPal;
+	c.VestPal           = s->VestPal;
+	c.SkinPal           = s->SkinPal;
+	c.PantsPal          = s->PantsPal;
 	c.bDirection        = s->bDirection;
 	c.uiTimeOfDeath     = GetWorldTotalMin();
 	c.usFlags           = flags_for_rotting_corpse;
@@ -1179,19 +1152,17 @@ void SetNumberOfVisibleWorldItemsInSectorStructureForSector(INT16 const x, INT16
 
 static void SynchronizeItemTempFileVisbleItemsToSectorInfoVisbleItems(INT16 const sMapX, INT16 const sMapY, INT8 const bMapZ, bool const check_consistency)
 {
-	UINT32     uiTotalNumberOfItems;
-	WORLDITEM* pTotalSectorList;
-	LoadWorldItemsFromTempItemFile(sMapX, sMapY, bMapZ, &uiTotalNumberOfItems, &pTotalSectorList);
+	std::vector<WORLDITEM> pTotalSectorList = LoadWorldItemsFromTempItemFile(sMapX, sMapY, bMapZ);
 
 	UINT32 uiItemCount = 0;
-	if (uiTotalNumberOfItems > 0)
+	if (pTotalSectorList.size() > 0)
 	{
-		for (const WORLDITEM* wi = pTotalSectorList; wi != pTotalSectorList + uiTotalNumberOfItems; ++wi)
+		for (const WORLDITEM& wi : pTotalSectorList)
 		{
 			if (!IsMapScreenWorldItemVisibleInMapInventory(wi)) continue;
-			uiItemCount += wi->o.ubNumberOfObjects;
+			uiItemCount += wi.o.ubNumberOfObjects;
 		}
-		MemFree(pTotalSectorList);
+		pTotalSectorList.clear();
 	}
 
 	if (check_consistency)
@@ -1212,7 +1183,7 @@ static UINT32 UpdateLoadedSectorsItemInventory(INT16 const x, INT16 const y, INT
 	CFOR_EACH_WORLD_ITEM(wi)
 	{
 		if (!IsMapScreenWorldItemVisibleInMapInventory(wi)) continue;
-		n += wi->o.ubNumberOfObjects;
+		n += wi.o.ubNumberOfObjects;
 	}
 
 	// Update the value in the sector info struct, if the item count is different
@@ -3521,7 +3492,7 @@ static UINT8 const* GetRotationArray()
 
 TEST(TacticalSave, asserts)
 {
-	EXPECT_EQ(lengthof(g_encryption_array), BASE_NUMBER_OF_ROTATION_ARRAYS * 12);
+	EXPECT_EQ(lengthof(g_encryption_array), static_cast<size_t>(BASE_NUMBER_OF_ROTATION_ARRAYS * 12));
 }
 
 #endif

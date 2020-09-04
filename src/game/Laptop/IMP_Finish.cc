@@ -21,6 +21,11 @@
 #include "ScreenIDs.h"
 #include "VSurface.h"
 #include "Font_Control.h"
+#include "GameInstance.h"
+#include "GamePolicy.h"
+#include "ContentManager.h"
+
+#include <string_theory/string>
 
 
 // min time btween frames of animation
@@ -98,7 +103,7 @@ void HandleIMPFinish( void )
 }
 
 
-static void MakeButton(UINT idx, const char* img_file, const wchar_t* text, INT16 x, INT16 y, GUI_CALLBACK click)
+static void MakeButton(UINT idx, const char* img_file, const ST::string& text, INT16 x, INT16 y, GUI_CALLBACK click)
 {
 	BUTTON_PICS* const img = LoadButtonImage(img_file, 0, 1);
 	giIMPFinishButtonImage[idx] = img;
@@ -129,7 +134,8 @@ static void CreateIMPFinishButtons(void)
 	MakeButton(1, LAPTOPDIR "/button_2.sti", pImpButtonText[6], dx + 136, dy + 114, BtnIMPFinishDoneCallback);
 
 	// the personality button
-	MakeButton(2, LAPTOPDIR "/button_8.sti", pImpButtonText[2], dx +  13, dy + 245, BtnIMPFinishPersonalityCallback);
+	ST::string btnText = gamepolicy(imp_pick_skills_directly) ? pImpButtonText[26] : pImpButtonText[2];
+	MakeButton(2, LAPTOPDIR "/button_8.sti", btnText, dx +  13, dy + 245, BtnIMPFinishPersonalityCallback);
 	giIMPFinishButton[2]->SpecifyIcon(guiANALYSE, 0, 33, 23, FALSE);
 
 	// the attribs button
@@ -141,8 +147,7 @@ static void CreateIMPFinishButtons(void)
 	giIMPFinishButton[4]->SpecifyIcon(guiCHARACTERPORTRAIT, 0, 33, 23, FALSE);
 
 	// the voice button
-	wchar_t sString[128];
-	swprintf(sString, lengthof(sString), pImpButtonText[5], iCurrentVoices + 1);
+	ST::string sString = st_format_printf(pImpButtonText[5], iCurrentVoices + 1);
 	MakeButton(5, LAPTOPDIR "/button_8.sti", sString, dx + 373, dy + 245, BtnIMPMainPageVoiceCallback);
 	giIMPFinishButton[5]->SpecifyIcon(guiSMALLSILHOUETTE, 0, 33, 23, FALSE);
 }
@@ -225,7 +230,16 @@ static void BtnIMPFinishPersonalityCallback(GUI_BUTTON *btn, INT32 reason)
 		fButtonPendingFlag = TRUE;
 		uiBaseTime = 0;
 		fAnimateFlag = FALSE;
-		btn->SpecifyText(pImpButtonText[2]);
+
+		if (gamepolicy(imp_pick_skills_directly))
+		{
+			iCurrentImpPage = IMP_SKILLTRAITS;
+			btn->SpecifyText(pImpButtonText[26]);
+		}
+		else
+		{
+			btn->SpecifyText(pImpButtonText[2]);
+		}
 	}
 
 	// get amount of time between callbacks
@@ -258,19 +272,20 @@ static void BtnIMPFinishAttributesCallback(GUI_BUTTON *btn, INT32 reason)
 	{
 		iCurrentImpPage = IMP_ATTRIBUTE_PAGE;
 		fButtonPendingFlag = TRUE;
-		giIMPFinishButton[2]->SpecifyText(pImpButtonText[2]);
+
+		auto btnText = gamepolicy(imp_pick_skills_directly) ? pImpButtonText[26] : pImpButtonText[2];
+		giIMPFinishButton[2]->SpecifyText(btnText);
 	}
 }
 
 
 static void RenderCharFullName(void)
 {
-	wchar_t sString[ 64 ];
 	INT16 sX, sY;
 
 	// render the characters full name
 	SetFontAttributes(FONT14ARIAL, FONT_WHITE);
-	swprintf(sString, lengthof(sString), pIMPFinishStrings, pFullName);
+	ST::string sString = st_format_printf(pIMPFinishStrings, pFullName);
 	FindFontCenterCoordinates(LAPTOP_SCREEN_UL_X, 0, LAPTOP_SCREEN_LR_X - LAPTOP_SCREEN_UL_X, 0 , sString , FONT14ARIAL, &sX, &sY);
 	MPrint(sX, STD_SCREEN_Y + LAPTOP_SCREEN_WEB_DELTA_Y + 33, sString);
 }

@@ -2,6 +2,10 @@
 #define __CHARPROFILE_H
 
 #include "Types.h"
+
+#include <string_theory/string>
+
+
 void GameInitCharProfile(void);
 void EnterCharProfile(void);
 void ExitCharProfile(void);
@@ -32,8 +36,8 @@ extern INT32 iMechanical;
 extern BOOLEAN fCharacterIsMale;
 
 // name?
-extern wchar_t pFullName[];
-extern wchar_t pNickName[];
+extern ST::string pFullName;
+extern ST::string pNickName;
 
 // skills
 extern INT32 iSkillA;
@@ -52,6 +56,7 @@ enum{
 	IMP_MAIN_PAGE,
 	IMP_PERSONALITY,
 	IMP_PERSONALITY_QUIZ,
+	IMP_SKILLTRAITS,
 	IMP_PERSONALITY_FINISH,
 	IMP_ATTRIBUTE_ENTRANCE,
 	IMP_ATTRIBUTE_PAGE,
@@ -65,5 +70,7 @@ enum{
 };
 
 #define COST_OF_PROFILE 3000
+
+extern BOOLEAN fLoadingCharacterForPreviousImpProfile;
 
 #endif

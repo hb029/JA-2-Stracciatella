@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "Directories.h"
 #include "Font_Control.h"
 #include "HImage.h"
@@ -92,6 +90,11 @@
 #include "WeaponModels.h"
 #include "Logger.h"
 
+#include <string_theory/string>
+
+#include <algorithm>
+#include <stdexcept>
+
 #define PALETTEFILENAME			BINARYDATADIR "/ja2pal.dat"
 
 #define LOW_MORALE_BATTLE_SND_THREASHOLD	35
@@ -119,6 +122,7 @@ enum
 	EX_DIRECTION_IRRELEVANT
 };
 
+static void SetSoldierPersonalLightLevel(SOLDIERTYPE*);
 
 static UINT8 Dir2ExtDir(const UINT8 dir)
 {
@@ -267,7 +271,7 @@ static void HandleCrowShadowNewGridNo(SOLDIERTYPE& s)
 	if (s.usAnimState != CROW_FLY) return;
 
 	ANITILE_PARAMS a;
-	memset(&a, 0, sizeof(a));
+	a = ANITILE_PARAMS{};
 	a.sGridNo        = s.sGridNo;
 	a.ubLevelID      = ANI_SHADOW_LEVEL;
 	a.sDelay         = s.sAniDelay;
@@ -591,7 +595,7 @@ try
 	s.uiTimeSameBattleSndDone   = 0;
 	// ATE: Reset every time.....
 	s.fSoldierWasMoving         = TRUE;
-	s.iTuringSoundID            = NO_SAMPLE;
+	s.uiTuringSoundID           = NO_SAMPLE;
 	s.uiTimeSinceLastBleedGrunt = 0;
 
 	if (s.ubBodyType == QUEENMONSTER)
@@ -602,7 +606,7 @@ try
 	// ANYTHING AFTER HERE CAN FAIL
 	if (IsOnOurTeam(s))
 	{
-		s.pKeyRing = MALLOCNZ(KEY_ON_RING, NUM_KEYS);
+		s.pKeyRing = new KEY_ON_RING[NUM_KEYS]{};
 		for (UINT32 i = 0; i < NUM_KEYS; ++i)
 		{
 			s.pKeyRing[i].ubKeyID = INVALID_KEY_NUMBER;
@@ -670,7 +674,7 @@ void DeleteSoldier(SOLDIERTYPE& s)
 
 	if (s.pKeyRing)
 	{
-		MemFree(s.pKeyRing);
+		delete[] s.pKeyRing;
 		s.pKeyRing = 0;
 	}
 
@@ -679,20 +683,20 @@ void DeleteSoldier(SOLDIERTYPE& s)
 	FOR_EACH(UINT16*, i, s.pShades)
 	{
 		if (*i == NULL) continue;
-		MemFree(*i);
+		delete[] *i;
 		*i = NULL;
 	}
 
 	if (s.effect_shade)
 	{
-		MemFree(s.effect_shade);
+		delete[] s.effect_shade;
 		s.effect_shade = 0;
 	}
 
 	FOR_EACH(UINT16*, i, s.pGlowShades)
 	{
 		if (*i == NULL) continue;
-		MemFree(*i);
+		delete[] *i;
 		*i = NULL;
 	}
 
@@ -856,7 +860,7 @@ static void CheckForFreeupFromHit(SOLDIERTYPE* pSoldier, UINT32 uiOldAnimFlags, 
 	{
 		// Release attacker
 		SLOGD("Releasesoldierattacker, normal hit animation ended\n\
-			NEW: %hs ( %d ) OLD: %hs ( %d )",
+			NEW: %s ( %d ) OLD: %s ( %d )",
 			gAnimControl[usNewState].zAnimStr, usNewState,
 			gAnimControl[usOldAniState].zAnimStr, pSoldier->usOldAniState);
 		ReleaseSoldiersAttacker( pSoldier );
@@ -1271,7 +1275,7 @@ void EVENT_InitNewSoldierAnim(SOLDIERTYPE* const pSoldier, UINT16 usNewState, UI
 			{
 				if ( usNewState != SWATTING  )
 				{
-					SLOGD("Handling New gridNo for %d: Old %hs, New %hs",
+					SLOGD("Handling New gridNo for %d: Old %s, New %s",
 						pSoldier->ubID, gAnimControl[pSoldier->usAnimState].zAnimStr,
 						gAnimControl[usNewState].zAnimStr);
 
@@ -2023,6 +2027,11 @@ static void SetSoldierGridNo(SOLDIERTYPE& s, GridNo new_grid_no, BOOLEAN const f
 			n->ubMaxLights         = other.ubMaxLights;
 			n->ubNaturalShadeLevel = other.ubNaturalShadeLevel;
 		}
+		else    //The player DOESNT want the mercs to cast the fake lights
+		{
+			//Only light the soldier
+			SetSoldierPersonalLightLevel(&s);
+		}
 
 		HandleAnimationProfile(s, s.usAnimState, FALSE);
 		HandleCrowShadowNewGridNo(s);
@@ -2674,7 +2683,7 @@ void EVENT_SoldierGotHit(SOLDIERTYPE* pSoldier, const UINT16 usWeaponIndex, INT1
 		case THROW_ITEM:
 		case LOB_ITEM:
 			SLOGD(
-				"Freeing up attacker - ATTACK ANIMATION %hs ENDED BY HIT ANIMATION, Now %d",
+				"Freeing up attacker - ATTACK ANIMATION %s ENDED BY HIT ANIMATION, Now %d",
 				gAnimControl[pSoldier->usAnimState].zAnimStr, gTacticalStatus.ubAttackBusyCount);
 			ReduceAttackBusyCount(pSoldier, FALSE);
 			break;
@@ -3232,7 +3241,7 @@ static void SoldierGotHitGunFire(SOLDIERTYPE* const pSoldier, const UINT16 bDire
 					if ( gAnimControl[ pSoldier->usAnimState ].ubEndHeight == ANIM_STAND && !MercInWater( pSoldier ) )
 					{
 						fFallenOver = TRUE;
-						ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, gzLateLocalizedString[STR_LATE_20], pSoldier->name);
+						ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(gzLateLocalizedString[STR_LATE_20], pSoldier->name));
 					}
 				}
 			}
@@ -3441,7 +3450,7 @@ BOOLEAN EVENT_InternalGetNewSoldierPath( SOLDIERTYPE *pSoldier, UINT16 sDestGrid
 	UINT16 usMoveAnimState = usMovementAnim;
 	INT16 sMercGridNo;
 	UINT8 ubPathingData[MAX_PATH_LIST_SIZE];
-	UINT8 ubPathingMaxDirection;
+	//UINT8 ubPathingMaxDirection;
 	BOOLEAN fAdvancePath = TRUE;
 	UINT8 fFlags = 0;
 
@@ -3522,7 +3531,7 @@ BOOLEAN EVENT_InternalGetNewSoldierPath( SOLDIERTYPE *pSoldier, UINT16 sDestGrid
 			if ( fAdvancePath )
 			{
 				memcpy( ubPathingData, pSoldier->ubPathingData, sizeof( ubPathingData ) );
-				ubPathingMaxDirection = (UINT8)ubPathingData[ MAX_PATH_LIST_SIZE -1 ];
+				//ubPathingMaxDirection = (UINT8)ubPathingData[ MAX_PATH_LIST_SIZE -1 ];
 				memcpy( &(pSoldier->ubPathingData[1]), ubPathingData, sizeof( ubPathingData ) - sizeof( ubPathingData[0] ) );
 
 				// If we have reach the max, go back one sFinalDest....
@@ -4237,7 +4246,7 @@ BOOLEAN ConvertAniCodeToAniFrame(SOLDIERTYPE* const s, UINT16 ani_frame)
 		{
 			// Debug msg here....
 			SLOGW(
-				"Wrong Number of frames per number of objects: %d vs %d, %hs",
+				"Wrong Number of frames per number of objects: %d vs %d, %s",
 				as.uiNumFramesPerDir, as.hVideoObject->SubregionCount(),
 				gAnimControl[s->usAnimState].zAnimStr);
 			ani_frame = 0;
@@ -4341,10 +4350,10 @@ void TurnSoldier( SOLDIERTYPE *pSoldier)
 	{
 		if ( pSoldier->ubBodyType == TANK_NW || pSoldier->ubBodyType == TANK_NE )
 		{
-			if ( pSoldier->iTuringSoundID != NO_SAMPLE )
+			if ( pSoldier->uiTuringSoundID != NO_SAMPLE )
 			{
-				SoundStop( pSoldier->iTuringSoundID );
-				pSoldier->iTuringSoundID = NO_SAMPLE;
+				SoundStop( pSoldier->uiTuringSoundID );
+				pSoldier->uiTuringSoundID = NO_SAMPLE;
 
 				PlaySoldierJA2Sample(pSoldier, TURRET_STOP, HIGHVOLUME, 1, TRUE);
 			}
@@ -4456,9 +4465,9 @@ void TurnSoldier( SOLDIERTYPE *pSoldier)
 
 		if ( pSoldier->ubBodyType == TANK_NW || pSoldier->ubBodyType == TANK_NE )
 		{
-			if ( pSoldier->iTuringSoundID == NO_SAMPLE )
+			if ( pSoldier->uiTuringSoundID == NO_SAMPLE )
 			{
-			pSoldier->iTuringSoundID = PlaySoldierJA2Sample(pSoldier, TURRET_MOVE, HIGHVOLUME, 100, TRUE);
+			pSoldier->uiTuringSoundID = PlaySoldierJA2Sample(pSoldier, TURRET_MOVE, HIGHVOLUME, 100, TRUE);
 			}
 		}
 
@@ -4682,7 +4691,7 @@ void CreateSoldierPalettes(SOLDIERTYPE& s)
 	}
 
 	SGPPaletteEntry tmp_pal[256];
-	memset(tmp_pal, 0, sizeof(*tmp_pal) * 256);
+	std::fill_n(tmp_pal, 256, SGPPaletteEntry{});
 
 	SGPPaletteEntry const*       pal;
 	char            const* const substitution = GetBodyTypePaletteSubstitution(&s, s.ubBodyType);
@@ -4718,14 +4727,14 @@ void CreateSoldierPalettes(SOLDIERTYPE& s)
 	{
 		if (s.pShades[i])
 		{
-			MemFree(s.pShades[i]);
+			delete[] s.pShades[i];
 			s.pShades[i] = 0;
 		}
 	}
 
 	if (s.effect_shade)
 	{
-		MemFree(s.effect_shade);
+		delete[] s.effect_shade;
 		s.effect_shade = 0;
 	}
 
@@ -4733,7 +4742,7 @@ void CreateSoldierPalettes(SOLDIERTYPE& s)
 	{
 		if (s.pGlowShades[i])
 		{
-			MemFree(s.pGlowShades[i]);
+			delete[] s.pGlowShades[i];
 			s.pGlowShades[i] = 0;
 		}
 	}
@@ -4998,8 +5007,8 @@ void LoadPaletteData()
 	FileRead(hFile, &guiNumPaletteSubRanges, sizeof(guiNumPaletteSubRanges));
 
 	// Malloc!
-	gpPaletteSubRanges          = MALLOCN(PaletteSubRangeType, guiNumPaletteSubRanges);
-	gubpNumReplacementsPerRange = MALLOCN(UINT8,               guiNumPaletteSubRanges);
+	gpPaletteSubRanges          = new PaletteSubRangeType[guiNumPaletteSubRanges]{};
+	gubpNumReplacementsPerRange = new UINT8[guiNumPaletteSubRanges]{};
 
 	// Read # of types for each!
 	for ( cnt = 0; cnt < guiNumPaletteSubRanges; cnt++ )
@@ -5019,7 +5028,7 @@ void LoadPaletteData()
 	FileRead(hFile, &guiNumReplacements, sizeof(guiNumReplacements));
 
 	// Malloc!
-	gpPalRep = MALLOCN(PaletteReplacementType, guiNumReplacements);
+	gpPalRep = new PaletteReplacementType[guiNumReplacements]{};
 
 	// Read!
 	for ( cnt = 0; cnt < guiNumReplacements; cnt++ )
@@ -5027,12 +5036,14 @@ void LoadPaletteData()
 		// type
 		FileRead(hFile, &gpPalRep[cnt].ubType, sizeof(gpPalRep[cnt].ubType));
 
-		FileRead(hFile, &gpPalRep[cnt].ID, sizeof(gpPalRep[cnt].ID));
+		ST::char_buffer buf{PaletteRepID_LENGTH, '\0'};
+		FileRead(hFile, buf.data(), buf.size() * sizeof(char));
+		gpPalRep[cnt].ID = ST::string{buf.c_str(), ST::substitute_invalid};
 
 		// # entries
 		FileRead(hFile, &gpPalRep[cnt].ubPaletteSize, sizeof(gpPalRep[cnt].ubPaletteSize));
 
-		SGPPaletteEntry* const Pal = MALLOCN(SGPPaletteEntry, gpPalRep[cnt].ubPaletteSize);
+		SGPPaletteEntry* const Pal = new SGPPaletteEntry[gpPalRep[cnt].ubPaletteSize]{};
 		gpPalRep[cnt].rgb = Pal;
 
 		for( cnt2 = 0; cnt2 < gpPalRep[ cnt ].ubPaletteSize; cnt2++ )
@@ -5046,7 +5057,7 @@ void LoadPaletteData()
 }
 
 
-void SetPaletteReplacement(SGPPaletteEntry* const p8BPPPalette, PaletteRepID aPalRep)
+void SetPaletteReplacement(SGPPaletteEntry* p8BPPPalette, const ST::string& aPalRep)
 {
 	UINT32 cnt2;
 	UINT8  ubType;
@@ -5070,37 +5081,37 @@ void DeletePaletteData()
 	// Free!
 	if ( gpPaletteSubRanges != NULL )
 	{
-		MemFree( gpPaletteSubRanges );
+		delete[] gpPaletteSubRanges;
 		gpPaletteSubRanges = NULL;
 	}
 
 	if ( gubpNumReplacementsPerRange != NULL )
 	{
-		MemFree( gubpNumReplacementsPerRange );
+		delete[] gubpNumReplacementsPerRange;
 		gubpNumReplacementsPerRange = NULL;
 	}
 
 
 	for ( cnt = 0; cnt < guiNumReplacements; cnt++ )
 	{
-		if (gpPalRep[cnt].rgb != NULL) MemFree(gpPalRep[cnt].rgb);
+		if (gpPalRep[cnt].rgb != NULL) delete[] gpPalRep[cnt].rgb;
 	}
 
 	// Free
 	if ( gpPalRep != NULL )
 	{
-		MemFree( gpPalRep );
+		delete[] gpPalRep;
 		gpPalRep = NULL;
 	}
 }
 
 
-UINT8 GetPaletteRepIndexFromID(const PaletteRepID pal_rep)
+UINT8 GetPaletteRepIndexFromID(const ST::string& pal_rep)
 {
 	// Check if type exists
 	for (UINT32 i = 0; i < guiNumReplacements; ++i)
 	{
-		if (strcmp(pal_rep, gpPalRep[i].ID) == 0) return i;
+		if (pal_rep.compare(gpPalRep[i].ID) == 0) return i;
 	}
 
 	throw std::logic_error("Invalid Palette Replacement ID given");
@@ -6664,7 +6675,8 @@ void EVENT_SoldierBeginGiveItem( SOLDIERTYPE *pSoldier )
 	{
 		UnSetEngagedInConvFromPCAction( pSoldier );
 
-		MemFree( pSoldier->pTempObject );
+		delete pSoldier->pTempObject;
+		pSoldier->pTempObject = nullptr;
 	}
 }
 
@@ -7380,7 +7392,7 @@ void HaultSoldierFromSighting( SOLDIERTYPE *pSoldier, BOOLEAN fFromSightingEnemy
 	{
 		// Place it back into inv....
 		AutoPlaceObject( pSoldier, pSoldier->pTempObject, FALSE );
-		MemFree( pSoldier->pTempObject );
+		delete pSoldier->pTempObject;
 		pSoldier->pTempObject        = NULL;
 		pSoldier->usPendingAnimation = NO_PENDING_ANIMATION;
 
@@ -7547,8 +7559,8 @@ void ReLoadSoldierAnimationDueToHandItemChange(SOLDIERTYPE* const s, UINT16 cons
 				EVENT_InitNewSoldierAnim(s, RAISE_RIFLE, 0, FALSE);
 				break;
 			}
-			/* FALLTHROUGH */
 		}
+			// fallthrough
 
 		case ANIM_CROUCH:
 		case ANIM_PRONE:
@@ -7562,7 +7574,7 @@ static UINT16* CreateEnemyGlow16BPPPalette(const SGPPaletteEntry* pPalette, UINT
 {
 	Assert(pPalette != NULL);
 
-	UINT16* const p16BPPPalette = MALLOCN(UINT16, 256);
+	UINT16* const p16BPPPalette = new UINT16[256]{};
 
 	for (UINT32 cnt = 0; cnt < 256; cnt++)
 	{
@@ -7579,7 +7591,7 @@ static UINT16* CreateEnemyGreyGlow16BPPPalette(const SGPPaletteEntry* pPalette, 
 {
 	Assert(pPalette != NULL);
 
-	UINT16* const p16BPPPalette = MALLOCN(UINT16, 256);
+	UINT16* const p16BPPPalette = new UINT16[256]{};
 
 	for (UINT32 cnt = 0; cnt < 256; cnt++)
 	{
@@ -8102,7 +8114,8 @@ void SoldierCollapse( SOLDIERTYPE *pSoldier )
 
 	if (pSoldier->uiStatusFlags & SOLDIER_ENEMY)
 	{
-		if (!gTacticalStatus.bPanicTriggerIsAlarm && gTacticalStatus.the_chosen_one == pSoldier)
+		INT8 bPanicTrigger = ClosestPanicTrigger(pSoldier);
+		if (bPanicTrigger != -1 && !gTacticalStatus.bPanicTriggerIsAlarm[bPanicTrigger] && gTacticalStatus.the_chosen_one == pSoldier)
 		{
 			// replace this guy as the chosen one!
 			gTacticalStatus.the_chosen_one = NULL;
@@ -8894,7 +8907,7 @@ void HandleSystemNewAISituation(SOLDIERTYPE* const pSoldier)
 				{
 					// Place it back into inv....
 					AutoPlaceObject( pSoldier, pSoldier->pTempObject, FALSE );
-					MemFree( pSoldier->pTempObject );
+					delete pSoldier->pTempObject;
 					pSoldier->pTempObject        = NULL;
 					pSoldier->usPendingAnimation = NO_PENDING_ANIMATION;
 
@@ -9044,9 +9057,6 @@ void HandlePlayerTogglingLightEffects( BOOLEAN fToggleValue )
 }
 
 
-static void SetSoldierPersonalLightLevel(SOLDIERTYPE*);
-
-
 static void EnableDisableSoldierLightEffects(BOOLEAN const enable_lights)
 {
 	FOR_EACH_IN_TEAM(s, OUR_TEAM)
@@ -9090,8 +9100,8 @@ static void SetSoldierPersonalLightLevel(SOLDIERTYPE* const s)
 
 TEST(SoldierControl, asserts)
 {
-	EXPECT_EQ(lengthof(gubMaxActionPoints), TOTALBODYTYPES);
-	EXPECT_EQ(sizeof(KEY_ON_RING), 2);
+	EXPECT_EQ(lengthof(gubMaxActionPoints), static_cast<size_t>(TOTALBODYTYPES));
+	EXPECT_EQ(sizeof(KEY_ON_RING), 2u);
 }
 
 #endif

@@ -1,9 +1,10 @@
-﻿// -*-coding: utf-8-with-signature-unix;-*-
+// -*-coding: utf-8-unix;-*-
 
 #include "gtest/gtest.h"
 
 #include "LoadSaveData.h"
 
+#include "externalized/RustInterface.h"
 #include "externalized/TestUtils.h"
 
 
@@ -22,8 +23,8 @@ TEST(LoadSaveData, integers)
 		EXPECT_EQ(reader.readU8(), 0x00);
 		EXPECT_EQ(reader.readU8(), 0xff);
 
-		EXPECT_EQ(reader.getConsumed(), 3);
-		EXPECT_EQ(writer.getConsumed(), 3);
+		EXPECT_EQ(reader.getConsumed(), 3u);
+		EXPECT_EQ(writer.getConsumed(), 3u);
 	}
 
 	{
@@ -37,8 +38,8 @@ TEST(LoadSaveData, integers)
 		EXPECT_EQ(reader.readU16(), 0x0000);
 		EXPECT_EQ(reader.readU16(), 0xffff);
 
-		EXPECT_EQ(reader.getConsumed(), 6);
-		EXPECT_EQ(writer.getConsumed(), 6);
+		EXPECT_EQ(reader.getConsumed(), 6u);
+		EXPECT_EQ(writer.getConsumed(), 6u);
 	}
 
 	{
@@ -48,21 +49,21 @@ TEST(LoadSaveData, integers)
 		writer.writeU32(0xffffffff);
 
 		DataReader reader(buf);
-		EXPECT_EQ(reader.readU32(), 0x01234567);
-		EXPECT_EQ(reader.readU32(), 0x00000000);
-		EXPECT_EQ(reader.readU32(), 0xffffffff);
+		EXPECT_EQ(reader.readU32(), 0x01234567u);
+		EXPECT_EQ(reader.readU32(), 0x00000000u);
+		EXPECT_EQ(reader.readU32(), 0xffffffffu);
 
-		EXPECT_EQ(reader.getConsumed(), 12);
-		EXPECT_EQ(writer.getConsumed(), 12);
+		EXPECT_EQ(reader.getConsumed(), 12u);
+		EXPECT_EQ(writer.getConsumed(), 12u);
 	}
 }
 
-TEST(LoadSaveData, wcharToUTF16English)
+TEST(LoadSaveData, writeUTF16English)
 {
 	char buf[100];
 
 	DataWriter writer(buf);
-	writer.writeStringAsUTF16(L"test", 5);
+	writer.writeUTF16("test", 5);
 
 	// read as 5 uint16
 	{
@@ -73,17 +74,17 @@ TEST(LoadSaveData, wcharToUTF16English)
 		EXPECT_EQ(reader.readU16(), 't');
 		EXPECT_EQ(reader.readU16(), 0x0000);
 
-		EXPECT_EQ(reader.getConsumed(), 10);
-		EXPECT_EQ(writer.getConsumed(), 10);
+		EXPECT_EQ(reader.getConsumed(), 10u);
+		EXPECT_EQ(writer.getConsumed(), 10u);
 	}
 }
 
-TEST(LoadSaveData, wcharToUTF16Russian)
+TEST(LoadSaveData, writeUTF16Russian)
 {
 	char buf[100];
 
 	DataWriter writer(buf);
-	writer.writeStringAsUTF16(L"тест", 5);
+	writer.writeUTF16("тест", 5);
 
 	// read as 5 uint16
 	{
@@ -96,7 +97,7 @@ TEST(LoadSaveData, wcharToUTF16Russian)
 	}
 }
 
-TEST(LoadSaveData, utf16ToWideString)
+TEST(LoadSaveData, readUTF16)
 {
 	char buf[100];
 	DataWriter writer(buf);
@@ -109,24 +110,14 @@ TEST(LoadSaveData, utf16ToWideString)
 
 	{
 		DataReader reader(buf);
-		EXPECT_STREQ(reader.readUTF16(5).getWCHAR().data(), L"тест");
+		EXPECT_EQ(reader.readUTF16(5), "тест");
 
-		EXPECT_EQ(reader.getConsumed(), 10);
-		EXPECT_EQ(writer.getConsumed(), 10);
-	}
-
-	{
-		DataReader reader(buf);
-		wchar_t wideBuf[10];
-		reader.readUTF16(wideBuf, 5);
-		EXPECT_STREQ(wideBuf, L"тест");
-
-		EXPECT_EQ(reader.getConsumed(), 10);
-		EXPECT_EQ(writer.getConsumed(), 10);
+		EXPECT_EQ(reader.getConsumed(), 10u);
+		EXPECT_EQ(writer.getConsumed(), 10u);
 	}
 }
 
-TEST(LoadSaveData, utf32ToWideString)
+TEST(LoadSaveData, readUTF32)
 {
 	char buf[100];
 	DataWriter writer(buf);
@@ -139,20 +130,10 @@ TEST(LoadSaveData, utf32ToWideString)
 
 	{
 		DataReader reader(buf);
-		EXPECT_STREQ(reader.readUTF32(5).getWCHAR().data(), L"тест");
+		EXPECT_EQ(reader.readUTF32(5), "тест");
 
-		EXPECT_EQ(reader.getConsumed(), 20);
-		EXPECT_EQ(writer.getConsumed(), 20);
-	}
-
-	{
-		DataReader reader(buf);
-		wchar_t wideBuf[10];
-		reader.readUTF32(wideBuf, 5);
-		EXPECT_STREQ(wideBuf, L"тест");
-
-		EXPECT_EQ(reader.getConsumed(), 20);
-		EXPECT_EQ(writer.getConsumed(), 20);
+		EXPECT_EQ(reader.getConsumed(), 20u);
+		EXPECT_EQ(writer.getConsumed(), 20u);
 	}
 }
 
@@ -163,8 +144,8 @@ TEST(LoadSaveData, floatAndDoubleFormat)
 	// as on Windows.  Otherwise, there will be problems with
 	// loading saved games made on Windows.
 
-	std::string floatsPath = FileMan::joinPaths(GetExtraDataDir(), "unittests/datatypes/floats.bin");
-	std::string doublesPath = FileMan::joinPaths(GetExtraDataDir(), "unittests/datatypes/doubles.bin");
+	ST::string floatsPath = FileMan::joinPaths(GetExtraDataDir(), "unittests/datatypes/floats.bin");
+	ST::string doublesPath = FileMan::joinPaths(GetExtraDataDir(), "unittests/datatypes/doubles.bin");
 
 	// // Test data were previously written with the following code.
 	// {
@@ -190,36 +171,36 @@ TEST(LoadSaveData, floatAndDoubleFormat)
 	//   printf("double size: %d\n", sizeof(double));
 	// }
 
-	ASSERT_EQ(sizeof(float),  4);
-	ASSERT_EQ(sizeof(double), 8);
+	ASSERT_EQ(sizeof(float),  4u);
+	ASSERT_EQ(sizeof(double), 8u);
 
 	{
-		char buf[100];
-		FILE *floats = fopen(floatsPath.c_str(), "rb");
-		fread(buf, sizeof(float), 5, floats);
-		fclose(floats);
+		RustPointer<VecU8> buf(Fs_read(floatsPath.c_str()));
+		ASSERT_TRUE(buf);
+		ASSERT_EQ(VecU8_len(buf.get()), sizeof(float) * 5);
 		float f;
 
-		char *S = buf;
+		DataReader S{VecU8_as_ptr(buf.get())};
 		EXTR_FLOAT(S, f); EXPECT_EQ(f, 0         );
 		EXTR_FLOAT(S, f); EXPECT_EQ(f, 1         );
 		EXTR_FLOAT(S, f); EXPECT_EQ(f, -1        );
 		EXTR_FLOAT(S, f); EXPECT_EQ(f, 1.1234678f);
 		EXTR_FLOAT(S, f); EXPECT_EQ(f, 12345.678f);
+		ASSERT_EQ(S.getConsumed(), sizeof(float) * 5);
 	}
 
 	{
-		char buf[100];
-		FILE *doubles = fopen(doublesPath.c_str(), "rb");
-		fread(buf, sizeof(double), 5, doubles);
-		fclose(doubles);
+		RustPointer<VecU8> buf(Fs_read(doublesPath.c_str()));
+		ASSERT_TRUE(buf);
+		ASSERT_EQ(VecU8_len(buf.get()), sizeof(double) * 5);
 		double d;
 
-		char *S = buf;
+		DataReader S{VecU8_as_ptr(buf.get())};
 		EXTR_DOUBLE(S, d); EXPECT_EQ(d, 0         );
 		EXTR_DOUBLE(S, d); EXPECT_EQ(d, 1         );
 		EXTR_DOUBLE(S, d); EXPECT_EQ(d, -1        );
 		EXTR_DOUBLE(S, d); EXPECT_EQ(d, 1.1234678 );
 		EXTR_DOUBLE(S, d); EXPECT_EQ(d, 12345.678 );
+		ASSERT_EQ(S.getConsumed(), sizeof(double) * 5);
 	}
 }

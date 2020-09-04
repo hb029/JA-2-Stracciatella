@@ -63,7 +63,7 @@ SGPImage* LoadPCXFileToImage(char const* const filename, UINT16 const contents)
 	// Read and allocate bitmap block if requested
 	if (contents & IMAGE_BITMAPDATA)
 	{
-		UINT8* const img_data = img->pImageData.Allocate(w * h);
+		UINT8* const img_data = img->pImageData.Allocate(static_cast<UINT32>(w) * h);
 		BlitPcxToBuffer(pcx_buffer, img_data, w, h);
 	}
 
@@ -86,11 +86,11 @@ SGPImage* LoadPCXFileToImage(char const* const filename, UINT16 const contents)
 
 static void BlitPcxToBuffer(UINT8 const* src, UINT8* dst, UINT16 const w, UINT16 const h)
 {
-	for (size_t n = w * h; n != 0;)
+	for (UINT32 n = static_cast<UINT32>(w) * h; n != 0;)
 	{
 		if (*src >= 0xC0)
 		{
-			size_t      n_px   = *src++ & 0x3F;
+			UINT32      n_px   = *src++ & 0x3F;
 			UINT8 const colour = *src++;
 			if (n_px > n) n_px = n;
 			n -= n_px;
@@ -110,7 +110,7 @@ static void BlitPcxToBuffer(UINT8 const* src, UINT8* dst, UINT16 const w, UINT16
 
 TEST(PCX, asserts)
 {
-	EXPECT_EQ(sizeof(PcxHeader), 128);
+	EXPECT_EQ(sizeof(PcxHeader), 128u);
 }
 
 #endif

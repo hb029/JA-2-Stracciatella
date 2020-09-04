@@ -2501,7 +2501,10 @@ static INT8 DecideActionBlack(SOLDIERTYPE* pSoldier)
 
 		bPanicTrigger = ClosestPanicTrigger( pSoldier );
 		// if it's an alarm trigger and team is alerted, ignore it
-		if ( !(gTacticalStatus.bPanicTriggerIsAlarm[ bPanicTrigger ] && gTacticalStatus.Team[pSoldier->bTeam].bAwareOfOpposition) && PythSpacesAway( pSoldier->sGridNo, gTacticalStatus.sPanicTriggerGridNo[ bPanicTrigger ] ) < 10)
+		if ( bPanicTrigger != -1 && 
+			!(gTacticalStatus.bPanicTriggerIsAlarm[ bPanicTrigger ] && 
+				gTacticalStatus.Team[pSoldier->bTeam].bAwareOfOpposition) && 
+			PythSpacesAway( pSoldier->sGridNo, gTacticalStatus.sPanicTriggerGridNo[ bPanicTrigger ] ) < 10)
 		{
 			PossiblyMakeThisEnemyChosenOne( pSoldier );
 		}
@@ -3047,7 +3050,7 @@ static INT8 DecideActionBlack(SOLDIERTYPE* pSoldier)
 
 			default:
 				// set to empty
-				memset( &BestAttack, 0, sizeof( BestAttack ) );
+				BestAttack = ATTACKTYPE{};
 				break;
 		}
 	}
@@ -3155,7 +3158,7 @@ static INT8 DecideActionBlack(SOLDIERTYPE* pSoldier)
 			case ATTACKSLAYONLY:iOffense += 30; break;
 		}
 		SLOGD("%s - CHOICE: iOffense = %d, iDefense = %d\n",
-			pSoldier->name,iOffense,iDefense);
+			pSoldier->name.c_str(), iOffense,iDefense);
 
 		// if his defensive instincts win out, forget all about the attack
 		if (iDefense > iOffense)
@@ -3178,7 +3181,7 @@ static INT8 DecideActionBlack(SOLDIERTYPE* pSoldier)
 		if (ubBestAttackAction == AI_ACTION_FIRE_GUN)
 		{
 			// Do we need to change stance?  NB We'll have to ready our gun again
-			if ( !TANK( pSoldier ) && ( pSoldier->bActionPoints - (BestAttack.ubAPCost - BestAttack.ubAimTime) ) >= (AP_CROUCH + GetAPsToReadyWeapon( pSoldier, pSoldier->usAnimState ) ) )
+			if ( !TANK( pSoldier ) && ( pSoldier->bActionPoints - (BestAttack.ubAPCost + BestAttack.ubAimTime) ) >= (AP_CROUCH + GetAPsToReadyWeapon( pSoldier, pSoldier->usAnimState ) ) )
 			{
 				// since the AI considers shooting chance from standing primarily, if we are not
 				// standing we should always consider a stance change
@@ -3357,9 +3360,9 @@ static INT8 DecideActionBlack(SOLDIERTYPE* pSoldier)
 			pSoldier->bTargetLevel = BestAttack.bTargetLevel;
 
 			SLOGD("%d(%s) %s %d(%s)",
-				pSoldier->ubID, pSoldier->name,
+				pSoldier->ubID, pSoldier->name.c_str(),
 				ubBestAttackAction == AI_ACTION_FIRE_GUN ? "SHOOTS" : (ubBestAttackAction == AI_ACTION_TOSS_PROJECTILE ? "TOSSES AT" : "STABS"),
-				BestAttack.opponent->ubID, BestAttack.opponent->name );
+				BestAttack.opponent->ubID, BestAttack.opponent->name.c_str() );
 			return(ubBestAttackAction);
 		}
 
@@ -3413,7 +3416,7 @@ static INT8 DecideActionBlack(SOLDIERTYPE* pSoldier)
 	if (sBestCover != NOWHERE)
 	{
 		SLOGD("%s - taking cover at gridno %d (%d%% better)",
-			pSoldier->name, sBestCover, iCoverPercentBetter);
+			pSoldier->name.c_str(), sBestCover, iCoverPercentBetter);
 		pSoldier->usActionData = sBestCover;
 		return(AI_ACTION_TAKE_COVER);
 	}

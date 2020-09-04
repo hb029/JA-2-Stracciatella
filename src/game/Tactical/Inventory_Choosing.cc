@@ -433,7 +433,7 @@ void GenerateRandomEquipment( SOLDIERCREATE_STRUCT *pp, INT8 bSoldierClass, INT8
 		//clear items, but only if they have write status.
 		if( !(pp->Inv[ i ].fFlags & OBJECT_NO_OVERWRITE) )
 		{
-			memset( &(pp->Inv[ i ]), 0, sizeof( OBJECTTYPE ) );
+			pp->Inv[ i ] = OBJECTTYPE{};
 			pp->Inv[ i ].fFlags |= OBJECT_UNDROPPABLE;
 		}
 		else
@@ -764,6 +764,7 @@ static void ChooseGrenadesForSoldierCreateStruct(SOLDIERCREATE_STRUCT* pp, INT8 
 						break;
 					}
 					// if grenade launcher, pick regular instead
+					// fallthrough
 				case 1:
 					ubNumReg++;
 					sNumPoints -= 9;
@@ -776,6 +777,7 @@ static void ChooseGrenadesForSoldierCreateStruct(SOLDIERCREATE_STRUCT* pp, INT8 
 						break;
 					}
 					// if grenade launcher, pick tear instead
+					// fallthrough
 				case 3:
 					ubNumTear++;
 					sNumPoints -= 6;
@@ -1981,7 +1983,7 @@ static UINT16 SelectStandardArmyGun(UINT8 uiGunLevel)
 	}
 
 	// choose one the of the possible gun choices
-	uiChoice = Random(gunChoice->at(uiGunLevel).size());
+	uiChoice = Random(static_cast<UINT32>(gunChoice->at(uiGunLevel).size()));
 	usGunIndex = (gunChoice->at(uiGunLevel)[uiChoice])->getItemIndex();
 
 	Assert(usGunIndex);

@@ -9,16 +9,16 @@ void ExtractRottingCorpseFromFile(HWFILE const file, ROTTING_CORPSE_DEFINITION* 
 	BYTE data[160];
 	FileRead(file, data, sizeof(data));
 
-	const BYTE* d = data;
+	DataReader d{data};
 	EXTR_U8(d, c->ubType)
 	EXTR_U8(d, c->ubBodyType)
 	EXTR_I16(d, c->sGridNo)
 	EXTR_SKIP(d, 8)
 	EXTR_I16(d, c->sHeightAdjustment)
-	EXTR_STR(d, c->HeadPal, lengthof(c->HeadPal))
-	EXTR_STR(d, c->PantsPal, lengthof(c->PantsPal))
-	EXTR_STR(d, c->VestPal, lengthof(c->VestPal))
-	EXTR_STR(d, c->SkinPal, lengthof(c->SkinPal))
+	c->HeadPal = d.readUTF8(PaletteRepID_LENGTH, ST::substitute_invalid);
+	c->PantsPal = d.readUTF8(PaletteRepID_LENGTH, ST::substitute_invalid);
+	c->VestPal = d.readUTF8(PaletteRepID_LENGTH, ST::substitute_invalid);
+	c->SkinPal = d.readUTF8(PaletteRepID_LENGTH, ST::substitute_invalid);
 	EXTR_I8(d, c->bDirection)
 	EXTR_SKIP(d, 1)
 	EXTR_U32(d, c->uiTimeOfDeath)
@@ -30,7 +30,7 @@ void ExtractRottingCorpseFromFile(HWFILE const file, ROTTING_CORPSE_DEFINITION* 
 	EXTR_BOOL(d, c->fHeadTaken)
 	EXTR_U8(d, c->ubAIWarningValue)
 	EXTR_SKIP(d, 12)
-	Assert(d == endof(data));
+	Assert(d.getConsumed() == lengthof(data));
 }
 
 
@@ -38,16 +38,16 @@ void InjectRottingCorpseIntoFile(HWFILE const file, ROTTING_CORPSE_DEFINITION co
 {
 	BYTE data[160];
 
-	BYTE* d = data;
+	DataWriter d{data};
 	INJ_U8(d, c->ubType)
 	INJ_U8(d, c->ubBodyType)
 	INJ_I16(d, c->sGridNo)
 	INJ_SKIP(d, 8)
 	INJ_I16(d, c->sHeightAdjustment)
-	INJ_STR(d, c->HeadPal, lengthof(c->HeadPal))
-	INJ_STR(d, c->PantsPal, lengthof(c->PantsPal))
-	INJ_STR(d, c->VestPal, lengthof(c->VestPal))
-	INJ_STR(d, c->SkinPal, lengthof(c->SkinPal))
+	d.writeUTF8(c->HeadPal, PaletteRepID_LENGTH);
+	d.writeUTF8(c->PantsPal, PaletteRepID_LENGTH);
+	d.writeUTF8(c->VestPal, PaletteRepID_LENGTH);
+	d.writeUTF8(c->SkinPal, PaletteRepID_LENGTH);
 	INJ_I8(d, c->bDirection)
 	INJ_SKIP(d, 1)
 	INJ_U32(d, c->uiTimeOfDeath)
@@ -59,7 +59,7 @@ void InjectRottingCorpseIntoFile(HWFILE const file, ROTTING_CORPSE_DEFINITION co
 	INJ_BOOL(d, c->fHeadTaken)
 	INJ_U8(d, c->ubAIWarningValue)
 	INJ_SKIP(d, 12)
-	Assert(d == endof(data));
+	Assert(d.getConsumed() == lengthof(data));
 
 	FileWrite(file, data, sizeof(data));
 }

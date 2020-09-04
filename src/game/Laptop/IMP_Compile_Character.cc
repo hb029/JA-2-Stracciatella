@@ -2,8 +2,12 @@
 #include "Laptop.h"
 #include "CharProfile.h"
 #include "Debug.h"
+#include "GameInstance.h"
+#include "GamePolicy.h"
+#include "ContentManager.h"
 #include "Render_Dirty.h"
 #include "IMP_Portraits.h"
+#include "IMP_SkillTraits.h"
 #include "IMP_Compile_Character.h"
 #include "Soldier_Profile_Type.h"
 #include "Soldier_Profile.h"
@@ -24,9 +28,6 @@ static INT32 iLastElementInSkillsList = 0;
 static INT32 PersonalityList[ATTITUDE_LIST_SIZE];
 static INT32 iLastElementInPersonalityList = 0;
 
-extern BOOLEAN fLoadingCharacterForPreviousImpProfile;
-
-
 static void SelectMercFace(void);
 
 
@@ -34,8 +35,8 @@ void CreateACharacterFromPlayerEnteredStats(void)
 {
 	MERCPROFILESTRUCT& p = GetProfile(PLAYER_GENERATED_CHARACTER_ID + LaptopSaveInfo.iVoiceId);
 
-	wcscpy(p.zName,     pFullName);
-	wcscpy(p.zNickname, pNickName);
+	p.zName = pFullName;
+	p.zNickname = pNickName;
 
 	p.bSex = fCharacterIsMale ? MALE : FEMALE;
 
@@ -180,7 +181,7 @@ void AddSkillToSkillList( INT8 bSkill )
 
 static void RemoveSkillFromSkillsList(INT32 const Skill)
 {
-	for (size_t i = 0; i != iLastElementInSkillsList;)
+	for (INT32 i = 0; i != iLastElementInSkillsList;)
 	{
 		if (SkillsList[i] == Skill)
 		{
@@ -228,6 +229,35 @@ static void ValidateSkillsList(void)
 static void CreatePlayerSkills(void)
 {
 	ValidateSkillsList();
+
+	if (gamepolicy(imp_pick_skills_directly))
+	{
+		// the skills selected are distinct and there are at most 2
+		iSkillA = NO_SKILLTRAIT;
+		iSkillB = NO_SKILLTRAIT;
+
+		if (iLastElementInSkillsList == 1)
+		{
+			// grant expert level if only 1 skill is chosen, unless the skill as no expert level
+			iSkillA = SkillsList[0];
+			if (iSkillA != ELECTRONICS && iSkillA != AMBIDEXT && iSkillA != CAMOUFLAGED)
+			{
+				iSkillB = iSkillA;
+			}
+		}
+		else if (iLastElementInSkillsList == 2)
+		{
+			iSkillA = SkillsList[0];
+			iSkillB = SkillsList[1];
+		}
+		else if (iLastElementInSkillsList > 2)
+		{
+			// This should be impossible
+			SLOGA(ST::format("Invalid number ({}) of skills selected", iLastElementInSkillsList));
+		}
+	
+		return;
+	}
 
 	iSkillA = SkillsList[Random(iLastElementInSkillsList)];
 
@@ -371,10 +401,10 @@ static void SetMercSkinAndHairColors(void)
 		{ TANSKIN,   BLONDHEAD }
 	};
 
-	Assert(iPortraitNumber < lengthof(Colors));
+	Assert(iPortraitNumber < static_cast<INT32>(lengthof(Colors)));
 	MERCPROFILESTRUCT& p = GetProfile(PLAYER_GENERATED_CHARACTER_ID + LaptopSaveInfo.iVoiceId);
-	strcpy(p.HAIR, Colors[iPortraitNumber].Hair);
-	strcpy(p.SKIN, Colors[iPortraitNumber].Skin);
+	p.HAIR = Colors[iPortraitNumber].Hair;
+	p.SKIN = Colors[iPortraitNumber].Skin;
 }
 
 
@@ -383,7 +413,7 @@ static BOOLEAN ShouldThisMercHaveABigBody(void);
 
 void HandleMercStatsForChangesInFace(void)
 {
-	if (fLoadingCharacterForPreviousImpProfile) return;
+	AddSelectedSkillsToSkillsList();
 
 	CreatePlayerSkills();
 

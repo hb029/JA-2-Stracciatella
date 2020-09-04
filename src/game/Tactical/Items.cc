@@ -93,9 +93,9 @@ void createAllHardcodedItemModels(std::vector<const ItemModel*> &items)
 	items[155] = new ItemModel(155, "STRUCTURE_EXPLOSION",        IC_BOMB,    24, INVALIDCURS, 1, 40,  41,  2, 450,  0,  /* fake struct xplod*/    0, -4, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_NOT_BUYABLE);
 	items[156] = new ItemModel(156, "GREAT_BIG_EXPLOSION",        IC_BOMB,    25, INVALIDCURS, 1, 40,  41,  2, 450,  0,  /* fake vehicle xplod*/   0, -4, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_NOT_BUYABLE);
 	items[157] = new ItemModel(157, "BIG_TEAR_GAS",               IC_GRENADE, 26, TOSSCURS,    1, 48,  6,   4, 0,    0,  /* BIG tear gas grenade*/ 0, -2, ITEM_DAMAGEABLE | ITEM_METAL | ITEM_REPAIRABLE | ITEM_NOT_BUYABLE);
-	items[158] = new ItemModel(158, "SMALL_CREATURE_GAS",         IC_GRENADE, 27, INVALIDCURS, 0, 0,   0,   0, 0,    0,  /* small creature gas */  0, 0,  0);
-	items[159] = new ItemModel(159, "LARGE_CREATURE_GAS",         IC_GRENADE, 28, INVALIDCURS, 0, 0,   0,   0, 0,    0,  /* big creature gas */    0, 0,  0);
-	items[160] = new ItemModel(160, "VERY_SMALL_CREATURE_GAS",    IC_GRENADE, 29, INVALIDCURS, 0, 0,   0,   0, 0,    0,  /* very sm creat gas */   0, 0,  0);
+	items[158] = new ItemModel(158, "SMALL_CREATURE_GAS",         IC_GRENADE, 27, INVALIDCURS, 0, 0,   0,   0, 0,    0,  /* small creature gas */  0, 0,  ITEM_NOT_EDITOR);
+	items[159] = new ItemModel(159, "LARGE_CREATURE_GAS",         IC_GRENADE, 28, INVALIDCURS, 0, 0,   0,   0, 0,    0,  /* big creature gas */    0, 0,  ITEM_NOT_EDITOR);
+	items[160] = new ItemModel(160, "VERY_SMALL_CREATURE_GAS",    IC_GRENADE, 29, INVALIDCURS, 0, 0,   0,   0, 0,    0,  /* very sm creat gas */   0, 0,  ITEM_NOT_EDITOR);
 
 	items[161] = new ItemModel(161, "FLAK_JACKET",                IC_ARMOUR,  0,  INVALIDCURS, 1, 66,  20,  0, 300,  2,  /* Flak jacket */         0, +2, IF_STANDARD_ARMOUR);
 	items[162] = new ItemModel(162, "FLAK_JACKET_18",             IC_ARMOUR,  1,  INVALIDCURS, 2, 18,  22,  0, 350,  0,  /* Flak jacket w X */     0, +1, IF_STANDARD_ARMOUR | ITEM_NOT_BUYABLE);
@@ -1098,7 +1098,7 @@ BOOLEAN ValidItemAttachment(const OBJECTTYPE* const pObj, const UINT16 usAttachm
 			if ( fAttemptingAttachment && ValidAttachmentClass( usAttachment, pObj->usItem ) )
 			{
 				// well, maybe the player thought he could
-				ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_UI_FEEDBACK, g_langRes->Message[STR_CANT_ATTACH], ItemNames[usAttachment], ItemNames[pObj->usItem]);
+				ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_UI_FEEDBACK, st_format_printf(g_langRes->Message[STR_CANT_ATTACH], ItemNames[usAttachment], ItemNames[pObj->usItem]));
 			}
 
 			return( FALSE );
@@ -1165,7 +1165,7 @@ BOOLEAN ValidItemAttachment(const OBJECTTYPE* const pObj, const UINT16 usAttachm
 		}
 		else if (fSimilarItems)
 		{
-			ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_UI_FEEDBACK, g_langRes->Message[ STR_CANT_USE_TWO_ITEMS ], ItemNames[ usSimilarItem ], ItemNames[ usAttachment ] );
+			ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_UI_FEEDBACK, st_format_printf(g_langRes->Message[ STR_CANT_USE_TWO_ITEMS ], ItemNames[ usSimilarItem ], ItemNames[ usAttachment ]) );
 			return( FALSE );
 		}
 	}
@@ -1356,7 +1356,7 @@ UINT32 CalculateCarriedWeight(SOLDIERTYPE const* const s)
 
 void DeleteObj(OBJECTTYPE * pObj )
 {
-	memset( pObj, 0, sizeof(OBJECTTYPE) );
+	*pObj = OBJECTTYPE{};
 }
 
 
@@ -1617,8 +1617,17 @@ BOOLEAN ReloadGun( SOLDIERTYPE * pSoldier, OBJECTTYPE * pGun, OBJECTTYPE * pAmmo
 		else
 		{
 			// record old ammo
-			memset( &OldAmmo, 0, sizeof( OBJECTTYPE ));
-			OldAmmo.usItem = pGun->usGunAmmoItem;
+			OldAmmo = OBJECTTYPE{};
+			const ItemModel* item = GCM->getItem(pGun->usGunAmmoItem);
+			const MagazineModel* mag = item->asAmmo();
+			if (mag && mag->isInBigGunList())
+			{
+				OldAmmo.usItem = GCM->getMagazineByName(mag->getStandardReplacement())->getItemIndex();
+			}
+			else
+			{
+				OldAmmo.usItem = pGun->usGunAmmoItem;
+			}
 			OldAmmo.ubNumberOfObjects = 1;
 			OldAmmo.ubShotsLeft[0] = pGun->ubGunShotsLeft;
 
@@ -1790,7 +1799,7 @@ BOOLEAN ReloadGun( SOLDIERTYPE * pSoldier, OBJECTTYPE * pGun, OBJECTTYPE * pAmmo
 	if (pSoldier->bTeam == OUR_TEAM)
 	{
 		// spit out a message if this is one of our folks reloading
-		ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, g_langRes->Message[STR_PLAYER_RELOADS], pSoldier->name );
+		ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(g_langRes->Message[STR_PLAYER_RELOADS], pSoldier->name) );
 	}
 
 	DeductPoints( pSoldier, bAPs, 0 );
@@ -1861,7 +1870,7 @@ BOOLEAN ReloadLauncher( OBJECTTYPE * pLauncher, OBJECTTYPE * pAmmo )
 			return( FALSE );
 		}
 		// otherwise temporarily store the launcher's old ammo
-		memset( &OldAmmo, 0, sizeof( OBJECTTYPE ));
+		OldAmmo = OBJECTTYPE{};
 		fOldAmmo = TRUE;
 		OldAmmo.usItem = pLauncher->usGunAmmoItem;
 		OldAmmo.ubNumberOfObjects = 1;
@@ -1986,7 +1995,7 @@ BOOLEAN AutoReload( SOLDIERTYPE * pSoldier )
 					}
 					else
 					{
-						ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, g_langRes->Message[ STR_RELOAD_ONLY_ONE_GUN ], pSoldier->name );
+						ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(g_langRes->Message[ STR_RELOAD_ONLY_ONE_GUN ], pSoldier->name) );
 					}
 				}
 			}
@@ -2051,7 +2060,7 @@ static void PerformAttachmentComboMerge(OBJECTTYPE& o, ComboMergeInfoStruct cons
 }
 
 
-bool AttachObject(SOLDIERTYPE* const s, OBJECTTYPE* const pTargetObj, OBJECTTYPE* const pAttachment)
+bool AttachObject(SOLDIERTYPE* const s, OBJECTTYPE* const pTargetObj, OBJECTTYPE* const pAttachment, UINT8 const ubIndexInStack)
 {
 	OBJECTTYPE& target     = *pTargetObj;
 	OBJECTTYPE& attachment = *pAttachment;
@@ -2189,17 +2198,18 @@ bool AttachObject(SOLDIERTYPE* const s, OBJECTTYPE* const pTargetObj, OBJECTTYPE
 			// count down through # of attaching items and add to status of item in position 0
 			for (INT8 bLoop = attachment.ubNumberOfObjects - 1; bLoop >= 0; --bLoop)
 			{
-				if (target.bStatus[0] + attachment.bStatus[bLoop] <= limit)
+				INT8& targetStatus = target.bStatus[ubIndexInStack];
+				if (targetStatus + attachment.bStatus[bLoop] <= limit)
 				{ // Consume this one totally and continue
-					target.bStatus[0] += attachment.bStatus[bLoop];
+					targetStatus += attachment.bStatus[bLoop];
 					RemoveObjFrom(&attachment, bLoop);
 					// reset loop limit
 					bLoop = attachment.ubNumberOfObjects; // add 1 to counteract the -1 from the loop
 				}
 				else
 				{ // Add part of this one and then we're done
-					attachment.bStatus[bLoop] -= limit - target.bStatus[0];
-					target.bStatus[0]          = limit;
+					attachment.bStatus[bLoop] -= limit - targetStatus;
+					targetStatus               = limit;
 					break;
 				}
 			}
@@ -2412,8 +2422,8 @@ BOOLEAN PlaceObject( SOLDIERTYPE * pSoldier, INT8 bPos, OBJECTTYPE * pObj )
 	{
 		if ( !CompatibleFaceItem( pObj->usItem, pSoldier->inv[ HEAD2POS ].usItem ) )
 		{
-			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_UI_FEEDBACK, g_langRes->Message[STR_CANT_USE_TWO_ITEMS],
-					ItemNames[pObj->usItem], ItemNames[pSoldier->inv[HEAD2POS].usItem]);
+			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_UI_FEEDBACK, st_format_printf(g_langRes->Message[STR_CANT_USE_TWO_ITEMS],
+					ItemNames[pObj->usItem], ItemNames[pSoldier->inv[HEAD2POS].usItem]));
 			return( FALSE );
 		}
 	}
@@ -2421,8 +2431,8 @@ BOOLEAN PlaceObject( SOLDIERTYPE * pSoldier, INT8 bPos, OBJECTTYPE * pObj )
 	{
 		if ( !CompatibleFaceItem( pObj->usItem, pSoldier->inv[ HEAD1POS ].usItem ) )
 		{
-			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_UI_FEEDBACK, g_langRes->Message[STR_CANT_USE_TWO_ITEMS],
-					ItemNames[pObj->usItem], ItemNames[pSoldier->inv[HEAD1POS].usItem]);
+			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_UI_FEEDBACK, st_format_printf(g_langRes->Message[STR_CANT_USE_TWO_ITEMS],
+					ItemNames[pObj->usItem], ItemNames[pSoldier->inv[HEAD1POS].usItem]));
 			return( FALSE );
 		}
 	}
@@ -2945,7 +2955,7 @@ void CreateKeyObject(OBJECTTYPE* const pObj, UINT8 const ubNumberOfKeys, UINT8 c
 void AllocateObject(OBJECTTYPE** const pObj)
 {
 	// create a key object
-	*pObj = MALLOC(OBJECTTYPE);
+	*pObj = new OBJECTTYPE{};
 }
 
 
@@ -2954,7 +2964,7 @@ BOOLEAN DeleteKeyObject( OBJECTTYPE * pObj )
 	if (pObj == NULL) return FALSE;
 
 	// free up space
-	MemFree( pObj );
+	delete pObj;
 
 	return( TRUE );
 }
@@ -3012,7 +3022,7 @@ UINT16 DefaultMagazine(UINT16 const gun)
 
 	const WeaponModel * w = GCM->getWeapon(gun);
 	const std::vector<const MagazineModel*>& magazines = GCM->getMagazines();
-	for(const MagazineModel* mag : magazines)
+	for (const MagazineModel* mag : magazines)
 	{
 		if (mag->calibre->index == NOAMMO)      break;
 		if (mag->dontUseAsDefaultMagazine) continue;
@@ -3029,7 +3039,7 @@ UINT16 FindReplacementMagazine(const CalibreModel * calibre, UINT8 const mag_siz
 {
 	UINT16 default_mag = NOTHING;
 	const std::vector<const MagazineModel*>& magazines = GCM->getMagazines();
-	for(const MagazineModel* mag : magazines)
+	for (const MagazineModel* mag : magazines)
 	{
 		if (mag->calibre->index == NOAMMO)   break;
 		if (mag->calibre->index != calibre->index)  continue;
@@ -3069,7 +3079,7 @@ UINT16 RandomMagazine( UINT16 usItem, UINT8 ubPercentStandard )
 
 	// find & store all possible mag types that fit this gun
 	const std::vector<const MagazineModel*>& magazines = GCM->getMagazines();
-	for(const MagazineModel* mag : magazines)
+	for (const MagazineModel* mag : magazines)
 	{
 		if (pWeapon->matches(mag))
 		{
@@ -3163,7 +3173,7 @@ static void CreateMagazine(UINT16 usItem, OBJECTTYPE* pObj)
 
 void CreateItem(UINT16 const usItem, INT8 const bStatus, OBJECTTYPE* const pObj)
 {
-	memset( pObj, 0, sizeof( OBJECTTYPE ) );
+	*pObj = OBJECTTYPE{};
 	if (usItem >= MAXITEMS)
 	{
 		throw std::logic_error("Tried to create item with invalid ID");
@@ -3601,7 +3611,7 @@ static void RemoveInvObject(SOLDIERTYPE* pSoldier, UINT16 usItem)
 	{
 
 		// Erase!
-		memset( &(pSoldier->inv[ bInvPos ]), 0, sizeof( OBJECTTYPE ) );
+		pSoldier->inv[ bInvPos ] = OBJECTTYPE{};
 
 		//Dirty!
 		DirtyMercPanelInterface( pSoldier, DIRTYLEVEL2 );
@@ -3920,7 +3930,7 @@ void WaterDamage(SOLDIERTYPE& s)
 		{
 			// Reload palettes....
 			if (s.bInSector) CreateSoldierPalettes(s);
-			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, g_langRes->Message[STR_CAMO_WASHED_OFF], s.name);
+			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(g_langRes->Message[STR_CAMO_WASHED_OFF], s.name));
 		}
 	}
 	if (s.bTeam == OUR_TEAM && s.bMonsterSmell > 0)

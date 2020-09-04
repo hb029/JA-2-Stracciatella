@@ -2,7 +2,7 @@
     {
         "itemIndex": 0,
         "internalName": "Nothing",
-        "internalType": "NOWEAPON",
+        "internalType": "PUNCH",
         "ubGraphicType": 0,
         "ubGraphicNum": 0,
         "ubWeight": 0,
@@ -1505,10 +1505,9 @@
         "bShowStatus": true
     },
     {
-        "thrown": true,
         "itemIndex": 39,
         "internalName": "ROCK",
-        "internalType": "NOWEAPON",
+        "internalType": "THROWN",
         "ubGraphicType": 1,
         "ubGraphicNum": 57,
         "ubWeight": 5,
@@ -1580,10 +1579,9 @@
         "bTwoHanded": true
     },
     {
-        "thrown": true,
         "itemIndex": 42,
         "internalName": "ROCK2",
-        "internalType": "NOWEAPON",
+        "internalType": "THROWN",
         "ubGraphicType": 1,
         "ubGraphicNum": 60,
         "ubWeight": 4,
@@ -1735,7 +1733,8 @@
         "Sound": "sounds/adult spit.wav",
         "bNotBuyable": true,
         "bNotEditor": true,
-        "bDefaultUndroppable": true
+        "bDefaultUndroppable": true,
+        "usSmokeEffect": 159  // LARGE_CREATURE_GAS
     },
     {
         "itemIndex": 49,
@@ -1984,7 +1983,8 @@
         "Sound": "sounds/adult spit.wav",
         "bNotBuyable": true,
         "bNotEditor": true,
-        "bDefaultUndroppable": true
+        "bDefaultUndroppable": true,
+        "usSmokeEffect": 160  // VERY_SMALL_CREATURE_GAS
     },
     {
         "itemIndex": 58,
@@ -2010,7 +2010,8 @@
         "Sound": "sounds/adult spit.wav",
         "bNotBuyable": true,
         "bNotEditor": true,
-        "bDefaultUndroppable": true
+        "bDefaultUndroppable": true,
+        "usSmokeEffect": 160  // VERY_SMALL_CREATURE_GAS
     },
     {
         "itemIndex": 59,
@@ -2036,7 +2037,8 @@
         "Sound": "sounds/adult spit.wav",
         "bNotBuyable": true,
         "bNotEditor": true,
-        "bDefaultUndroppable": true
+        "bDefaultUndroppable": true,
+        "usSmokeEffect": 158  // SMALL_CREATURE_GAS
     },
     {
         "itemIndex": 60,

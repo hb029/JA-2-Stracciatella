@@ -84,7 +84,7 @@ void LoadRadarScreenBitmap(const char* const filename)
 	ClearOutRadarMapImage();
 
 	// Grab the Map image
-	std::string image_filename(GCM->getRadarMapResourceName(FileMan::replaceExtension(FileMan::getFileName(filename), ".sti")));
+	ST::string image_filename(GCM->getRadarMapResourceName(FileMan::replaceExtension(FileMan::getFileName(filename), "sti")));
 
 	SGPVObject* const radar = AddVideoObjectFromFile(image_filename.c_str());
 	gusRadarImage = radar;
@@ -440,13 +440,13 @@ static void RenderSquadList(void)
 	SetFont(SQUAD_FONT);
 	SetFontBackground(FONT_BLACK);
 
-	for (UINT i = 0; i < NUMBER_OF_SQUADS; ++i)
+	for (INT16 i = 0; i < NUMBER_OF_SQUADS; ++i)
 	{
 		const UINT8 colour =
 			sSelectedSquadLine == i         ? FONT_WHITE   : // highlight line?
 			!IsSquadOnCurrentTacticalMap(i) ? FONT_BLACK   :
-			CurrentSquad() == (INT32)i      ? FONT_LTGREEN :
-								FONT_DKGREEN;
+			CurrentSquad() == i             ? FONT_LTGREEN :
+			                                  FONT_DKGREEN;
 		SetFontForeground(colour);
 
 		INT16 sX;

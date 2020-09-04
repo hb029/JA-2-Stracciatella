@@ -16,8 +16,7 @@ public:
 private:
 	int argc;
 	char** argv;
-	std::string exePath;
-	EngineOptions* engine_options;
+	RustPointer<EngineOptions> engine_options;
 
 	void populateChoices();
 	void startExecutable(bool asEditor);

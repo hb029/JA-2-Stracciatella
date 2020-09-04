@@ -1,13 +1,17 @@
 # JA2-Stracciatella Continued
 
-[![Build Status Travis](https://img.shields.io/travis/ja2-stracciatella/ja2-stracciatella/master.svg?style=flat-square)](https://travis-ci.org/ja2-stracciatella/ja2-stracciatella)
-[![Build Status Appveyor](https://img.shields.io/appveyor/ci/ja2-stracciatella/ja2-stracciatella/master.svg?style=flat-square)](https://ci.appveyor.com/project/ja2-stracciatella/ja2-stracciatella)
+[![GitHub CI](https://img.shields.io/github/workflow/status/ja2-stracciatella/ja2-stracciatella/GitHub%20CI/nightly?label=GitHub%20CI&logo=github)](https://github.com/ja2-stracciatella/ja2-stracciatella/actions?query=workflow%3A%22GitHub+CI%22)
+[![Travis CI](https://img.shields.io/travis/ja2-stracciatella/ja2-stracciatella/nightly.svg?style=flat-square&logo=travis&label=Travis%20CI)](https://travis-ci.org/ja2-stracciatella/ja2-stracciatella)
+[![AppVeyor](https://img.shields.io/appveyor/ci/ja2-stracciatella/ja2-stracciatella/nightly.svg?style=flat-square&logo=appveyor&label=AppVeyor)](https://ci.appveyor.com/project/ja2-stracciatella/ja2-stracciatella)
+[![Coverity Scan](https://img.shields.io/coverity/scan/8431.svg?style=flat-square&label=Coverity%20Scan)](https://scan.coverity.com/projects/ja2-stracciatella-ja2-stracciatella)
 
 This is continuation of venerable JA2-Stracciatella project.
 
 The goal of the project was to make Jagged Alliance 2 available on a wide range of platforms, improve its stability, fix bugs and provide a stable platform for mod development.  At the moment the goal mostly to fix bugs.
 
 Official Homepage: http://ja2-stracciatella.github.io/
+
+To get in touch with the developers you can use the [#ja2-stracciatella IRC channel on freenode](http://webchat.freenode.net/?channels=ja2-stracciatella).
 
 ## How to start the game
 
@@ -25,7 +29,7 @@ Official Homepage: http://ja2-stracciatella.github.io/
 ### Without the optional launcher
 3. Start the game the first time.  It will create the configuration file %USERPROFILE%\Documents\JA2\ja2.json on Windows or ~/.ja2/ja2.json on Unix-like systems.
 
-4. Edit the configuration file and set parameter data_dir to point to the directory where the original game was installed during step 1.  For example, D:\games\ja2\ (on Windows) or /home/user/games/ja2-installed (on Linux).
+4. Edit the configuration file and set parameter game_dir to point to the directory where the original game was installed during step 1.  For example, D:\games\ja2\ (on Windows) or /home/user/games/ja2-installed (on Linux).
 
 5. If you installed not English version of the original game, but one of the localized varieties (e.g. French or Russian), you need to start ja2.exe with parameter telling which version of the game you are using.  For example: ```ja2.exe -resversion FRENCH```
 

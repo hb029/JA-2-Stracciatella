@@ -56,6 +56,9 @@
 #include "UILayout.h"
 #include "Air_Raid.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
 
 extern BOOLEAN gfDelayAutoResolveStart;
 
@@ -143,7 +146,7 @@ BOOLEAN gfCantRetreatInPBI = FALSE;
 
 BOOLEAN gfUsePersistantPBI;
 
-static void MakeButton(UINT idx, INT16 x, const wchar_t* text, GUI_CALLBACK click)
+static void MakeButton(UINT idx, INT16 x, const ST::string& text, GUI_CALLBACK click)
 {
 	GUIButtonRef const btn = QuickCreateButton(iPBButtonImage[idx], x, STD_SCREEN_Y + 54, MSYS_PRIORITY_HIGHEST - 2, click);
 	iPBButton[idx] = btn;
@@ -209,7 +212,7 @@ void InitPreBattleInterface(GROUP* const battle_group, bool const persistent_pbi
 		}
 
 		// Reset the help text for mouse regions
-		gMapStatusBarsRegion.SetFastHelpText(L"");
+		gMapStatusBarsRegion.SetFastHelpText(ST::null);
 
 		gfDisplayPotentialRetreatPaths = false;
 
@@ -476,7 +479,7 @@ void InitPreBattleInterface(GROUP* const battle_group, bool const persistent_pbi
 	 * disable buttons when necessary. */
 	if (gfPersistantPBI)
 	{
-		wchar_t const* autoresolve_help;
+		ST::string autoresolve_help;
 		switch (gubEnemyEncounterCode)
 		{
 			case ENTERING_ENEMY_SECTOR_CODE:
@@ -502,7 +505,7 @@ void InitPreBattleInterface(GROUP* const battle_group, bool const persistent_pbi
 		iPBButton[1]->SetFastHelpText(gpStrategicString[STR_PB_GOTOSECTOR_FASTHELP]);
 		if (gfAutomaticallyStartAutoResolve) DisableButton(iPBButton[1]);
 
-		wchar_t const* retreat_help;
+		ST::string retreat_help;
 		if (gfAutomaticallyStartAutoResolve               ||
 				gfCantRetreatInPBI                            ||
 				gubEnemyEncounterCode == ENEMY_AMBUSH_CODE    ||
@@ -530,7 +533,7 @@ void InitPreBattleInterface(GROUP* const battle_group, bool const persistent_pbi
 		DisableButton(iPBButton[2]);
 		iPBButton[2]->SetFastHelpText(gzNonPersistantPBIText[0]);
 		iPBButton[1]->SetFastHelpText(gzNonPersistantPBIText[1]);
-		wchar_t const* help;
+		ST::string help;
 		switch (gubExplicitEnemyEncounterCode)
 		{
 			case CREATURE_ATTACK_CODE:
@@ -712,7 +715,7 @@ static void RenderPBHeader(INT32* piX, INT32* piWidth)
 		GetJA2Clock() % 1000 < 667 ? FONT_WHITE :
 		FONT_LTRED;
 	SetFontAttributes(FONT10ARIALBOLD, foreground);
-	const wchar_t* str; // XXX HACK000E
+	ST::string str;
 	if( !gfPersistantPBI )
 	{
 		str = gzNonPersistantPBIText[8];
@@ -758,7 +761,7 @@ static void RenderPBHeader(INT32* piX, INT32* piWidth)
 }
 
 
-static void PrintConfined(INT32 const x, INT32 const y, INT32 const max_w, wchar_t const* const str)
+static void PrintConfined(INT32 x, INT32 y, INT32 max_w, const ST::string& str)
 {
 	SGPFont  font  = BLOCKFONT;
 	INT32 w     = StringPixLength(str, font);
@@ -772,19 +775,19 @@ static void PrintConfined(INT32 const x, INT32 const y, INT32 const max_w, wchar
 }
 
 
-static void MPrintCentered(INT32 x, INT32 const y, INT32 const w, wchar_t const* const str)
+static void MPrintCentered(INT32 x, INT32 y, INT32 w, const ST::string& str)
 {
 	x += (w - StringPixLength(str, FontDefault)) / 2;
 	MPrint(STD_SCREEN_X + x, STD_SCREEN_Y + y, str);
 }
 
 
-static wchar_t const* GetSoldierConditionInfo(SOLDIERTYPE const&);
+static ST::string GetSoldierConditionInfo(const SOLDIERTYPE& s);
 
 
 void RenderPreBattleInterface()
 {
-	wchar_t str[100];
+	ST::string str;
 
 	/* If the cursor is inside the rectangle consisting of the rectangle button,
 	 * then we set up the variables so that the retreat arrows get drawn in the
@@ -847,7 +850,7 @@ void RenderPreBattleInterface()
 		SetFontForeground(FONT_BEIGE);
 		PrintConfined(65, 17, 64, gpStrategicString[STR_PB_LOCATION]);
 
-		wchar_t const* const encounter =
+		ST::string encounter =
 			gubEnemyEncounterCode == CREATURE_ATTACK_CODE ? gpStrategicString[STR_PB_CREATURES] :
 			gubEnemyEncounterCode == BLOODCAT_AMBUSH_CODE || gubEnemyEncounterCode == ENTERING_BLOODCAT_LAIR_CODE ? gpStrategicString[STR_PB_BLOODCATS] :
 			gubEnemyEncounterCode == ENEMY_AIR_RAID_CODE ? TacticalStr[AIR_RAID_TURN_STR] :
@@ -875,33 +878,32 @@ void RenderPreBattleInterface()
 
 		// Location
 		SetFontAttributes(FONT10ARIAL, FONT_YELLOW);
-		wchar_t sector_name[128];
-		GetSectorIDString(sec_x, sec_y, sec_z, sector_name, lengthof(sector_name), TRUE);
-		mprintf(STD_SCREEN_X + 70, STD_SCREEN_Y + 17, L"%ls %ls", gpStrategicString[STR_PB_SECTOR], sector_name);
+		ST::string sector_name = GetSectorIDString(sec_x, sec_y, sec_z, TRUE);
+		MPrint(STD_SCREEN_X + 70, STD_SCREEN_Y + 17, ST::format("{} {}", gpStrategicString[STR_PB_SECTOR], sector_name));
 
 		SetFont(FONT14ARIAL);
 		// Enemy
-		wchar_t const* enemies;
+		ST::string enemies;
 		if (gubEnemyEncounterCode == CREATURE_ATTACK_CODE        ||
 			gubEnemyEncounterCode == BLOODCAT_AMBUSH_CODE        ||
 			gubEnemyEncounterCode == ENTERING_BLOODCAT_LAIR_CODE ||
 			WhatPlayerKnowsAboutEnemiesInSector(sec_x, sec_y) != KNOWS_HOW_MANY)
 		{ // Don't know how many
-			enemies = L"?";
+			enemies = "?";
 		}
 		else
 		{ // Know exactly how many
 			INT32 n = NumEnemiesInSector(sec_x, sec_y);
 			if (InAirRaid()) n += 1;
-			swprintf(str, lengthof(str), L"%d", n);
+			str = ST::format("{}", n);
 			enemies = str;
 		}
 		MPrintCentered(57, 36, 27, enemies);
 		// Player
-		swprintf(str, lengthof(str), L"%d", guiNumInvolved);
+		str = ST::format("{}", guiNumInvolved);
 		MPrintCentered(142, 36, 27, str);
 		// Militia
-		swprintf(str, lengthof(str), L"%d", CountAllMilitiaInSector(sec_x, sec_y));
+		str = ST::format("{}", CountAllMilitiaInSector(sec_x, sec_y));
 		MPrintCentered(227, 36, 27, str);
 		SetFontShadow(FONT_NEARBLACK);
 
@@ -920,14 +922,15 @@ void RenderPreBattleInterface()
 				// Name
 				MPrintCentered( 17, y, 52, s.name);
 				// Assignment
-				MPrintCentered( 72, y, 45, GetMapscreenMercAssignmentString(s));
+				str = GetMapscreenMercAssignmentString(s);
+				MPrintCentered( 72, y, 45, str);
 				// Condition
 				MPrintCentered(129, y, 58, GetSoldierConditionInfo(s));
 				// HP
-				swprintf(str, lengthof(str), L"%d%%", s.bLife * 100 / s.bLifeMax);
+				str = ST::format("{}%", s.bLife * 100 / s.bLifeMax);
 				MPrintCentered(189, y, 25, str);
 				// BP
-				swprintf(str, lengthof(str), L"%d%%", s.bBreath);
+				str = ST::format("{}%", s.bBreath);
 				MPrintCentered(217, y, 25, str);
 
 				y += ROW_HEIGHT;
@@ -953,15 +956,16 @@ void RenderPreBattleInterface()
 				// Name
 				MPrintCentered( 17, y, 52, s.name);
 				// Assignment
-				MPrintCentered( 72, y, 54, GetMapscreenMercAssignmentString(s));
+				str = GetMapscreenMercAssignmentString(s);
+				MPrintCentered( 72, y, 54, str);
 				// Location
-				GetMapscreenMercLocationString(s, str, lengthof(str));
+				str = GetMapscreenMercLocationString(s);
 				MPrintCentered(128, y, 33, str);
 				// Destination
-				GetMapscreenMercDestinationString(s, str, lengthof(str));
-				if (str[0] != L'\0') MPrintCentered(164, y, 41, str);
+				str = GetMapscreenMercDestinationString(s);
+				if (!str.empty()) MPrintCentered(164, y, 41, str);
 				// Departure
-				GetMapscreenMercDepartureString(s, str, lengthof(str), 0);
+				str = GetMapscreenMercDepartureString(s, 0);
 				MPrintCentered(208, y, 34, str);
 				y += ROW_HEIGHT;
 			}
@@ -1144,7 +1148,7 @@ enum
 };
 
 
-static wchar_t const* GetSoldierConditionInfo(SOLDIERTYPE const& s)
+static ST::string GetSoldierConditionInfo(const SOLDIERTYPE& s)
 {
 	// Go from the worst condition to the best
 	return

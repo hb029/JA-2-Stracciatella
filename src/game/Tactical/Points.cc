@@ -456,6 +456,12 @@ BOOLEAN EnoughPoints(const SOLDIERTYPE* pSoldier, INT16 sAPCost, INT16 sBPCost, 
 		return( TRUE );
 	}
 
+	// can't do anything while collapsed
+	if (pSoldier->bCollapsed)
+	{
+		return FALSE;
+	}
+
 	if ( pSoldier->ubQuoteActionID >=QUOTE_ACTION_ID_TRAVERSE_EAST && pSoldier->ubQuoteActionID <= QUOTE_ACTION_ID_TRAVERSE_NORTH )
 	{
 		// AI guy on special move off map
@@ -833,7 +839,7 @@ static INT16 GetBreathPerAP(SOLDIERTYPE* pSoldier, UINT16 usAnimState)
 
 	if ( !fAnimTypeFound )
 	{
-		SLOGD("Unknown end-of-turn breath anim: %hs",
+		SLOGD("Unknown end-of-turn breath anim: %s",
 			gAnimControl[usAnimState].zAnimStr);
 	}
 
@@ -1447,12 +1453,16 @@ INT8 GetAPsToAutoReload( SOLDIERTYPE * pSoldier )
 	if (GCM->getItem(pObj->usItem)->getItemClass() == IC_GUN || GCM->getItem(pObj->usItem)->getItemClass() == IC_LAUNCHER)
 	{
 		bSlot = FindAmmoToReload( pSoldier, HANDPOS, NO_SLOT );
-		if (bSlot != NO_SLOT)
+		if (bSlot == NO_SLOT)
 		{
-			// we would reload using this ammo!
-			bAPCost += GetAPsToReloadGunWithAmmo( pObj, &(pSoldier->inv[bSlot] ) );
+			// we would not reload
+			return( 0 );
 		}
 
+		// we would reload using this ammo!
+		bAPCost += GetAPsToReloadGunWithAmmo( pObj, &(pSoldier->inv[bSlot] ) );
+		// if we are valid for two-pistol shooting (reloading) and we have enough APs still
+		// then we would do a reload of both guns!
 		if ( IsValidSecondHandShotForReloadingPurposes( pSoldier ) )
 		{
 			pObj = &(pSoldier->inv[SECONDHANDPOS]);
@@ -1674,6 +1684,18 @@ INT8 GetAPsToRefuelVehicle( SOLDIERTYPE *pSoldier )
 INT16 MinAPsToThrow(SOLDIERTYPE const& s, GridNo gridno, bool const add_turning_cost)
 {
 	INT32 ap = AP_MIN_AIM_ATTACK;
+
+	// Make sure the guy's actually got a throwable item in his hand
+	UINT16 const in_hand = s.inv[HANDPOS].usItem;
+	const ItemModel *item = GCM->getItem(in_hand);
+	if (!item)
+	{
+		SLOGW("MinAPsToThrow - in-hand item is missing");
+	}
+	else if (!(item->getItemClass() & (IC_GRENADE | IC_THROWN))) // match MinAPsToAttack
+	{
+		SLOGW("MinAPsToThrow - in-hand item '%s' has unexpected item class 0x%x", item->getInternalName().c_str(), item->getItemClass());
+	}
 
 	if (gridno != NOWHERE)
 	{

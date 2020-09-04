@@ -40,6 +40,8 @@
 #include "Queen_Command.h"
 #include "Debug.h"
 
+#include <algorithm>
+
 #define AI_DELAY 100
 
 
@@ -69,7 +71,7 @@ void InitAI(void)
 #ifdef _DEBUG
 	if (gfDisplayCoverValues)
 	{
-		memset( gsCoverValue, 0x7F, sizeof( INT16 ) * WORLD_MAX );
+		std::fill_n(gsCoverValue, WORLD_MAX, 0x7F7F);
 	}
 #endif
 
@@ -598,7 +600,7 @@ void EndAIDeadlock()
 			SLOGD("Ending turn for %d because breaking deadlock", s.ubID);
 		}
 
-		SLOGD("Number of bullets in the air is %ld", guiNumBullets);
+		SLOGD(ST::format("Number of bullets in the air is {}", guiNumBullets));
 		SLOGD("Setting attack busy count to 0 from deadlock break");
 		gTacticalStatus.ubAttackBusyCount = 0;
 
@@ -1077,7 +1079,7 @@ static void TurnBasedHandleNPCAI(SOLDIERTYPE* pSoldier)
 
 
 	SLOGD("HandleManAI - DECIDING for guynum %d(%s) at gridno %d, APs %d",
-		pSoldier->ubID,pSoldier->name,pSoldier->sGridNo,pSoldier->bActionPoints);
+		pSoldier->ubID, pSoldier->name.c_str(), pSoldier->sGridNo, pSoldier->bActionPoints);
 
 
 	// if man has nothing to do
@@ -1323,13 +1325,13 @@ INT8 ExecuteAction(SOLDIERTYPE *pSoldier)
 
 	if (gfTurnBasedAI || gTacticalStatus.fAutoBandageMode)
 	{
-		SLOGD("%d does %hs (a.d. %d) in %d with %d APs left",
+		SLOGD(ST::format("{} does {} (a.d. {}) in {} with {} APs left",
 			pSoldier->ubID, gzActionStr[pSoldier->bAction], pSoldier->usActionData,
-			pSoldier->sGridNo, pSoldier->bActionPoints);
+			pSoldier->sGridNo, pSoldier->bActionPoints));
 	}
 
-	SLOGD("%d does %hs (a.d. %d) at time %ld", pSoldier->ubID,
-		gzActionStr[pSoldier->bAction], pSoldier->usActionData, GetJA2Clock());
+	SLOGD(ST::format("{} does {} (a.d. {}) at time {}", pSoldier->ubID,
+		gzActionStr[pSoldier->bAction], pSoldier->usActionData, GetJA2Clock()));
 
 	switch (pSoldier->bAction)
 	{
@@ -1349,7 +1351,7 @@ INT8 ExecuteAction(SOLDIERTYPE *pSoldier)
 				if (pSoldier->ubProfile != NO_PROFILE)
 				{
 					SLOGD("%s waiting %d from %d",
-								pSoldier->name, pSoldier->AICounter, GetJA2Clock());
+								pSoldier->name.c_str(), pSoldier->AICounter, GetJA2Clock());
 				}
 			}
 			ActionDone( pSoldier );
@@ -1493,7 +1495,7 @@ INT8 ExecuteAction(SOLDIERTYPE *pSoldier)
 					// Check if we were told to move by NPC stuff
 					if ( pSoldier->sAbsoluteFinalDestination != NOWHERE && !(gTacticalStatus.uiFlags & INCOMBAT) )
 					{
-						SLOGE("AI %ls failed to get path for dialogue-related move!", pSoldier->name);
+						SLOGE("AI %s failed to get path for dialogue-related move!", pSoldier->name.c_str());
 
 						// Are we close enough?
 						if ( !ACTING_ON_SCHEDULE( pSoldier ) && SpacesAway( pSoldier->sGridNo, pSoldier->sAbsoluteFinalDestination ) < 4 )
@@ -1590,15 +1592,15 @@ INT8 ExecuteAction(SOLDIERTYPE *pSoldier)
 
 		case AI_ACTION_TOSS_PROJECTILE:       // throw grenade at/near opponent(s)
 			LoadWeaponIfNeeded(pSoldier);
-			// drop through here...
+			// fallthrough
 
 		case AI_ACTION_KNIFE_MOVE:            // preparing to stab opponent
 			if (pSoldier->bAction == AI_ACTION_KNIFE_MOVE) // if statement because toss falls through
 			{
 				pSoldier->usUIMovementMode = DetermineMovementMode( pSoldier, AI_ACTION_KNIFE_MOVE );
 			}
+			// fallthrough
 
-			// fall through
 		case AI_ACTION_FIRE_GUN:              // shoot at nearby opponent
 		case AI_ACTION_THROW_KNIFE:						// throw knife at nearby opponent
 		{
@@ -1683,7 +1685,7 @@ INT8 ExecuteAction(SOLDIERTYPE *pSoldier)
 				HandleInitialRedAlert(pSoldier->bTeam);
 			}
 			SLOGD("AI radios your position!" );
-			// DROP THROUGH HERE!
+			// fallthrough
 		case AI_ACTION_YELLOW_ALERT:          // tell friends opponent(s) heard
 			SLOGD("Debug: AI radios about a noise!" );
 			DeductPoints(pSoldier,AP_RADIO,BP_RADIO);// pay for it!
@@ -1914,7 +1916,7 @@ void HandleInitialRedAlert(INT8 bTeam)
 {
 	if (!gTacticalStatus.Team[bTeam].bAwareOfOpposition)
 	{
-		SLOGE("Enemies on team %d prompted to go on RED ALERT!", bTeam );
+		SLOGD("Enemies on team %d prompted to go on RED ALERT!", bTeam );
 	}
 
 	// if there is a stealth mission in progress here, and a panic trigger exists

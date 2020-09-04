@@ -291,7 +291,7 @@ INT8 RandomPointPatrolAI(SOLDIERTYPE *pSoldier)
 
 	// passed all tests - start moving towards next patrol point
 	SLOGD("%s - POINT PATROL to grid %d",
-		pSoldier->name, pSoldier->usActionData);
+		pSoldier->name.c_str(), pSoldier->usActionData);
 	return(TRUE);
 }
 
@@ -592,7 +592,7 @@ void SoldierTriesToContinueAlongPath(SOLDIERTYPE *pSoldier)
 		return;
 	}
 
-	if (pSoldier->usActionData >= NOWHERE)
+	if (pSoldier->usActionData >= GRIDSIZE)
 	{
 		CancelAIAction(pSoldier);
 		return;

@@ -431,7 +431,7 @@ static void UpdateOldVersionMap(void)
 		gMapInformation.ubMapVersion = 18;
 		FOR_EACH_WORLD_ITEM(wi)
 		{
-			OBJECTTYPE& o = wi->o;
+			OBJECTTYPE& o = wi.o;
 			if (o.usItem == JAR_ELIXIR) o.usItem = CROWBAR;
 		}
 	}
@@ -551,7 +551,7 @@ void ValidateAndUpdateMapVersionIfNecessary()
 	else if( gMapInformation.ubMapVersion > MINOR_MAP_VERSION )
 	{
 		//we may have a problem...
-		SLOGA("Map version is greater than the current version (old ja2.exe?)" );
+		SLOGW("Map version is greater than the current version (old ja2.exe?)" );
 	}
 	AutoCalculateItemNoOverwriteStatus() ;
 }
@@ -585,7 +585,7 @@ void UpdateSummaryInfo( SUMMARYFILE *pSummary )
 
 TEST(MapInformation, asserts)
 {
-	EXPECT_EQ(sizeof(MAPCREATE_STRUCT), 100);
+	EXPECT_EQ(sizeof(MAPCREATE_STRUCT), 100u);
 }
 
 #endif

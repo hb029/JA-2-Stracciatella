@@ -1,71 +1,69 @@
+#include "Explosion_Control.h"
+
+#include "AI.h"
+#include "Action_Items.h"
+#include "Animation_Control.h"
+#include "Campaign_Types.h"
+#include "ContentManager.h"
+#include "Debug.h"
 #include "Directories.h"
+#include "End_Game.h"
+#include "FOV.h"
+#include "FileMan.h"
 #include "Font_Control.h"
+#include "GameInstance.h"
+#include "GameSettings.h"
+#include "Game_Clock.h"
+#include "Handle_Doors.h"
+#include "Handle_Items.h"
+#include "Handle_UI.h"
+#include "Interactive_Tiles.h"
+#include "Interface.h"
+#include "Interface_Dialogue.h"
+#include "Isometric_Utils.h"
+#include "Items.h"
+#include "Keys.h"
+#include "LightEffects.h"
+#include "Lighting.h"
 #include "LoadSaveData.h"
 #include "LoadSaveExplosionType.h"
-#include "Overhead.h"
-#include "Structure.h"
-#include "Timer_Control.h"
-#include "Debug.h"
-#include "Soldier_Control.h"
-#include "Handle_Items.h"
-#include "WorldDef.h"
-#include "WorldMan.h"
-#include "Rotting_Corpses.h"
-#include "Isometric_Utils.h"
-#include "Animation_Control.h"
-#include "Game_Clock.h"
-#include "Soldier_Create.h"
-#include "RenderWorld.h"
-#include "Soldier_Add.h"
-#include "Explosion_Control.h"
-#include "Tile_Animation.h"
-#include "Sound_Control.h"
-#include "Weapons.h"
-#include "World_Items.h"
-#include "Structure_Wrap.h"
-#include "TileDef.h"
-#include "TileDat.h"
-#include "Interactive_Tiles.h"
-#include "SaveLoadMap.h"
-#include "Handle_Doors.h"
-#include "Message.h"
-#include "Random.h"
-#include "SmokeEffects.h"
-#include "Handle_UI.h"
-#include "PathAI.h"
-#include "Pits.h"
-#include "Campaign_Types.h"
-#include "StrategicMap.h"
-#include "Action_Items.h"
-#include "Soldier_Profile.h"
-#include "Quests.h"
-#include "Interface_Dialogue.h"
-#include "LightEffects.h"
-#include "AI.h"
-#include "Soldier_Tile.h"
-#include "Lighting.h"
-#include "Render_Fun.h"
-#include "OppList.h"
-#include "Smell.h"
-#include "GameSettings.h"
-#include "Interface.h"
-#include "End_Game.h"
-#include "WorldDat.h"
-#include "Keys.h"
-#include "FOV.h"
+#include "Logger.h"
 #include "Map_Information.h"
 #include "MemMan.h"
-#include "FileMan.h"
-#include "Items.h"
-#include "Soldier_Macros.h"
+#include "Message.h"
 #include "Morale.h"
-
-#include "ContentManager.h"
-#include "GameInstance.h"
-#include "Logger.h"
-
-extern INT8 gbSAMGraphicList[NUMBER_OF_SAMS];
-
+#include "OppList.h"
+#include "Overhead.h"
+#include "PathAI.h"
+#include "Pits.h"
+#include "Quests.h"
+#include "Random.h"
+#include "RenderWorld.h"
+#include "Render_Fun.h"
+#include "Rotting_Corpses.h"
+#include "SamSiteModel.h"
+#include "SaveLoadMap.h"
+#include "Smell.h"
+#include "SmokeEffects.h"
+#include "Soldier_Add.h"
+#include "Soldier_Control.h"
+#include "Soldier_Create.h"
+#include "Soldier_Macros.h"
+#include "Soldier_Profile.h"
+#include "Soldier_Tile.h"
+#include "Sound_Control.h"
+#include "StrategicMap.h"
+#include "Structure.h"
+#include "Structure_Wrap.h"
+#include "TileDat.h"
+#include "TileDef.h"
+#include "Tile_Animation.h"
+#include "Timer_Control.h"
+#include "Weapons.h"
+#include "WorldDat.h"
+#include "WorldDef.h"
+#include "WorldMan.h"
+#include "World_Items.h"
 
 struct ExplosionInfo
 {
@@ -206,13 +204,20 @@ static void GenerateExplosionFromExplosionPointer(EXPLOSIONTYPE* pExplosion)
 	const ExplosionInfo* inf = &explosion_info[pExplosion->ubTypeID];
 
 	// Setup explosion!
-	memset( &AniParams, 0, sizeof( ANITILE_PARAMS ) );
+	AniParams = ANITILE_PARAMS{};
 
 	AniParams.sGridNo							= sGridNo;
 	AniParams.ubLevelID						= ANI_TOPMOST_LEVEL;
 	AniParams.sDelay              = inf->blast_speed;
 	AniParams.sStartFrame					= pExplosion->sCurrentFrame;
 	AniParams.uiFlags             = ANITILE_FORWARD | ANITILE_EXPLOSION;
+
+	if ( ubTerrainType == LOW_WATER || ubTerrainType == MED_WATER || ubTerrainType == DEEP_WATER )
+	{
+		// Change type to water explosion...
+		inf = &explosion_info[WATER_BLAST];
+		AniParams.uiFlags						|= ANITILE_ALWAYS_TRANSLUCENT;
+	}
 
 	if ( sZ < WALL_HEIGHT )
 	{
@@ -229,13 +234,6 @@ static void GenerateExplosionFromExplosionPointer(EXPLOSIONTYPE* pExplosion)
 	AniParams.ubKeyFrame2     = inf->damage_key_frame;
 	AniParams.uiKeyFrame2Code = ANI_KEYFRAME_BEGIN_DAMAGE;
 	AniParams.v.explosion     = pExplosion;
-
-	if ( ubTerrainType == LOW_WATER || ubTerrainType == MED_WATER || ubTerrainType == DEEP_WATER )
-	{
-		// Change type to water explosion...
-		inf = &explosion_info[WATER_BLAST];
-		AniParams.uiFlags						|= ANITILE_ALWAYS_TRANSLUCENT;
-	}
 
 	AniParams.zCachedFile = inf->blast_anim;
 	CreateAnimationTile( &AniParams );
@@ -672,7 +670,7 @@ static void ExplosiveDamageGridNo(const INT16 sGridNo, const INT16 sWoundAmt, co
 	BOOLEAN   fMultiStructSpecialFlag = FALSE;
 	BOOLEAN   fExplodeDamageReturn = FALSE;
 
-	DB_STRUCTURE_TILE** ppTile          = NULL;    // XXX HACK000E
+	std::vector<DB_STRUCTURE_TILE*> ppTile;
 	GridNo              sBaseGridNo     = NOWHERE; // XXX HACK000E
 	UINT8               ubNumberOfTiles = 0;       // XXX HACK000E
 
@@ -693,8 +691,7 @@ static void ExplosiveDamageGridNo(const INT16 sGridNo, const INT16 sWoundAmt, co
 			sBaseGridNo = pBaseStructure->sGridNo;
 			ubNumberOfTiles = pBaseStructure->pDBStructureRef->pDBStructure->ubNumberOfTiles;
 			fMultiStructure = ( ( pBaseStructure->fFlags & STRUCTURE_MULTI ) != 0 );
-			ppTile = MALLOCN(DB_STRUCTURE_TILE*, ubNumberOfTiles);
-			memcpy(ppTile, pBaseStructure->pDBStructureRef->ppTile, sizeof(*ppTile) * ubNumberOfTiles);
+			ppTile.assign(pBaseStructure->pDBStructureRef->ppTile, pBaseStructure->pDBStructureRef->ppTile + ubNumberOfTiles);
 
 			if ( bMultiStructSpecialFlag == -1 )
 			{
@@ -735,7 +732,7 @@ static void ExplosiveDamageGridNo(const INT16 sGridNo, const INT16 sWoundAmt, co
 			{
 				if ( pBaseStructure )
 				{
-					MemFree( ppTile );
+					ppTile.clear();
 				}
 				return;
 			}
@@ -779,7 +776,7 @@ static void ExplosiveDamageGridNo(const INT16 sGridNo, const INT16 sWoundAmt, co
 
 		if ( pBaseStructure )
 		{
-			MemFree( ppTile );
+			ppTile.clear();
 		}
 
 		pCurrent = pNextCurrent;
@@ -817,7 +814,7 @@ static BOOLEAN DamageSoldierFromBlast(SOLDIERTYPE* const pSoldier, SOLDIERTYPE* 
 
 	pSoldier->ubMiscSoldierFlags |= SOLDIER_MISC_HURT_BY_EXPLOSION;
 
-	if (owner != NULL && owner->bTeam == OUR_TEAM && pSoldier->bTeam != OUR_TEAM)
+	if (owner != NULL && owner->bTeam == OUR_TEAM && pSoldier->bTeam != OUR_TEAM && pSoldier->bTeam != MILITIA_TEAM && pSoldier->bTeam != CIV_TEAM)
 	{
 		ProcessImplicationsOfPCAttack(owner, pSoldier, REASON_EXPLOSION);
 	}
@@ -1133,7 +1130,7 @@ static BOOLEAN ExpAffect(const INT16 sBombGridNo, const INT16 sGridNo, const UIN
 				if (DamageItemOnGround(&wi.o, sGridNo, bLevel, sWoundAmt * 2, owner))
 				{
 					// item was destroyed
-					RemoveItemFromPool(&wi);
+					RemoveItemFromPool(wi);
 				}
 				pItemPool = pItemPoolNext;
 			}
@@ -1780,7 +1777,7 @@ static void ToggleActionItemsByFrequency(INT8 bFrequency)
 	// Go through all the bombs in the world, and look for remote ones
 	CFOR_EACH_WORLD_BOMB(wb)
 	{
-		OBJECTTYPE& o = GetWorldItem(wb->iItemIndex).o;
+		OBJECTTYPE& o = GetWorldItem(wb.iItemIndex).o;
 		if (o.bDetonatorType == BOMB_REMOTE)
 		{
 			// Found a remote bomb, so check to see if it has the same frequency
@@ -1806,7 +1803,7 @@ static void TogglePressureActionItemsInGridNo(INT16 sGridNo)
 	// Go through all the bombs in the world, and look for remote ones
 	CFOR_EACH_WORLD_BOMB(wb)
 	{
-		WORLDITEM& wi = GetWorldItem(wb->iItemIndex);
+		WORLDITEM& wi = GetWorldItem(wb.iItemIndex);
 		if (wi.sGridNo != sGridNo) continue;
 
 		OBJECTTYPE& o = wi.o;
@@ -2125,7 +2122,6 @@ void PerformItemAction(INT16 sGridNo, OBJECTTYPE* pObj)
 			if (gTacticalStatus.uiFlags & INCOMBAT) break;
 			else
 			{
-				OBJECTTYPE DoorCloser;
 				INT16 sTeleportSpot;
 				INT16 sDoorSpot;
 				UINT8 ubDirection;
@@ -2269,7 +2265,7 @@ void HandleExplosionQueue()
 		else if (o.usBombItem == TRIP_FLARE)
 		{
 			NewLightEffect(gridno, LIGHT_FLARE_MARK_1);
-			RemoveItemFromPool(&wi);
+			RemoveItemFromPool(wi);
 		}
 		else
 		{
@@ -2277,7 +2273,7 @@ void HandleExplosionQueue()
 
 			/* Remove the item first to prevent the explosion from detonating it a
 			 * second time. */
-			RemoveItemFromPool(&wi);
+			RemoveItemFromPool(wi);
 
 			// Make sure no one thinks there is a bomb here any more
 			UINT16& flags = gpWorldLevelData[gridno].uiFlags;
@@ -2348,7 +2344,8 @@ void DecayBombTimers( void )
 	uiTimeStamp = GetJA2Clock();
 
 	// Go through all the bombs in the world, and look for timed ones
-	for (uiWorldBombIndex = 0; uiWorldBombIndex < guiNumWorldBombs; uiWorldBombIndex++)
+	Assert(gWorldBombs.size() <= UINT32_MAX);
+	for (uiWorldBombIndex = 0; uiWorldBombIndex < static_cast<UINT32>(gWorldBombs.size()); uiWorldBombIndex++)
 	{
 		if (gWorldBombs[uiWorldBombIndex].fExists)
 		{
@@ -2390,7 +2387,8 @@ void SetOffBombsByFrequency(SOLDIERTYPE* const s, const INT8 bFrequency)
 	uiTimeStamp = GetJA2Clock();
 
 	// Go through all the bombs in the world, and look for remote ones
-	for (uiWorldBombIndex = 0; uiWorldBombIndex < guiNumWorldBombs; uiWorldBombIndex++)
+	Assert(gWorldBombs.size() <= UINT32_MAX);
+	for (uiWorldBombIndex = 0; uiWorldBombIndex < static_cast<UINT32>(gWorldBombs.size()); uiWorldBombIndex++)
 	{
 		if (gWorldBombs[uiWorldBombIndex].fExists)
 		{
@@ -2458,7 +2456,8 @@ BOOLEAN SetOffBombsInGridNo(SOLDIERTYPE* const s, const INT16 sGridNo, const BOO
 	uiTimeStamp = GetJA2Clock();
 
 	// Go through all the bombs in the world, and look for mines at this location
-	for (uiWorldBombIndex = 0; uiWorldBombIndex < guiNumWorldBombs; uiWorldBombIndex++)
+	Assert(gWorldBombs.size() <= UINT32_MAX);
+	for (uiWorldBombIndex = 0; uiWorldBombIndex < static_cast<UINT32>(gWorldBombs.size()); uiWorldBombIndex++)
 	{
 		if (!gWorldBombs[uiWorldBombIndex].fExists) continue;
 
@@ -2522,7 +2521,7 @@ void ActivateSwitchInGridNo(SOLDIERTYPE* const s, const INT16 sGridNo)
 	// Go through all the bombs in the world, and look for mines at this location
 	CFOR_EACH_WORLD_BOMB(wb)
 	{
-		WORLDITEM const& wi = GetWorldItem(wb->iItemIndex);
+		WORLDITEM const& wi = GetWorldItem(wb.iItemIndex);
 		if (wi.sGridNo != sGridNo) continue;
 
 		OBJECTTYPE const& o = wi.o;
@@ -2560,12 +2559,12 @@ void SaveExplosionTableToSaveGameFile(HWFILE const hFile)
 	{
 		ExplosionQueueElement const& e = *i;
 		BYTE  data[12];
-		BYTE* d = data;
+		DataWriter d{data};
 		INJ_U32( d, e.uiWorldBombIndex)
 		INJ_U32( d, e.uiTimeStamp)
 		INJ_U8(  d, e.fExists)
 		INJ_SKIP(d, 3)
-		Assert(d == endof(data));
+		Assert(d.getConsumed() == lengthof(data));
 		FileWrite(hFile, data, sizeof(data));
 	}
 
@@ -2613,13 +2612,13 @@ void LoadExplosionTableFromSavedGameFile(HWFILE const hFile)
 	{
 		BYTE  data[12];
 		FileRead(hFile, data, sizeof(data));
-		BYTE*                  d = data;
+		DataReader d{data};
 		ExplosionQueueElement& e = *i;
 		EXTR_U32( d, e.uiWorldBombIndex)
 		EXTR_U32( d, e.uiTimeStamp)
 		EXTR_U8(  d, e.fExists)
 		EXTR_SKIP(d, 3)
-		Assert(d == endof(data));
+		Assert(d.getConsumed() == lengthof(data));
 	}
 
 	//
@@ -2645,12 +2644,12 @@ bool DoesSAMExistHere(INT16 const x, INT16 const y, INT16 const z, GridNo const 
 	// ATE: If we are below, return right away
 	if (z != 0) return false;
 
-	INT16 const sector = SECTOR(x, y);
-	for (UINT8 i = 0; i < NUMBER_OF_SAMS; ++i)
+	for (auto s : GCM->getSamSites())
 	{
-		if (pSamList[i] != sector) continue;
-		if (pSamGridNoAList[i] == gridno) return true;
-		if (pSamGridNoBList[i] == gridno) return true;
+		if (s->doesSamExistHere(x, y, gridno))
+		{
+			return true;
+		}
 	}
 	return false;
 }
@@ -2691,13 +2690,14 @@ void UpdateAndDamageSAMIfFound( INT16 sSectorX, INT16 sSectorY, INT16 sSectorZ, 
 
 	if (fReplaceTile)
 	{
-		for (UINT8 i = 0; i < NUMBER_OF_SAMS; ++i)
+		auto samList = GCM->getSamSites();
+		for (auto samSite: samList)
 		{
-			if (pSamList[i] != sector) continue;
+			if (samSite->sectorId != sector) continue;
 
-			UINT16 const good_graphic    = GetTileIndexFromTypeSubIndex(EIGHTISTRUCT, gbSAMGraphicList[i]);
+			UINT16 const good_graphic    = GetTileIndexFromTypeSubIndex(EIGHTISTRUCT, samSite->graphicIndex);
 			UINT16 const damaged_graphic = good_graphic - 2; // Damaged one (current) is 2 less
-			GridNo const gridno          = pSamGridNoAList[i];
+			GridNo const gridno          = samSite->gridNos[0];
 
 			ApplyMapChangesToMapTempFile app;
 			RemoveStruct(   gridno, good_graphic);
@@ -2724,13 +2724,14 @@ void UpdateSAMDoneRepair(INT16 const x, INT16 const y, INT16 const z)
 	if (z != 0) return;
 
 	INT16 const sector = SECTOR(x, y);
-	for (UINT8 i = 0; i < NUMBER_OF_SAMS; ++i)
+	auto samList = GCM->getSamSites();
+	for (auto samSite: samList)
 	{
-		if (pSamList[i] != sector) continue;
+		if (samSite->sectorId != sector) continue;
 
-		UINT16 const good_graphic    = GetTileIndexFromTypeSubIndex(EIGHTISTRUCT, gbSAMGraphicList[i]);
+		UINT16 const good_graphic    = GetTileIndexFromTypeSubIndex(EIGHTISTRUCT, samSite->graphicIndex);
 		UINT16 const damaged_graphic = good_graphic - 2; // Damaged one (current) is 2 less
-		GridNo const gridno          = pSamGridNoAList[i];
+		GridNo const gridno          = samSite->gridNos[0];
 		if (x == gWorldSectorX && y == gWorldSectorY && z == gbWorldSectorZ)
 		{ // Sector loaded, update graphic
 			ApplyMapChangesToMapTempFile app;
@@ -2788,10 +2789,10 @@ static INT32 FindActiveTimedBomb(void)
 	// Go through all the bombs in the world, and look for timed ones
 	FOR_EACH_WORLD_BOMB(wb)
 	{
-		OBJECTTYPE const& o = GetWorldItem(wb->iItemIndex).o;
+		OBJECTTYPE const& o = GetWorldItem(wb.iItemIndex).o;
 		if (o.bDetonatorType != BOMB_TIMED || o.fFlags & OBJECT_DISABLED_BOMB) continue;
 
-		return wb->iItemIndex;
+		return wb.iItemIndex;
 	}
 	return -1;
 }

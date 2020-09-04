@@ -426,8 +426,8 @@ void HandleMoraleEvent( SOLDIERTYPE *pSoldier, INT8 bMoraleEvent, INT16 sMapX, I
 	else
 	{
 		SLOGD(
-			"Handling morale event %d for %ls at X=%d, Y=%d, Z=%d",
-			bMoraleEvent, pSoldier->name, sMapX, sMapY, bMapZ);
+			"Handling morale event %d for %s at X=%d, Y=%d, Z=%d",
+			bMoraleEvent, pSoldier->name.c_str(), sMapX, sMapY, bMapZ);
 	}
 
 
@@ -744,6 +744,7 @@ void HourlyMoraleUpdate()
 			if (opinion == HATED_OPINION)
 			{
 				INT8 const hated = WhichHated(s->ubProfile, other->ubProfile);
+				Assert(hated >= 0);
 				if (hated >= 2 || // Learn to hate which has become full-blown hatred, full strength
 					p.bHatedCount[hated] <= p.bHatedTime[hated] / 2)
 				{

@@ -14,6 +14,10 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
+
 BOOLEAN CreateSGPPaletteFromCOLFile(SGPPaletteEntry* const pal, const char* const col_file)
 try
 {
@@ -22,7 +26,7 @@ try
 	BYTE data[776];
 	FileRead(f, data, sizeof(data));
 
-	const BYTE* d = data;
+	DataReader d{data};
 	EXTR_SKIP(d, 8); // skip header
 	for (UINT i = 0; i != 256; ++i)
 	{
@@ -30,14 +34,14 @@ try
 		EXTR_U8(d, pal[i].g)
 		EXTR_U8(d, pal[i].b)
 	}
-	Assert(d == endof(data));
+	Assert(d.getConsumed() == lengthof(data));
 
 	return TRUE;
 }
 catch (...) { return FALSE; }
 
 
-void DisplayPaletteRep(const PaletteRepID aPalRep, const UINT8 ubXPos, const UINT8 ubYPos, SGPVSurface* const dst)
+void DisplayPaletteRep(const ST::string& aPalRep, UINT8 ubXPos, UINT8 ubYPos, SGPVSurface* dst)
 {
 	UINT16 us16BPPColor;
 	UINT32 cnt1;
@@ -64,5 +68,5 @@ void DisplayPaletteRep(const PaletteRepID aPalRep, const UINT8 ubXPos, const UIN
 		ColorFillVideoSurfaceArea(dst, sTLX, sTLY, sBRX, sBRY, us16BPPColor);
 	}
 
-	gprintf(ubXPos + 16 * 20, ubYPos, L"%hs", gpPalRep[ubPaletteRep].ID);
+	GPrint(ubXPos + 16 * 20, ubYPos, ST::format("{}", gpPalRep[ubPaletteRep].ID));
 }

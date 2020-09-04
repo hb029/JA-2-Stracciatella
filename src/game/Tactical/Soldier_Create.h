@@ -6,6 +6,8 @@
 #include "Item_Types.h"
 #include "Soldier_Control.h"
 
+#include <string_theory/string>
+
 
 //Kris:  SERIALIZING INFORMATION
 //All maps must have:
@@ -81,10 +83,10 @@ struct SOLDIERCREATE_STRUCT
 	OBJECTTYPE Inv[ NUM_INV_SLOTS ];
 
 	//Palette information for soldiers.
-	PaletteRepID HeadPal;
-	PaletteRepID PantsPal;
-	PaletteRepID VestPal;
-	PaletteRepID SkinPal;
+	ST::string HeadPal;
+	ST::string PantsPal;
+	ST::string VestPal;
+	ST::string SkinPal;
 
 	//Waypoint information for patrolling
 	INT16   sPatrolGrid[ MAXPATROLGRIDS ];
@@ -92,7 +94,7 @@ struct SOLDIERCREATE_STRUCT
 
 	//Kris: Additions November 16, 1997 (padding down to 129 from 150)
 	BOOLEAN fVisible;
-	wchar_t name[ 10 ];
+	ST::string name;
 
 	UINT8   ubSoldierClass; //army, administrator, elite
 

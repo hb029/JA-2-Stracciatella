@@ -28,6 +28,9 @@
 #include "Video.h"
 #include "UILayout.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
 
 BOOLEAN fBuildingShowRoofs, fBuildingShowWalls, fBuildingShowRoomInfo;
 UINT16 usCurrentMode;
@@ -82,16 +85,16 @@ void UpdateBuildingsInfo()
 	//print the headers on top of the columns
 	SetFont( SMALLCOMPFONT );
 	SetFontForeground( FONT_RED );
-	mprintfEditor(112,  2, L"TOGGLE");
-	mprintfEditor(114, 12, L"VIEWS");
+	MPrintEditor(112,  2, "TOGGLE");
+	MPrintEditor(114, 12, "VIEWS");
 	SetFontForeground( FONT_YELLOW );
-	mprintfEditor(185,  2, L"SELECTION METHOD");
+	MPrintEditor(185,  2, "SELECTION METHOD");
 	SetFontForeground( FONT_LTGREEN );
-	mprintfEditor(290,  2, L"SMART METHOD");
+	MPrintEditor(290,  2, "SMART METHOD");
 	SetFontForeground( FONT_LTBLUE );
-	mprintfEditor(390,  2, L"BUILDING METHOD");
+	MPrintEditor(390,  2, "BUILDING METHOD");
 	SetFontForeground( FONT_GRAY2 );
-	mprintfEditor(437, 44, L"Room#" );
+	MPrintEditor(437, 44, "Room#" );
 }
 
 //Uses a recursive method to elimate adjacent tiles of structure information.
@@ -146,7 +149,7 @@ void DeleteBuildingLayout()
 	{
 		curr = gpBuildingLayoutList;
 		gpBuildingLayoutList = gpBuildingLayoutList->next;
-		MemFree( curr );
+		delete curr;
 	}
 	gpBuildingLayoutList = NULL;
 	gsBuildingLayoutAnchorGridNo = -1;
@@ -181,7 +184,7 @@ static void BuildLayout(INT32 iMapIndex, INT32 iOffset)
 		curr = curr->next;
 	}
 	//Good, it hasn't, so process it and add it to the head of the list.
-	curr = MALLOC(BUILDINGLAYOUTNODE);
+	curr = new BUILDINGLAYOUTNODE{};
 	curr->sGridNo = (INT16)iMapIndex;
 	curr->next = gpBuildingLayoutList;
 	gpBuildingLayoutList = curr;
@@ -203,7 +206,7 @@ void CopyBuilding( INT32 iMapIndex )
 		return;
 	//Okay, a building does exist here to some undetermined capacity.
 	//Allocate the basic structure, then calculate the layout.  The head node is
-	gpBuildingLayoutList = MALLOC(BUILDINGLAYOUTNODE);
+	gpBuildingLayoutList = new BUILDINGLAYOUTNODE{};
 	gpBuildingLayoutList->sGridNo = (INT16)iMapIndex;
 	gpBuildingLayoutList->next = NULL;
 
@@ -437,7 +440,7 @@ static void ReplaceRoof(INT32 iMapIndex, UINT16 usRoofType)
 		curr = curr->next;
 	}
 	//Good, it hasn't, so process it and add it to the head of the list.
-	curr = MALLOC(ROOFNODE);
+	curr = new ROOFNODE{};
 	curr->iMapIndex = iMapIndex;
 	curr->next = gpRoofList;
 	gpRoofList = curr;
@@ -465,7 +468,7 @@ void ReplaceBuildingWithNewRoof( INT32 iMapIndex )
 	usRoofType = (UINT16)SelSingleNewRoof[ iCurBank ].uiObject;
 
 	//now start building a linked list of all nodes visited -- start the first node.
-	gpRoofList = MALLOC(ROOFNODE);
+	gpRoofList = new ROOFNODE{};
 	gpRoofList->iMapIndex = iMapIndex;
 	gpRoofList->next = 0;
 	RebuildRoofUsingFloorInfo( iMapIndex, usRoofType );
@@ -481,7 +484,7 @@ void ReplaceBuildingWithNewRoof( INT32 iMapIndex )
 	{
 		curr = gpRoofList;
 		gpRoofList = gpRoofList->next;
-		MemFree( curr );
+		delete curr;
 	}
 	gpRoofList = NULL;
 }
@@ -512,13 +515,13 @@ void InitDoorEditing(INT32 const map_idx)
 	iDoorMapIndex = map_idx;
 	DisableEditorTaskbar();
 	MSYS_DefineRegion(&DoorRegion, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, MSYS_PRIORITY_HIGH - 2, 0, MSYS_NO_CALLBACK, MSYS_NO_CALLBACK);
-	iDoorButton[DOOR_BACKGROUND] = CreateLabel(0, 0, 0, 0, 200, 130, 240, 100, MSYS_PRIORITY_HIGH - 1);
-	iDoorButton[DOOR_OKAY]       = CreateTextButton(L"Okay",   FONT12POINT1, FONT_BLACK, FONT_BLACK, 330, 195, 50, 30, MSYS_PRIORITY_HIGH, DoorOkayCallback);
-	iDoorButton[DOOR_CANCEL]     = CreateTextButton(L"Cancel", FONT12POINT1, FONT_BLACK, FONT_BLACK, 385, 195, 50, 30, MSYS_PRIORITY_HIGH, DoorCancelCallback);
+	iDoorButton[DOOR_BACKGROUND] = CreateLabel(ST::null, 0, 0, 0, 200, 130, 240, 100, MSYS_PRIORITY_HIGH - 1);
+	iDoorButton[DOOR_OKAY]       = CreateTextButton("Okay",   FONT12POINT1, FONT_BLACK, FONT_BLACK, 330, 195, 50, 30, MSYS_PRIORITY_HIGH, DoorOkayCallback);
+	iDoorButton[DOOR_CANCEL]     = CreateTextButton("Cancel", FONT12POINT1, FONT_BLACK, FONT_BLACK, 385, 195, 50, 30, MSYS_PRIORITY_HIGH, DoorCancelCallback);
 	InitTextInputModeWithScheme(DEFAULT_SCHEME);
-	AddTextInputField(210, 155, 25, 16, MSYS_PRIORITY_HIGH, L"0", 3, INPUTTYPE_NUMERICSTRICT);
-	AddTextInputField(210, 175, 25, 16, MSYS_PRIORITY_HIGH, L"0", 2, INPUTTYPE_NUMERICSTRICT);
-	AddTextInputField(210, 195, 25, 16, MSYS_PRIORITY_HIGH, L"0", 2, INPUTTYPE_NUMERICSTRICT);
+	AddTextInputField(210, 155, 25, 16, MSYS_PRIORITY_HIGH, "0", 3, INPUTTYPE_NUMERICSTRICT);
+	AddTextInputField(210, 175, 25, 16, MSYS_PRIORITY_HIGH, "0", 2, INPUTTYPE_NUMERICSTRICT);
+	AddTextInputField(210, 195, 25, 16, MSYS_PRIORITY_HIGH, "0", 2, INPUTTYPE_NUMERICSTRICT);
 	iDoorButton[DOOR_LOCKED] = CreateCheckBoxButton(210, 215, EDITORDIR "/smcheckbox.sti", MSYS_PRIORITY_HIGH, DoorToggleLockedCallback);
 
 	if (DOOR const* const door = FindDoorInfoAtGridNo(map_idx))
@@ -540,7 +543,7 @@ void ExtractAndUpdateDoorInfo()
 	BOOLEAN fCursor = FALSE;
 	BOOLEAN fCursorExists = FALSE;
 
-	memset( &door, 0, sizeof( DOOR ) );
+	door = DOOR{};
 
 	door.sGridNo = (INT16)iDoorMapIndex;
 
@@ -623,13 +626,13 @@ void RenderDoorEditingWindow()
 {
 	InvalidateRegion( 200, 130, 440, 230 );
 	SetFontAttributes(FONT10ARIAL, FONT_YELLOW);
-	mprintf( 210, 140, L"Editing lock attributes at map index %d.", iDoorMapIndex );
+	MPrint( 210, 140, ST::format("Editing lock attributes at map index {}.", iDoorMapIndex) );
 
 	SetFontForeground( FONT_GRAY2 );
-	MPrint(238, 160, L"Lock ID");
-	MPrint(238, 180, L"Trap Type");
-	MPrint(238, 200, L"Trap Level");
-	MPrint(238, 218, L"Locked");
+	MPrint(238, 160, "Lock ID");
+	MPrint(238, 180, "Trap Type");
+	MPrint(238, 200, "Trap Level");
+	MPrint(238, 218, "Locked");
 }
 
 
@@ -670,18 +673,18 @@ static void DoorToggleLockedCallback(GUI_BUTTON* btn, INT32 reason)
 
 void AddLockedDoorCursors()
 {
-	FOR_EACH_DOOR(i)
+	FOR_EACH_DOOR(d)
 	{
-		AddTopmostToHead(i->sGridNo, ROTATINGKEY1);
+		AddTopmostToHead(d.sGridNo, ROTATINGKEY1);
 	}
 }
 
 
 void RemoveLockedDoorCursors()
 {
-	FOR_EACH_DOOR(i)
+	FOR_EACH_DOOR(d)
 	{
-		GridNo const gridno = i->sGridNo;
+		GridNo const gridno = d.sGridNo;
 		for (LEVELNODE* k = gpWorldLevelData[gridno].pTopmostHead; k;)
 		{
 			LEVELNODE* const next = k->pNext;
@@ -694,16 +697,16 @@ void RemoveLockedDoorCursors()
 
 void SetupTextInputForBuildings()
 {
-	wchar_t str[4];
+	ST::string str;
 	InitTextInputModeWithScheme( DEFAULT_SCHEME );
 	AddUserInputField( NULL );  //just so we can use short cut keys while not typing.
-	swprintf(str, lengthof(str), L"%d", gubMaxRoomNumber);
+	str = ST::format("{}", gubMaxRoomNumber);
 	AddTextInputField( 410, EDITOR_TASKBAR_POS_Y + 40, 25, 15, MSYS_PRIORITY_NORMAL, str, 3, INPUTTYPE_NUMERICSTRICT );
 }
 
 void ExtractAndUpdateBuildingInfo()
 {
-	wchar_t str[4];
+	ST::string str;
 	INT32 temp;
 	//extract light1 colors
 	temp = MIN( GetNumericStrictValueFromField( 1 ), 255 );
@@ -715,7 +718,7 @@ void ExtractAndUpdateBuildingInfo()
 	{
 		gubCurrRoomNumber = 0;
 	}
-	swprintf(str, lengthof(str), L"%d", gubCurrRoomNumber);
-	SetInputFieldStringWith16BitString( 1, str );
+	str = ST::format("{}", gubCurrRoomNumber);
+	SetInputFieldString( 1, str );
 	SetActiveField( 0 );
 }

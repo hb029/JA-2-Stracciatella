@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "Directories.h"
 #include "HImage.h"
 #include "Overhead.h"
@@ -18,6 +16,10 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 #include "Logger.h"
+
+#include <algorithm>
+#include <iterator>
+#include <stdexcept>
 
 #define EMPTY_SLOT					-1
 #define TO_INIT					0
@@ -768,7 +770,7 @@ try
 
 	FileRead(f, &gubNumAnimProfiles, sizeof(gubNumAnimProfiles));
 
-	ANIM_PROF* const aps = MALLOCN(ANIM_PROF, gubNumAnimProfiles);
+	ANIM_PROF* const aps = new ANIM_PROF[gubNumAnimProfiles]{};
 	gpAnimProfiles = aps;
 
 	for (INT32 profile_idx = 0; profile_idx < gubNumAnimProfiles; ++profile_idx)
@@ -779,7 +781,7 @@ try
 			ANIM_PROF_DIR* const apd = &ap->Dirs[direction_idx];
 
 			FileRead(f, &apd->ubNumTiles, sizeof(UINT8));
-			ANIM_PROF_TILE* const apts = MALLOCN(ANIM_PROF_TILE, apd->ubNumTiles);
+			ANIM_PROF_TILE* const apts = new ANIM_PROF_TILE[apd->ubNumTiles]{};
 			apd->pTiles = apts;
 
 			for (INT32 tile_idx = 0; tile_idx < apd->ubNumTiles; ++tile_idx)
@@ -814,13 +816,13 @@ static void DeleteAnimationProfiles(void)
 			pProfileDir = &( gpAnimProfiles[ iProfileCount ].Dirs[ iDirectionCount ] );
 
 			// Free tile
-			MemFree( pProfileDir->pTiles );
+			delete[] pProfileDir->pTiles;
 
 		}
 	}
 
 	// Free profile data!
-	MemFree( gpAnimProfiles );
+	delete[] gpAnimProfiles;
 
 }
 
@@ -835,5 +837,8 @@ void ZeroAnimSurfaceCounts( )
 		gAnimSurfaceDatabase[ cnt ].hVideoObject  = NULL;
 	}
 
-	memset( gbAnimUsageHistory, 0, sizeof( gbAnimUsageHistory ) );
+	for (auto& i : gbAnimUsageHistory)
+	{
+		std::fill(std::begin(i), std::end(i), 0);
+	}
 }

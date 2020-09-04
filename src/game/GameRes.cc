@@ -35,15 +35,15 @@ const LanguageRes* g_langRes = &g_LanguageResEnglish;
 unsigned char const *TranslationTable = g_en_TranslationTable->m_table;
 
 
-wchar_t getZeroGlyphChar()
+char32_t getZeroGlyphChar()
 {
 	if(s_gameVersion == GameVersion::RUSSIAN)
 	{
-		return L' ';
+		return U' ';
 	}
 	else
 	{
-		return L'A';
+		return U'A';
 	}
 }
 
@@ -136,9 +136,9 @@ FLOAT getMajorMapVersion()
 }
 
 /** Get list of resource libraries. */
-std::vector<std::string> GetResourceLibraries(const std::string &dataDir)
+std::vector<ST::string> GetResourceLibraries(const ST::string &dataDir)
 {
-	std::vector<std::string> libraries = FindFilesInDir(dataDir, ".slf", true, true);
+	std::vector<ST::string> libraries = FindFilesInDir(dataDir, "slf", true, true);
 
 	// for (int i = 0; i < libraries.size(); i++)
 	// {
@@ -402,7 +402,7 @@ char const* GetMLGFilename(MultiLanguageGraphic const id)
 		}
 	}
 
-	throw std::runtime_error(FormattedString("Multilanguage resource %d is not found", id));
+	throw std::runtime_error(FormattedString("Multilanguage resource %d is not found", id).to_std_string());
 }
 
 STRING_ENC_TYPE getStringEncType()

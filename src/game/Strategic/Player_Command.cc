@@ -21,29 +21,36 @@
 #include "PreBattle_Interface.h"
 #include "Map_Screen_Interface.h"
 #include "Tactical_Save.h"
+#include "GameInstance.h"
+#include "ContentManager.h"
+#include "ShippingDestinationModel.h"
 #include "Explosion_Control.h"
+#include "SamSiteModel.h"
+
+#include <string_theory/format>
+#include <string_theory/string>
 
 
-void GetSectorFacilitiesFlags(INT16 const x, INT16 const y, wchar_t* const buf, size_t const length)
+ST::string GetSectorFacilitiesFlags(INT16 x, INT16 y)
 {
 	// Build a string stating current facilities present in sector
 	UINT32 const facilities = SectorInfo[SECTOR(x, y)].uiFacilitiesFlags;
 	if (facilities == 0)
 	{
-		wcslcpy(buf, sFacilitiesStrings[0], length);
-		return;
+		return sFacilitiesStrings[0];
 	}
 
-	wchar_t const* fmt = L"%ls";
-	size_t         n   = 0;
+	ST::string buf;
+	const char* fmt = "{}";
 	for (size_t i = 0;; ++i)
 	{
 		UINT32 const bit = 1 << i;
 		if (!(facilities & bit)) continue;
-		n  += swprintf(buf + n, length - n, fmt, sFacilitiesStrings[i + 1]);
-		fmt = L",%ls";
+		buf += ST::format(fmt, sFacilitiesStrings[i + 1]);
+		fmt = ",{}";
 		if ((facilities & ~(bit - 1)) == bit) break;
 	}
+	return buf;
 }
 
 
@@ -79,7 +86,8 @@ BOOLEAN SetThisSectorAsPlayerControlled( INT16 sMapX, INT16 sMapY, INT8 bMapZ, B
 		}
 
 		// check if we ever grabbed drassen airport, if so, set fact we can go to BR's
-		if( ( sMapX == BOBBYR_SHIPPING_DEST_SECTOR_X ) && ( sMapY == BOBBYR_SHIPPING_DEST_SECTOR_Y ) )
+		auto shippingDest = GCM->getPrimaryShippingDestination();
+		if(sector == shippingDest->getDeliverySector())
 		{
 			LaptopSaveInfo.fBobbyRSiteCanBeAccessed = TRUE;
 
@@ -173,7 +181,27 @@ BOOLEAN SetThisSectorAsPlayerControlled( INT16 sMapX, INT16 sMapY, INT8 bMapZ, B
 				UpdateRefuelSiteAvailability( );
 			}
 
-//			SetSectorFlag( sMapX, sMapY, bMapZ, SF_SECTOR_HAS_BEEN_LIBERATED_ONCE );
+			if (IsThisSectorASAMSector(sMapX, sMapY, bMapZ))
+			{
+				if (StrategicMap[usMapSector].bSAMCondition < MIN_CONDITION_TO_FIX_SAM)
+				{
+					UpdateSAMDoneRepair(sMapX, sMapY, 0);
+				}
+
+				StrategicMap[usMapSector].bSAMCondition = 100;
+				auto samList = GCM->getSamSites();
+				for (INT8 i = 0; i < samList.size(); ++i)
+				{
+					if (samList[i]->sectorId == sector)
+					{
+						SetUpSAMPanicBomb(i);
+					}
+				}
+				// SAM site may have been put back into working order
+				UpdateAirspaceControl();
+			}
+			
+			// SetSectorFlag( sMapX, sMapY, bMapZ, SF_SECTOR_HAS_BEEN_LIBERATED_ONCE );
 			if ( bMapZ == 0 && ( ( sMapY == MAP_ROW_M && (sMapX >= 2 && sMapX <= 6) ) || (sMapY == MAP_ROW_N && sMapX == 6)) )
 			{
 				HandleOutskirtsOfMedunaMeanwhileScene();
@@ -217,6 +245,7 @@ BOOLEAN SetThisSectorAsEnemyControlled(INT16 const sMapX, INT16 const sMapY, INT
 	UINT16 usMapSector = 0;
 	BOOLEAN fWasPlayerControlled = FALSE;
 	INT8 bTownId = 0;
+	UINT8 ubTheftChance;
 
 	//KM : August 6, 1999 Patch fix
 	//     This check was added because this function gets called when player mercs retreat from an unresolved
@@ -280,27 +309,24 @@ BOOLEAN SetThisSectorAsEnemyControlled(INT16 const sMapX, INT16 const sMapY, INT
 				UpdateRefuelSiteAvailability( );
 			}
 
-			if (IsThisSectorASAMSector(sMapX, sMapY, bMapZ))
-			{
-				if (StrategicMap[usMapSector].bSAMCondition < MIN_CONDITION_TO_FIX_SAM)
-				{
-					UpdateSAMDoneRepair(sMapX, sMapY, 0);
-				}
-
-				StrategicMap[usMapSector].bSAMCondition = 100;
-				for (INT8 i = 0; i != NUMBER_OF_SAMS; ++i)
-				{
-					if (pSamList[i] == sector)
-					{
-						SetUpSAMPanicBomb(i);
-					}
-				}
-				// SAM site may have been put back into working order
-				UpdateAirspaceControl();
-			}
-
 			// ARM: this must be AFTER all resulting loyalty effects are resolved, or reduced mine income shown won't be accurate
 			NotifyPlayerWhenEnemyTakesControlOfImportantSector(sMapX, sMapY, 0);
+		}
+
+		// NOTE: Stealing is intentionally OUTSIDE the fWasPlayerControlled branch.  This function gets called if new
+		// enemy reinforcements arrive, and they deserve another crack at stealing what the first group missed! :-)
+
+		// stealing should fail anyway 'cause there shouldn't be a temp file for unvisited sectors, but let's check anyway
+		if (GetSectorFlagStatus(sMapX, sMapY, bMapZ, SF_ALREADY_VISITED))
+		{
+			// enemies can steal items left lying about (random chance).  The more there are, the more they take!
+			ubTheftChance = 5 * NumEnemiesInAnySector( sMapX, sMapY, bMapZ );
+			// max 90%, some stuff may just simply not get found
+			if (ubTheftChance > 90 )
+			{
+				ubTheftChance = 90;
+			}
+			RemoveRandomItemsInSector( sMapX, sMapY, bMapZ, ubTheftChance );
 		}
 
 		// don't touch fPlayer flag for a surface sector lost to the enemies!

@@ -25,6 +25,8 @@
 #include "GameInstance.h"
 #include "WeaponModels.h"
 
+#include <algorithm>
+
 #define DC_MAX_COVER_RANGE		31
 
 #define DC__SOLDIER_VISIBLE_RANGE	31
@@ -301,11 +303,6 @@ static INT8 CalcCoverForGridNoBasedOnTeamKnownEnemies(SOLDIERTYPE const* const p
 		{
 			continue;
 		}
-		else
-		{
-			// Feature - Display sight cover
-			return 0;
-		}
 
 		INT32  const iGetThrough = SoldierToLocationChanceToGetThrough(pOpponent, sTargetGridNo,
 										pSoldier->bLevel, bStance, NULL);
@@ -405,7 +402,7 @@ static INT8 GetCurrentMercForDisplayCoverStance(void)
 }
 
 
-void DisplayRangeToTarget(SOLDIERTYPE const* const s, INT16 const sTargetGridNo)
+void DisplayRangeToTarget(SOLDIERTYPE* s, INT16 const sTargetGridNo)
 {
 	if (sTargetGridNo == NOWHERE || sTargetGridNo == 0) return;
 
@@ -416,14 +413,22 @@ void DisplayRangeToTarget(SOLDIERTYPE const* const s, INT16 const sTargetGridNo)
 	{
 		//display a string with the weapons range, then range to target
 		ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE,
-				zNewTacticalMessages[TCTL_MSG__RANGE_TO_TARGET_AND_GUN_RANGE],
-				GCM->getWeapon(s->inv[HANDPOS].usItem)->usRange / 10, usRange);
+				st_format_printf(zNewTacticalMessages[TCTL_MSG__RANGE_TO_TARGET_AND_GUN_RANGE],
+				GCM->getWeapon(s->inv[HANDPOS].usItem)->usRange / 10, usRange));
+		// Get the chance to hit
+		UINT32 const uiHitChance = CalcChanceToHitGun(s, sTargetGridNo, s->bAimTime, s->bAimShotLocation, false );
+		// Get the cover modifier chance from a soldier to a grid location
+		UINT8 ubChanceToGetThrough = SoldierToLocationChanceToGetThrough(s, sTargetGridNo, s->bTargetLevel, s->bTargetCubeLevel, 0);
+		//display a string with the weapons range, then range to target
+		ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE,
+				st_format_printf(zNewTacticalMessages[TCTL_MSG__CHANCE_TO_HIT_TARGET],
+				uiHitChance, uiHitChance*ubChanceToGetThrough/100.0f));
 	}
 	else
 	{
 		//display a string with the range to target
 		ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE,
-				zNewTacticalMessages[TCTL_MSG__RANGE_TO_TARGET], usRange);
+				st_format_printf(zNewTacticalMessages[TCTL_MSG__RANGE_TO_TARGET], usRange));
 	}
 
 	//if the target is out of the mercs gun range or knife
@@ -437,7 +442,6 @@ void DisplayRangeToTarget(SOLDIERTYPE const* const s, INT16 const sTargetGridNo)
 		}
 	}
 }
-
 
 static void AddVisibleToSoldierToEachGridNo(void);
 static void CalculateVisibleToSoldierAroundGridno(INT16 sTargetGridNo, INT8 bSearchRange);
@@ -502,7 +506,10 @@ static void CalculateVisibleToSoldierAroundGridno(INT16 sTargetGridNo, INT8 bSea
 	BOOLEAN fRoof=FALSE;
 
 	//clear out the struct
-	memset( gVisibleToSoldierStruct, 0, sizeof( VISIBLE_TO_SOLDIER_STRUCT ) * DC__SOLDIER_VISIBLE_RANGE * DC__SOLDIER_VISIBLE_RANGE );
+	for (int i = 0; i < DC__SOLDIER_VISIBLE_RANGE; ++i)
+	{
+		std::fill_n(gVisibleToSoldierStruct[i], DC__SOLDIER_VISIBLE_RANGE, VISIBLE_TO_SOLDIER_STRUCT{});
+	}
 
 	if( bSearchRange > ( DC_MAX_COVER_RANGE / 2 ) )
 		bSearchRange = ( DC_MAX_COVER_RANGE / 2 );

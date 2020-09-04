@@ -1,17 +1,3 @@
-/* The implementation of swprintf() is broken on FreeBSD and sometimes fails if
- * LC_TYPE is not set to UTF-8.  This happens when characters, which cannot be
- * represented by the current LC_CTYPE, are printed. */
-#if defined __FreeBSD__
-#	define BROKEN_SWPRINTF
-#endif
-
-#if defined BROKEN_SWPRINTF
-#	include <locale.h>
-#endif
-
-#include <exception>
-#include <new>
-
 #include "Button_System.h"
 #include "Cheats.h"
 #include "Debug.h"
@@ -41,7 +27,6 @@
 #include "JsonUtility.h"
 #include "ModPackContentManager.h"
 #include "policy/GamePolicy.h"
-#include "sgp/UTF8String.h"
 #include "RustInterface.h"
 
 #include "Logger.h"
@@ -53,11 +38,18 @@
 #if defined _WIN32
 #	define WIN32_LEAN_AND_MEAN
 #	include <windows.h>
-
+#	include <typeinfo>
 #	include "Local.h"
 #endif
 
 #include "Multi_Language_Graphic_Utils.h"
+
+#include <string_theory/format>
+
+#include <exception>
+#include <locale>
+#include <new>
+#include <utility>
 
 extern BOOLEAN gfPauseDueToPlayerGamePause;
 
@@ -238,7 +230,7 @@ static void MainLoop(int msPerGameCycle)
 				GameLoop();
 				gameCycleMS = GetClock() - gameCycleMS;
 
-				if(gameCycleMS < msPerGameCycle)
+				if(static_cast<int>(gameCycleMS) < msPerGameCycle)
 				{
 					SDL_Delay(msPerGameCycle - gameCycleMS);
 				}
@@ -262,66 +254,139 @@ ContentManager *GCM = NULL;
 
 ////////////////////////////////////////////////////////////
 
-int main(int argc, char* argv[])
+/// Sets the C/C++ locale.
+/// @return true if successful, false otherwise
+static bool SetGlobalLocale(const char* name)
 {
-	std::string exeFolder = FileMan::getParentPath(argv[0], true);
-
-#if defined BROKEN_SWPRINTF
-	if (setlocale(LC_CTYPE, "UTF-8") == NULL)
+	try
 	{
-		fprintf(stderr, "WARNING: Failed to set LC_CTYPE to UTF-8. Some strings might get garbled.\n");
+		std::locale::global(std::locale(name));
+		return true;
+	}
+	catch(...)
+	{
+		return false;
+	}
+}
+
+/// Tries to set the C/C++ locale to something that supports unicode.
+///
+/// There is no way to query available locales so you can only try them.
+///
+/// @return List of problems.
+std::vector<ST::string> InitGlobalLocale()
+{
+	std::vector<ST::string> problems;
+
+#ifdef _WIN32
+	// In windows the console is a special device that accepts CP_UTF8, but needs a true type font to display it.
+	if (!SetConsoleOutputCP(CP_UTF8))
+	{
+		problems.emplace_back(std::move(ST::format("SetConsoleOutputCP(CP_UTF8) failed, using output code page {}", GetConsoleOutputCP())));
+	}
+	if (!SetConsoleCP(CP_UTF8))
+	{
+		problems.emplace_back(std::move(ST::format("SetConsoleCP(CP_UTF8) failed, using input code page {}", GetConsoleCP())));
+	}
+	 
+	// Ensure quick-edit mode is off, or else it will block execution
+	HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+	SetConsoleMode(hInput, ENABLE_EXTENDED_FLAGS);
+#endif
+
+#ifdef WITH_CUSTOM_LOCALE
+	if (!SetGlobalLocale(WITH_CUSTOM_LOCALE))
+	{
+		problems.emplace_back(std::move(ST::format("failed to set custom locale '{}'", WITH_CUSTOM_LOCALE)));
+	}
+	else
+	{
+		return problems; // the custom locale is set, assume unicode locale (no way to test)
 	}
 #endif
 
-	// init logging
-	Logger_Init("ja2.log");
+#ifndef _WIN32
+	// Windows does not support the utf8 locale (".65001") or the LC_* environment variables.
+	// CP_UTF8 (65001) is a pseudo code page that does not have a nls file.
+	// With VS2003 setlocale would accept it but the CRT APIs would fail, now it fails directly.
+	//
+	// According to https://www.python.org/dev/peps/pep-0538/
+	// *nix have one of "C.UTF-8", "C.utf8" or "UTF-8".
+	// Mac OS X and other *BSD systems have a partial UTF-8 locale that only defines the LC_CTYPE category.
 
-	EngineOptions* params = create_engine_options(argv, argc);
+	// set locale from the process environment
+	if (!SetGlobalLocale(""))
+	{
+		problems.emplace_back("failed to set locale from the process environment");
+	}
+
+	// TODO how to set a unicode LC_CTYPE for the C++ locale?
+	if (!setlocale(LC_CTYPE, "C.UTF-8") && !setlocale(LC_CTYPE, "C.utf8") && !setlocale(LC_CTYPE, "UTF-8"))
+	{
+		problems.emplace_back(ST::format("failed to set unicode ctype for locale '{}', using ctype '{}'", setlocale(LC_ALL, nullptr), setlocale(LC_CTYPE, nullptr)));
+	}
+#endif
+
+	return problems;
+}
+
+int main(int argc, char* argv[])
+{
+	// init locale and logging
+	{
+		std::vector<ST::string> problems = InitGlobalLocale();
+		Logger_initialize("ja2.log");
+		for (const ST::string& msg : problems)
+		{
+			SLOGW("%s", msg.c_str());
+		}
+	}
+
+#if _WIN32
+	// This is only required on Windows, as Linux/Mac prints the details of unhandled exceptions on program abort
+	std::set_terminate(TerminationHandler);
+#endif
+
+	ST::string exeFolder = FileMan::getParentPath(argv[0], true);
+
+	RustPointer<EngineOptions> params(EngineOptions_create(argv, argc));
 	if (params == NULL) {
 		return EXIT_FAILURE;
 	}
 
-	if (should_show_help(params)) {
+	if (EngineOptions_shouldShowHelp(params.get())) {
 		return EXIT_SUCCESS;
 	}
 
-	if (should_start_in_fullscreen(params)) {
+	if (EngineOptions_shouldStartInFullscreen(params.get())) {
 		VideoSetFullScreen(TRUE);
-	} else if (should_start_in_window(params)) {
+	} else if (EngineOptions_shouldStartInWindow(params.get())) {
 		VideoSetFullScreen(FALSE);
 	}
 
-	if (should_start_without_sound(params)) {
+	if (EngineOptions_shouldStartWithoutSound(params.get())) {
 		SoundEnableSound(FALSE);
 	}
 
-	// Disable sound when using SDL2 2.0.6:
-	SDL_version sdl_version_linked;
-	SDL_GetVersion(&sdl_version_linked);
-	if (sdl_version_linked.major == 2 && sdl_version_linked.minor == 0 && sdl_version_linked.patch == 6) {
-		SLOGE("Detected SDL2 2.0.6. Disabled sound.\n"
-							 "This version of SDL2 has a fatal bug in the audio conversion routines.\n"
-							 "Either downgrade to version 2.0.5 or upgrade to version 2.0.7 or later.");
-		SoundEnableSound(FALSE);
-	}
-
-	if (should_start_in_debug_mode(params)) {
-		Logger_SetLevel(LogLevel::Debug);
+	if (EngineOptions_shouldStartInDebugMode(params.get())) {
+		Logger_setLevel(LogLevel::Debug);
 		GameState::getInstance()->setDebugging(true);
 	}
 
-	if (should_run_editor(params)) {
+	if (EngineOptions_shouldRunEditor(params.get())) {
 		GameState::getInstance()->setEditorMode(false);
 	}
 
-	bool result = g_ui.setScreenSize(get_resolution_x(params), get_resolution_y(params));
+	uint16_t width = EngineOptions_getResolutionX(params.get());
+	uint16_t height = EngineOptions_getResolutionY(params.get());
+	bool result = g_ui.setScreenSize(width, height);
 	if(!result)
 	{
-		SLOGE("Failed to set screen resolution %d x %d", get_resolution_x(params), get_resolution_y(params));
+		SLOGE("Failed to set screen resolution %d x %d", width, height);
 		return EXIT_FAILURE;
 	}
 
-	if (should_run_unittests(params)) {
+	if (EngineOptions_shouldRunUnittests(params.get())) {
 #ifdef WITH_UNITTESTS
 		testing::InitGoogleTest(&argc, argv);
 		return RUN_ALL_TESTS();
@@ -330,12 +395,12 @@ int main(int argc, char* argv[])
 #endif
 	}
 
-	GameVersion version = get_resource_version(params);
+	GameVersion version = EngineOptions_getResourceVersion(params.get());
 	setGameVersion(version);
 
-	VideoScaleQuality scalingQuality = get_scaling_quality(params);
+	VideoScaleQuality scalingQuality = EngineOptions_getScalingQuality(params.get());
 
-	FLOAT brightness = get_brightness(params);
+	FLOAT brightness = EngineOptions_getBrightness(params.get());
 
 	////////////////////////////////////////////////////////////
 
@@ -357,66 +422,51 @@ int main(int argc, char* argv[])
 	InitializeMemoryManager();
 
 	SLOGD("Initializing Game Resources");
-	char* rustConfigFolderPath = get_stracciatella_home(params);
-	char* rustResRootPath = get_vanilla_game_dir(params);
-	std::string configFolderPath = std::string(rustConfigFolderPath);
-	std::string gameResRootPath = std::string(rustResRootPath);
-	free_rust_string(rustConfigFolderPath);
-	free_rust_string(rustResRootPath);
+	RustPointer<char> configFolderPath(EngineOptions_getStracciatellaHome(params.get()));
+	RustPointer<char> gameResRootPath(EngineOptions_getVanillaGameDir(params.get()));
 
-	std::string extraDataDir = EXTRA_DATA_DIR;
+	ST::string extraDataDir = EXTRA_DATA_DIR;
 	if(extraDataDir.empty())
 	{
 		// use location of the exe file
 		extraDataDir = exeFolder;
 	}
 
-	std::string externalizedDataPath = FileMan::joinPaths(extraDataDir, "externalized");
+	ST::string externalizedDataPath = FileMan::joinPaths(extraDataDir, "externalized");
 
-	FileMan::switchTmpFolder(configFolderPath);
+	FileMan::switchTmpFolder(configFolderPath.get());
 
 	DefaultContentManager *cm;
 
-	auto n = get_number_of_mods(params);
+	uint32_t n = EngineOptions_getModsLength(params.get());
 	if(n > 0)
 	{
-		std::vector<std::string> modNames;
-		std::vector<std::string> modResFolders;
-		for (auto i = 0; i < n; ++i)
+		std::vector<ST::string> enabledMods;
+		for (uint32_t i = 0; i < n; ++i)
 		{
-			char* rustModName = get_mod(params, i);
-			std::string modName(rustModName);
-			free_rust_string(rustModName);
-			std::string modResFolder = FileMan::joinPaths(FileMan::joinPaths(FileMan::joinPaths(extraDataDir, "mods"), modName), "data");
-			modNames.emplace_back(modName);
-			modResFolders.emplace_back(modResFolder);
+			RustPointer<char> modName(EngineOptions_getMod(params.get(), i));
+			enabledMods.emplace_back(modName.get());
 		}
 		cm = new ModPackContentManager(version,
-						modNames, modResFolders, configFolderPath,
-						gameResRootPath, externalizedDataPath);
+						enabledMods, extraDataDir, configFolderPath.get(),
+						gameResRootPath.get(), externalizedDataPath);
 		SLOGI("------------------------------------------------------------------------------");
-		SLOGI("JA2 Home Dir:                  '%s'", configFolderPath.c_str());
-		SLOGI("Root game resources directory: '%s'", gameResRootPath.c_str());
+		SLOGI("JA2 Home Dir:                  '%s'", configFolderPath.get());
+		SLOGI("Root game resources directory: '%s'", gameResRootPath.get());
 		SLOGI("Extra data directory:          '%s'", extraDataDir.c_str());
 		SLOGI("Data directory:                '%s'", cm->getDataDir().c_str());
 		SLOGI("Tilecache directory:           '%s'", cm->getTileDir().c_str());
 		SLOGI("Saved games directory:         '%s'", cm->getSavedGamesFolder().c_str());
 		SLOGI("------------------------------------------------------------------------------");
-		for (auto i = 0; i < n; ++i)
-		{
-			SLOGI("MOD name:                      '%s'", modNames[i].c_str());
-			SLOGI("MOD resource directory:        '%s'", modResFolders[i].c_str());
-			SLOGI("------------------------------------------------------------------------------");
-		}
 	}
 	else
 	{
 		cm = new DefaultContentManager(version,
-						configFolderPath,
-						gameResRootPath, externalizedDataPath);
+						configFolderPath.get(),
+						gameResRootPath.get(), externalizedDataPath);
 		SLOGI("------------------------------------------------------------------------------");
-		SLOGI("JA2 Home Dir:                  '%s'", configFolderPath.c_str());
-		SLOGI("Root game resources directory: '%s'", gameResRootPath.c_str());
+		SLOGI("JA2 Home Dir:                  '%s'", configFolderPath.get());
+		SLOGI("Root game resources directory: '%s'", gameResRootPath.get());
 		SLOGI("Extra data directory:          '%s'", extraDataDir.c_str());
 		SLOGI("Data directory:                '%s'", cm->getDataDir().c_str());
 		SLOGI("Tilecache directory:           '%s'", cm->getTileDir().c_str());
@@ -424,10 +474,13 @@ int main(int argc, char* argv[])
 		SLOGI("------------------------------------------------------------------------------");
 	}
 
-	free_engine_options(params);
+	cm->init();
 
-	std::vector<std::string> libraries = cm->getListOfGameResources();
-	cm->initGameResouces(configFolderPath, libraries);
+	if(EngineOptions_shouldRunEditor(params.get()))
+	{
+		RustPointer<char> path{Path_push(extraDataDir.c_str(), "editor.slf")};
+		cm->initOptionalFreeEditorSlf(path.get());
+	}
 
 	if(!cm->loadGameData())
 	{
@@ -504,18 +557,288 @@ int main(int argc, char* argv[])
 	return EXIT_SUCCESS;
 }
 
+//  Prints the exception message (if any) and abort
+void TerminationHandler()
+{
+	auto ex = std::current_exception();
+	if (ex)
+	{
+		try
+		{
+			std::rethrow_exception(ex);
+		}
+		catch (const std::exception& e) 
+		{
+			SLOGE(ST::format("Game has been terminated due to an unrecoverable error: {} ({})", e.what(), typeid(e).name()));
+		}
+		catch (...)
+		{
+			SLOGE("Game has been terminated due to an unknown error");
+		}
+	}
+	std::abort();
+}
+
 /*static void convertDialogQuotesToJson(const DefaultContentManager *cm,
 					STRING_ENC_TYPE encType,
 					const char *dialogFile, const char *outputFile)
 {
-	std::vector<UTF8String*> quotes;
-	std::vector<std::string> quotes_str;
+	std::vector<ST::string*> quotes;
+	std::vector<ST::string> quotes_str;
 	cm->loadAllDialogQuotes(encType, dialogFile, quotes);
 	for(int i = 0; i < quotes.size(); i++)
 	{
-		quotes_str.push_back(std::string(quotes[i]->getUTF8()));
+		quotes_str.push_back(quotes[i]->to_std_string());
 		delete quotes[i];
-		quotes[i] = NULL;
+		quotes[i] = nullptr;
 	}
 	JsonUtility::writeToFile(outputFile, quotes_str);
 }*/
+
+#ifdef WITH_UNITTESTS
+#include "gtest/gtest.h"
+
+struct TestStruct {
+	int a;
+	int b;
+	int c[2];
+};
+
+struct NonTrivialTestStruct {
+	NonTrivialTestStruct() : a(0) {}
+	NonTrivialTestStruct(int a) : a(a) {}
+	int a;
+	int b = 0;
+};
+
+TEST(cpp_language, list_initialization)
+{
+	// since C++11: https://en.cppreference.com/w/cpp/language/list_initialization
+	{
+		TestStruct tmp{};
+		EXPECT_EQ(tmp.a, 0);
+		EXPECT_EQ(tmp.b, 0);
+		EXPECT_EQ(tmp.c[0], 0);
+		EXPECT_EQ(tmp.c[1], 0);
+	}
+	{
+		TestStruct tmp{1, 2, {3, 4}};
+		EXPECT_EQ(tmp.a, 1);
+		EXPECT_EQ(tmp.b, 2);
+		EXPECT_EQ(tmp.c[0], 3);
+		EXPECT_EQ(tmp.c[1], 4);
+	}
+	{
+		TestStruct tmp = TestStruct{};
+		EXPECT_EQ(tmp.a, 0);
+		EXPECT_EQ(tmp.b, 0);
+		EXPECT_EQ(tmp.c[0], 0);
+		EXPECT_EQ(tmp.c[1], 0);
+	}
+	{
+		TestStruct tmp = TestStruct{1, 2, {3, 4}};
+		EXPECT_EQ(tmp.a, 1);
+		EXPECT_EQ(tmp.b, 2);
+		EXPECT_EQ(tmp.c[0], 3);
+		EXPECT_EQ(tmp.c[1], 4);
+	}
+	{
+		TestStruct tmp = {};
+		EXPECT_EQ(tmp.a, 0);
+		EXPECT_EQ(tmp.b, 0);
+		EXPECT_EQ(tmp.c[0], 0);
+		EXPECT_EQ(tmp.c[1], 0);
+	}
+	{
+		TestStruct tmp = {1, 2, {3, 4}};
+		EXPECT_EQ(tmp.a, 1);
+		EXPECT_EQ(tmp.b, 2);
+		EXPECT_EQ(tmp.c[0], 3);
+		EXPECT_EQ(tmp.c[1], 4);
+	}
+}
+
+// get initialized memory from new
+TEST(cpp_language, new_initialization)
+{
+	{
+		int* tmp = new int();
+		EXPECT_EQ(*tmp, 0);
+		delete tmp;
+	}
+	{
+		int* tmp = new int(123);
+		EXPECT_EQ(*tmp, 123);
+		delete tmp;
+	}
+	{
+		int* tmp = new int{123};
+		EXPECT_EQ(*tmp, 123);
+		delete tmp;
+	}
+	{
+		// avoid this pattern, it's uninitialized memory for trivial structs (PODs)
+		NonTrivialTestStruct* tmp = new NonTrivialTestStruct;
+		EXPECT_EQ(tmp->a, 0);
+		EXPECT_EQ(tmp->b, 0);
+		delete tmp;
+	}
+	{
+		TestStruct* tmp = new TestStruct();
+		EXPECT_EQ(tmp->a, 0);
+		EXPECT_EQ(tmp->b, 0);
+		EXPECT_EQ(tmp->c[0], 0);
+		EXPECT_EQ(tmp->c[1], 0);
+		delete tmp;
+	}
+	{
+		NonTrivialTestStruct* tmp = new NonTrivialTestStruct();
+		EXPECT_EQ(tmp->a, 0);
+		EXPECT_EQ(tmp->b, 0);
+		delete tmp;
+	}
+	{
+		NonTrivialTestStruct* tmp = new NonTrivialTestStruct(123);
+		EXPECT_EQ(tmp->a, 123);
+		EXPECT_EQ(tmp->b, 0);
+		delete tmp;
+	}
+	{
+		TestStruct* tmp = new TestStruct{};
+		EXPECT_EQ(tmp->a, 0);
+		EXPECT_EQ(tmp->b, 0);
+		EXPECT_EQ(tmp->c[0], 0);
+		EXPECT_EQ(tmp->c[1], 0);
+		delete tmp;
+	}
+	{
+		TestStruct* tmp = new TestStruct{1, 2, {3, 4}};
+		EXPECT_EQ(tmp->a, 1);
+		EXPECT_EQ(tmp->b, 2);
+		EXPECT_EQ(tmp->c[0], 3);
+		EXPECT_EQ(tmp->c[1], 4);
+		delete tmp;
+	}
+	{
+		NonTrivialTestStruct* tmp = new NonTrivialTestStruct{};
+		EXPECT_EQ(tmp->a, 0);
+		EXPECT_EQ(tmp->b, 0);
+		delete tmp;
+	}
+	{
+		NonTrivialTestStruct* tmp = new NonTrivialTestStruct{123};
+		EXPECT_EQ(tmp->a, 123);
+		EXPECT_EQ(tmp->b, 0);
+		delete tmp;
+	}
+}
+
+// get initialized memory from new[]
+TEST(cpp_language, new_array_initialization)
+{
+	{
+		int* tmp = new int[2]();
+		EXPECT_EQ(tmp[0], 0);
+		EXPECT_EQ(tmp[1], 0);
+		delete[] tmp;
+	}
+	{
+		int* tmp = new int[2]{};
+		EXPECT_EQ(tmp[0], 0);
+		EXPECT_EQ(tmp[1], 0);
+		delete[] tmp;
+	}
+	{
+		int* tmp = new int[2]{123};
+		EXPECT_EQ(tmp[0], 123);
+		EXPECT_EQ(tmp[1], 0);
+		delete[] tmp;
+	}
+	{
+		int* tmp = new int[2]{123, 456};
+		EXPECT_EQ(tmp[0], 123);
+		EXPECT_EQ(tmp[1], 456);
+		delete[] tmp;
+	}
+	{
+		// avoid this pattern, it's uninitialized memory for trivial structs (PODs)
+		NonTrivialTestStruct* tmp = new NonTrivialTestStruct[2];
+		EXPECT_EQ(tmp[0].a, 0);
+		EXPECT_EQ(tmp[0].b, 0);
+		EXPECT_EQ(tmp[1].a, 0);
+		EXPECT_EQ(tmp[1].b, 0);
+		delete[] tmp;
+	}
+	{
+		TestStruct* tmp = new TestStruct[2]();
+		EXPECT_EQ(tmp[0].a, 0);
+		EXPECT_EQ(tmp[0].b, 0);
+		EXPECT_EQ(tmp[0].c[0], 0);
+		EXPECT_EQ(tmp[0].c[1], 0);
+		EXPECT_EQ(tmp[1].a, 0);
+		EXPECT_EQ(tmp[1].b, 0);
+		EXPECT_EQ(tmp[1].c[0], 0);
+		EXPECT_EQ(tmp[1].c[1], 0);
+		delete[] tmp;
+	}
+	{
+		NonTrivialTestStruct* tmp = new NonTrivialTestStruct[2]();
+		EXPECT_EQ(tmp[0].a, 0);
+		EXPECT_EQ(tmp[0].b, 0);
+		EXPECT_EQ(tmp[1].a, 0);
+		EXPECT_EQ(tmp[1].b, 0);
+		delete[] tmp;
+	}
+	{
+		TestStruct* tmp = new TestStruct[2]{};
+		EXPECT_EQ(tmp[0].a, 0);
+		EXPECT_EQ(tmp[0].b, 0);
+		EXPECT_EQ(tmp[0].c[0], 0);
+		EXPECT_EQ(tmp[0].c[1], 0);
+		EXPECT_EQ(tmp[1].a, 0);
+		EXPECT_EQ(tmp[1].b, 0);
+		EXPECT_EQ(tmp[1].c[0], 0);
+		EXPECT_EQ(tmp[1].c[1], 0);
+		delete[] tmp;
+	}
+	{
+		NonTrivialTestStruct* tmp = new NonTrivialTestStruct[2]{};
+		EXPECT_EQ(tmp[0].a, 0);
+		EXPECT_EQ(tmp[0].b, 0);
+		EXPECT_EQ(tmp[1].a, 0);
+		EXPECT_EQ(tmp[1].b, 0);
+		delete[] tmp;
+	}
+	{
+		// avoid this pattern, it's uninitialized memory for trivial structs (PODs) in VS2015
+		NonTrivialTestStruct* tmp = new NonTrivialTestStruct[2]{
+			{123}
+		};
+		EXPECT_EQ(tmp[0].a, 123);
+		EXPECT_EQ(tmp[0].b, 0);
+		EXPECT_EQ(tmp[1].a, 0);
+		EXPECT_EQ(tmp[1].b, 0);
+		delete[] tmp;
+	}
+	{
+		// avoid this pattern, it's uninitialized memory for trivial structs (PODs) in VS2015
+		NonTrivialTestStruct* tmp = new NonTrivialTestStruct[2]{
+			{123},
+			{456}
+		};
+		EXPECT_EQ(tmp[0].a, 123);
+		EXPECT_EQ(tmp[0].b, 0);
+		EXPECT_EQ(tmp[1].a, 456);
+		EXPECT_EQ(tmp[1].b, 0);
+		delete[] tmp;
+	}
+}
+
+TEST(cpp_language, sizeof_type)
+{
+	EXPECT_EQ(sizeof(char), 1);
+	EXPECT_EQ(sizeof(char16_t), 2);
+	EXPECT_EQ(sizeof(char32_t), 4);
+}
+
+#endif // WITH_UNITTESTS

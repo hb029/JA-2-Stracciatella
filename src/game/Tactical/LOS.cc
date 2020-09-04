@@ -715,7 +715,7 @@ static INT32 LineOfSightTest(GridNo start_pos, FLOAT dStartZ, GridNo end_pos, FL
 	ddHorizAngle = atan2( dDeltaY, dDeltaX );
 
 	#ifdef LOS_DEBUG
-	memset( &gLOSTestResults, 0, sizeof( LOSResults ) );
+	gLOSTestResults = LOSResults{};
 	gLOSTestResults.fLOSTestPerformed = TRUE;
 	gLOSTestResults.iStartX = (INT32) dStartX;
 	gLOSTestResults.iStartY = (INT32) dStartY;
@@ -1945,13 +1945,13 @@ static BOOLEAN BulletHitMerc(BULLET* pBullet, STRUCTURE* pStructure, BOOLEAN fIn
 				// lucky bastard was facing away!
 			}
 			else if ((tgt.inv[HEAD1POS].usItem == NIGHTGOGGLES || tgt.inv[HEAD1POS].usItem == SUNGOGGLES ||
-				tgt.inv[HEAD1POS].usItem == GASMASK) && PreRandom(100) < tgt.inv[HEAD1POS].bStatus[0])
+				tgt.inv[HEAD1POS].usItem == GASMASK) && static_cast<INT8>(PreRandom(100)) < tgt.inv[HEAD1POS].bStatus[0])
 			{
 				// lucky bastard was wearing protective stuff
 				bHeadSlot = HEAD1POS;
 			}
 			else if ((tgt.inv[HEAD2POS].usItem == NIGHTGOGGLES || tgt.inv[HEAD2POS].usItem == SUNGOGGLES ||
-				tgt.inv[HEAD2POS].usItem == GASMASK) && PreRandom(100) < tgt.inv[HEAD2POS].bStatus[0])
+				tgt.inv[HEAD2POS].usItem == GASMASK) && static_cast<INT8>(PreRandom(100)) < tgt.inv[HEAD2POS].bStatus[0])
 			{
 				// lucky bastard was wearing protective stuff
 				bHeadSlot = HEAD2POS;
@@ -1998,7 +1998,8 @@ static BOOLEAN BulletHitMerc(BULLET* pBullet, STRUCTURE* pStructure, BOOLEAN fIn
 		// handle hit here...
 		if( pFirer->bTeam == 0 )
 		{
-			gMercProfiles[ pFirer->ubProfile ].usShotsHit++;
+			// issue #1140 : sync usShotsFired with usShotsHit and so that merc statistic <= 100%
+			if (pFirer->target->bLife > 0) gMercProfiles[ pFirer->ubProfile ].usShotsHit++;
 		}
 
 		// intentionally shot
@@ -2468,7 +2469,7 @@ static UINT8 CalcChanceToGetThrough(BULLET* pBullet)
 		// check a particular tile
 		// retrieve values from world for this particular tile
 		iGridNo = pBullet->iCurrTileX + pBullet->iCurrTileY * WORLD_COLS;
-		SLOGD("CTGT now at %ld", iGridNo);
+		SLOGD(ST::format("CTGT now at {}", iGridNo));
 		pMapElement = &(gpWorldLevelData[ iGridNo ] );
 		qLandHeight = INT32_TO_FIXEDPT( CONVERT_PIXELS_TO_HEIGHTUNITS( pMapElement->sHeight ) );
 		qWallHeight = gqStandardWallHeight + qLandHeight;
@@ -2710,8 +2711,8 @@ static UINT8 CalcChanceToGetThrough(BULLET* pBullet)
 				pBullet->bLOSIndexX = FIXEDPT_TO_LOS_INDEX( pBullet->qCurrX );
 				pBullet->bLOSIndexY = FIXEDPT_TO_LOS_INDEX( pBullet->qCurrY );
 
-				SLOGD("CTGT at %ld %ld after traversing empty tile",
-					pBullet->bLOSIndexX, pBullet->bLOSIndexY);
+				SLOGD(ST::format("CTGT at {} {} after traversing empty tile",
+					pBullet->bLOSIndexX, pBullet->bLOSIndexY));
 			}
 			else
 			{
@@ -2824,9 +2825,9 @@ static UINT8 CalcChanceToGetThrough(BULLET* pBullet)
 				}
 				while( (pBullet->bLOSIndexX == bOldLOSIndexX) && (pBullet->bLOSIndexY == bOldLOSIndexY) && (pBullet->iCurrCubesZ == iOldCubesZ));
 
-				SLOGD("CTGT at %ld %ld %ld after moving in nonempty tile from %ld %ld %ld",
+				SLOGD(ST::format("CTGT at {} {} {} after moving in nonempty tile from {} {} {}",
 					pBullet->bLOSIndexX, pBullet->bLOSIndexY, pBullet->iCurrCubesZ,
-					bOldLOSIndexX, bOldLOSIndexY, iOldCubesZ);
+					bOldLOSIndexX, bOldLOSIndexY, iOldCubesZ));
 				pBullet->iCurrTileX = FIXEDPT_TO_INT32( pBullet->qCurrX ) / CELL_X_SIZE;
 				pBullet->iCurrTileY = FIXEDPT_TO_INT32( pBullet->qCurrY ) / CELL_Y_SIZE;
 			}
@@ -2837,7 +2838,7 @@ static UINT8 CalcChanceToGetThrough(BULLET* pBullet)
 			return( 0 );
 		}
 
-		pBullet->sGridNo = MAPROWCOLTOPOS( pBullet->iCurrTileY , pBullet->iCurrTileX );
+		pBullet->sGridNo = GETWORLDINDEXFROMWORLDCOORDS( pBullet->iCurrTileY , pBullet->iCurrTileX );
 
 		if (pBullet->iLoop > pBullet->iRange * 2)
 		{
@@ -3569,7 +3570,7 @@ void MoveBullet(BULLET* const pBullet)
 			// NB remove bullet only flags a bullet for deletion; we still have access to the
 			// information in the structure
 			RemoveBullet(pBullet);
-			ShotMiss(pBullet);
+			ShotMiss(pBullet, false);
 			return;
 		}
 
@@ -4267,7 +4268,7 @@ void MoveBullet(BULLET* const pBullet)
 		{
 			// bullet outside of world!
 			RemoveBullet(pBullet);
-			ShotMiss(pBullet);
+			ShotMiss(pBullet, true);
 			return;
 		}
 

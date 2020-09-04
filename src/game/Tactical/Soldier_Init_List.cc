@@ -34,6 +34,10 @@
 #include "FileMan.h"
 #include "Logger.h"
 
+#include "ContentManager.h"
+#include "GameInstance.h"
+#include "externalized/strategic/BloodCatSpawnsModel.h"
+
 BOOLEAN gfOriginalList = TRUE;
 
 SOLDIERINITNODE *gSoldierInitHead = NULL;
@@ -63,9 +67,9 @@ void KillSoldierInitList()
 
 SOLDIERINITNODE* AddBasicPlacementToSoldierInitList(BASIC_SOLDIERCREATE_STRUCT const& bp)
 {
-	SOLDIERINITNODE* const si = MALLOCZ(SOLDIERINITNODE);
+	SOLDIERINITNODE* const si = new SOLDIERINITNODE{};
 
-	si->pBasicPlacement  = MALLOC(BASIC_SOLDIERCREATE_STRUCT);
+	si->pBasicPlacement  = new BASIC_SOLDIERCREATE_STRUCT{};
 	*si->pBasicPlacement = bp;
 
 	// It is impossible to set up detailed placement stuff now. If there is any
@@ -105,12 +109,12 @@ void RemoveSoldierNodeFromInitList( SOLDIERINITNODE *pNode )
 		gMapInformation.ubNumIndividuals--;
 	if( pNode->pBasicPlacement )
 	{
-		MemFree( pNode->pBasicPlacement );
+		delete pNode->pBasicPlacement;
 		pNode->pBasicPlacement = NULL;
 	}
 	if( pNode->pDetailedPlacement )
 	{
-		MemFree( pNode->pDetailedPlacement );
+		delete pNode->pDetailedPlacement;
 		pNode->pDetailedPlacement = NULL;
 	}
 	if( pNode->pSoldier )
@@ -140,7 +144,7 @@ void RemoveSoldierNodeFromInitList( SOLDIERINITNODE *pNode )
 		pNode->prev->next = pNode->next;
 		pNode->next->prev = pNode->prev;
 	}
-	MemFree( pNode );
+	delete pNode;
 }
 
 
@@ -220,7 +224,7 @@ void LoadSoldiersFromMap(HWFILE const f, bool stracLinuxFormat)
 		{
 			// Add the static detailed placement information in the same newly created
 			// node as the basic placement.
-			SOLDIERCREATE_STRUCT* const sc = MALLOC(SOLDIERCREATE_STRUCT);
+			SOLDIERCREATE_STRUCT* const sc = new SOLDIERCREATE_STRUCT{};
 			ExtractSoldierCreateFromFile(f, sc, stracLinuxFormat);
 
 			if (sc->ubProfile != NO_PROFILE)
@@ -423,7 +427,7 @@ static void SortSoldierInitList(void)
 bool AddPlacementToWorld(SOLDIERINITNODE* const init)
 {
 	SOLDIERCREATE_STRUCT dp;
-	memset(&dp, 0, sizeof(dp));
+	dp = SOLDIERCREATE_STRUCT{};
 
 	// First check if this guy has a profile and if so check his location such that it matches
 	if (SOLDIERCREATE_STRUCT* const init_dp = init->pDetailedPlacement)
@@ -1024,7 +1028,7 @@ void AddSoldierInitListEnemyDefenceSoldiers( UINT8 ubTotalAdmin, UINT8 ubTotalTr
 				/* DISABLE THE OVERRIDE FOR NOW...
 				if( curr->pDetailedPlacement )
 				{ //delete the detailed placement information.
-					MemFree( curr->pDetailedPlacement );
+					delete curr->pDetailedPlacement;
 					curr->pDetailedPlacement = NULL;
 					curr->pBasicPlacement->fDetailedPlacement = FALSE;
 				}
@@ -1107,7 +1111,7 @@ void AddSoldierInitListMilitia( UINT8 ubNumGreen, UINT8 ubNumRegs, UINT8 ubNumEl
 				if( curr->pDetailedPlacement )
 				{
 					//delete the detailed placement information.
-					MemFree( curr->pDetailedPlacement );
+					delete curr->pDetailedPlacement;
 					curr->pDetailedPlacement = NULL;
 					curr->pBasicPlacement->fDetailedPlacement = FALSE;
 					RandomizeRelativeLevel( &( curr->pBasicPlacement->bRelativeAttributeLevel ), curr->pBasicPlacement->ubSoldierClass );
@@ -1263,7 +1267,7 @@ void AddSoldierInitListMilitia( UINT8 ubNumGreen, UINT8 ubNumRegs, UINT8 ubNumEl
 				if( curr->pDetailedPlacement )
 				{
 					//delete the detailed placement information.
-					MemFree( curr->pDetailedPlacement );
+					delete curr->pDetailedPlacement;
 					curr->pDetailedPlacement = NULL;
 					curr->pBasicPlacement->fDetailedPlacement = FALSE;
 					RandomizeRelativeLevel( &( curr->pBasicPlacement->bRelativeAttributeLevel), curr->pBasicPlacement->ubSoldierClass );
@@ -1408,7 +1412,7 @@ void AddSoldierInitListCreatures(BOOLEAN fQueen, UINT8 ubNumLarvae, UINT8 ubNumI
 					SLOGA("AddSoldierInitListCreatures: something wrong with random");
 				if( curr->pDetailedPlacement )
 				{ //delete the detailed placement information.
-					MemFree( curr->pDetailedPlacement );
+					delete curr->pDetailedPlacement;
 					curr->pDetailedPlacement = NULL;
 					curr->pBasicPlacement->fDetailedPlacement = FALSE;
 				}
@@ -1486,7 +1490,7 @@ void EvaluateDeathEffectsToSoldierInitList(SOLDIERTYPE const& s)
 	if (s.bTeam == MILITIA_TEAM) return;
 	SOLDIERINITNODE* const curr = FindSoldierInitNodeBySoldier(s);
 	if (!curr || !curr->pDetailedPlacement) return;
-	MemFree(curr->pDetailedPlacement);
+	delete curr->pDetailedPlacement;
 	curr->pDetailedPlacement = 0;
 	curr->pSoldier           = 0;
 }
@@ -1577,8 +1581,9 @@ void AddSoldierInitListBloodcats()
 				bBloodCatPlacements++;
 			}
 		}
-		if( bBloodCatPlacements != pSector->bBloodCatPlacements &&
-			ubSectorID != SEC_I16 && ubSectorID != SEC_N5 )
+
+		auto spawns = GCM->getBloodCatSpawnsOfSector( ubSectorID );
+		if( bBloodCatPlacements != pSector->bBloodCatPlacements && spawns == NULL )
 		{
 			pSector->bBloodCatPlacements = bBloodCatPlacements;
 			pSector->bBloodCats = -1;
@@ -1720,7 +1725,7 @@ void AddProfilesUsingProfileInsertionData()
 		{
 			// Create a new soldier, as this one doesn't exist
 			SOLDIERCREATE_STRUCT c;
-			memset(&c, 0, sizeof(c));
+			c = SOLDIERCREATE_STRUCT{};
 			c.bTeam     = CIV_TEAM;
 			c.ubProfile = i;
 			c.sSectorX  = gWorldSectorX;
@@ -1866,7 +1871,7 @@ void StripEnemyDetailedPlacementsIfSectorWasPlayerLiberated()
 		if (bp.bTeam != ENEMY_TEAM) continue;
 		if (!si.pDetailedPlacement) continue;
 
-		MemFree(si.pDetailedPlacement);
+		delete si.pDetailedPlacement;
 		si.pDetailedPlacement = 0;
 		bp.fDetailedPlacement = FALSE;
 		bp.fPriorityExistance = FALSE;

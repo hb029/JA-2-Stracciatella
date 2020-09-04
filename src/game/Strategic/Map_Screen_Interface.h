@@ -1,11 +1,18 @@
 #ifndef MAP_SCREEN_INTERFACE_H
 #define MAP_SCREEN_INTERFACE_H
 
-#include "Item_Types.h"
-#include "JA2Types.h"
 #include "MessageBoxScreen.h"
 #include "MouseSystem.h"
 #include "ScreenIDs.h"
+#include "Soldier_Control.h"
+#include "Types.h"
+#include "UILayout.h"
+#include <string_theory/string>
+
+class SGPVObject;
+class SGPVSurface;
+struct GROUP;
+struct OBJECTTYPE;
 
 
 // char breath and life position
@@ -277,7 +284,7 @@ void DisableTeamInfoPanels( void );
 void EnableTeamInfoPanels( void );
 
 // do mapscreen message box
-void DoMapMessageBox(MessageBoxStyleID, wchar_t const* zString, ScreenID uiExitScreen, MessageBoxFlags, MSGBOX_CALLBACK ReturnCallback);
+void DoMapMessageBox(MessageBoxStyleID ubStyle, const ST::string& str, ScreenID uiExitScreen, MessageBoxFlags usFlags, MSGBOX_CALLBACK ReturnCallback);
 
 // hop up one leve,l int he map screen level interface
 void GoUpOneLevelInMap( void );
@@ -298,7 +305,7 @@ void HandleDisplayOfSelectedMercArrows();
 void DeselectSelectedListMercsWhoCantMoveWithThisGuy(const SOLDIERTYPE* s);
 
 // get morale string for this grunt given this morale level
-wchar_t const* GetMoraleString(SOLDIERTYPE const&);
+ST::string GetMoraleString(SOLDIERTYPE const& s);
 
 // handle leaving of equipment in sector
 void HandleLeavingOfEquipmentInCurrentSector(SOLDIERTYPE&);
@@ -378,7 +385,7 @@ BOOLEAN IsTheInterfaceFastHelpTextActive( void );
 /* This will setup a fast help text region that is unrelated to mouse regions.
  * The user is to pass in the x,y position of the box, the width to wrap the
  * string and the string itself */
-void SetUpFastHelpRegion(INT32 x, INT32 y, INT32 width, const wchar_t* text);
+void SetUpFastHelpRegion(INT32 x, INT32 y, INT32 width, const ST::string& str);
 
 
 // reset assignment for mercs trainign militia in this sector

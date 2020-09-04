@@ -49,6 +49,12 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
+#include <algorithm>
+#include <iterator>
+
 static SOLDIERTYPE* gOutOfTurnOrder[MAXMERCS];
 UINT8 gubOutOfTurnPersons = 0;
 
@@ -72,7 +78,7 @@ extern SightFlags gubSightFlags;
 
 void ClearIntList( void )
 {
-	memset(gOutOfTurnOrder, 0, sizeof(gOutOfTurnOrder));
+	std::fill(std::begin(gOutOfTurnOrder), std::end(gOutOfTurnOrder), nullptr);
 	gubOutOfTurnPersons = 0;
 }
 
@@ -522,7 +528,7 @@ static void StartInterrupt(void)
 	if (first_interrupter->bTeam == OUR_TEAM)
 	{
 		// start interrupts for everyone on our side at once
-		wchar_t sTemp[ 255 ];
+		ST::string sTemp;
 		UINT8   ubInterrupters = 0;
 
 		// build string for display of who gets interrupt
@@ -545,7 +551,7 @@ static void StartInterrupt(void)
 			}
 		}
 
-		wcscpy( sTemp, g_langRes->Message[ STR_INTERRUPT_FOR ] );
+		sTemp = g_langRes->Message[ STR_INTERRUPT_FOR ];
 
 		// build string in separate loop here, want to linearly process squads...
 		for (INT32 iSquad = 0; iSquad < NUMBER_OF_SQUADS; ++iSquad)
@@ -562,17 +568,17 @@ static void StartInterrupt(void)
 				{
 					// flush... display string, then clear it (we could have 20 names!)
 					// add comma to end, we know we have another person after this...
-					wcscat( sTemp, L", " );
+					sTemp += ", ";
 					ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, sTemp );
-					wcscpy( sTemp, L"" );
+					sTemp = ST::null;
 					ubInterrupters = 1;
 				}
 
 				if ( ubInterrupters > 1 )
 				{
-					wcscat( sTemp, L", " );
+					sTemp += ", ";
 				}
-				wcscat(sTemp, s->name);
+				sTemp += s->name;
 			}
 		}
 
@@ -1304,7 +1310,7 @@ BOOLEAN InterruptDuel( SOLDIERTYPE * pSoldier, SOLDIERTYPE * pOpponent)
 			fResult = TRUE;
 		}
 	}
-	//ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, L"Interrupt duel %d (%d pts) vs %d (%d pts)", pSoldier->ubID, pSoldier->bInterruptDuelPts, pOpponent->ubID, pOpponent->bInterruptDuelPts );
+	//ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, ST::format("Interrupt duel {} ({} pts) vs {} ({} pts)", pSoldier->ubID, pSoldier->bInterruptDuelPts, pOpponent->ubID, pOpponent->bInterruptDuelPts) );
 	return( fResult );
 }
 
@@ -1590,7 +1596,7 @@ void ResolveInterruptsVs( SOLDIERTYPE * pSoldier, UINT8 ubInterruptType)
 						/*
 							if (pOpponent->bInterruptDuelPts != NO_INTERRUPT)
 							{
-								ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, L"%d fails to interrupt %d (%d vs %d pts)", pOpponent->ubID, pSoldier->ubID, pOpponent->bInterruptDuelPts, pSoldier->bInterruptDuelPts);
+								ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, ST::format("{} fails to interrupt {} ({} vs {} pts)", pOpponent->ubID, pSoldier->ubID, pOpponent->bInterruptDuelPts, pSoldier->bInterruptDuelPts));
 							}
 							*/
 						}
@@ -1655,7 +1661,7 @@ void ResolveInterruptsVs( SOLDIERTYPE * pSoldier, UINT8 ubInterruptType)
 					}
 				}
 
-				if (ubSmallestSlot < NOBODY)
+				if (ubSmallestSlot < MAX_NUM_SOLDIERS)
 				{
 					// add this guy to everyone's interrupt queue
 					AddToIntList(IntList[ubSmallestSlot], TRUE, TRUE);
@@ -1681,7 +1687,7 @@ void ResolveInterruptsVs( SOLDIERTYPE * pSoldier, UINT8 ubInterruptType)
 void SaveTeamTurnsToTheSaveGameFile(HWFILE const f)
 {
 	BYTE  data[174];
-	BYTE* d = data;
+	DataWriter d{data};
 	for (size_t i = 0; i != lengthof(gOutOfTurnOrder); ++i)
 	{
 		INJ_SOLDIER(d, gOutOfTurnOrder[i])
@@ -1693,7 +1699,7 @@ void SaveTeamTurnsToTheSaveGameFile(HWFILE const f)
 	INJ_BOOL(   d, gfHiddenInterrupt)
 	INJ_SOLDIER(d, gLastInterruptedGuy)
 	INJ_SKIP(   d, 17)
-	Assert(d == endof(data));
+	Assert(d.getConsumed() == lengthof(data));
 
 	FileWrite(f, data, sizeof(data));
 }
@@ -1704,7 +1710,7 @@ void LoadTeamTurnsFromTheSavedGameFile(HWFILE const f)
 	BYTE data[174];
 	FileRead(f, data, sizeof(data));
 
-	BYTE const* d = data;
+	DataReader d{data};
 	EXTR_SKIP(d, 1)
 	for (size_t i = 1; i != lengthof(gOutOfTurnOrder); ++i)
 	{
@@ -1717,7 +1723,7 @@ void LoadTeamTurnsFromTheSavedGameFile(HWFILE const f)
 	EXTR_BOOL(   d, gfHiddenInterrupt)
 	EXTR_SOLDIER(d, gLastInterruptedGuy)
 	EXTR_SKIP(   d, 17)
-	Assert(d == endof(data));
+	Assert(d.getConsumed() == lengthof(data));
 }
 
 

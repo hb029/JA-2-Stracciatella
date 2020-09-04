@@ -7,6 +7,8 @@
 #include "WCheck.h"
 #include "MemMan.h"
 
+#include <vector>
+
 
 #define CONVERT_ADD_APPDATA										0x0001
 #define CONVERT_ADD_JA2DATA										0x0003
@@ -46,14 +48,11 @@
 
 //#define JA2_OBJECT_DATA_SIZE	16
 
-static BOOLEAN ConvertToETRLE(UINT8** ppDest, UINT32* puiDestLen, STCISubImage** ppSubImageBuffer, UINT16* pusNumberOfSubImages, UINT8* p8BPPBuffer, UINT16 usWidth, UINT16 usHeight, UINT32 fFlags);
+static BOOLEAN ConvertToETRLE(UINT8** ppDest, UINT32* puiDestLen, std::vector<STCISubImage>& subImages, UINT8* p8BPPBuffer, UINT16 usWidth, UINT16 usHeight, UINT32 fFlags);
 
 
 void WriteSTIFile(UINT8* const pData, SGPPaletteEntry* const pPalette, const INT16 sWidth, const INT16 sHeight, const char* const cOutputName, const UINT32 fFlags, const UINT32 uiAppDataSize)
 {
-
-	FILE *							pOutput;
-
 	UINT32							uiOriginalSize;
 	UINT8 *							pOutputBuffer = NULL;
 	UINT32							uiCompressedSize=0; // Wmaybe-uninitialized
@@ -64,13 +63,11 @@ void WriteSTIFile(UINT8* const pData, SGPPaletteEntry* const pPalette, const INT
 	SGPPaletteEntry *		pSGPPaletteEntry;
 	STCIPaletteElement	STCIPaletteEntry;
 
-	STCISubImage *			pSubImageBuffer=0; // Wmaybe-uninitialized
-	UINT16							usNumberOfSubImages=0; // Wmaybe-uninitialized
-	UINT32							uiSubImageBufferSize=0;
+	std::vector<STCISubImage> subImages;
 
 	//UINT16							usLoop;
 
-	memset(&Header, 0, sizeof(Header));
+	Header = STCIHeader{};
 
 	uiOriginalSize = sWidth * sHeight * (8 / 8);
 
@@ -97,10 +94,9 @@ void WriteSTIFile(UINT8* const pData, SGPPaletteEntry* const pPalette, const INT
 
 	if ((Header.fFlags & STCI_INDEXED) && (fFlags & CONVERT_ETRLE_COMPRESS))
 	{
-		ConvertToETRLE(&pOutputBuffer, &uiCompressedSize, &pSubImageBuffer, &usNumberOfSubImages, pData, sWidth, sHeight, fFlags);
-		uiSubImageBufferSize = (UINT32) usNumberOfSubImages * sizeof(STCISubImage);
-
-		Header.Indexed.usNumberOfSubImages = usNumberOfSubImages;
+		ConvertToETRLE(&pOutputBuffer, &uiCompressedSize, subImages, pData, sWidth, sHeight, fFlags);
+		Assert(subImages.size() <= UINT16_MAX);
+		Header.Indexed.usNumberOfSubImages = static_cast<UINT16>(subImages.size());
 		Header.uiStoredSize = uiCompressedSize;
 		Header.fFlags |= STCI_ETRLE_COMPRESSED;
 	}
@@ -109,13 +105,19 @@ void WriteSTIFile(UINT8* const pData, SGPPaletteEntry* const pPalette, const INT
 	// save file
 	//
 
-	pOutput = fopen( cOutputName, "wb" );
-	if (pOutput == NULL )
+	RustPointer<File> file(File_open(cOutputName, FILE_OPEN_WRITE));
+	if (!file)
 	{
+		RustPointer<char> err(getRustError());
+		SLOGE("WriteSTIFile: %s", err.get());
 		return;
 	}
 	// write header
-	fwrite(&Header, sizeof(Header), 1, pOutput);
+	if (!File_writeAll(file.get(), reinterpret_cast<const uint8_t*>(&Header), sizeof(Header)))
+	{
+		RustPointer<char> err(getRustError());
+		SLOGW("WriteSTIFile: %s", err.get());
+	}
 	// write palette and subimage structs, if any
 	if (Header.fFlags & STCI_INDEXED)
 	{
@@ -128,33 +130,47 @@ void WriteSTIFile(UINT8* const pData, SGPPaletteEntry* const pPalette, const INT
 				STCIPaletteEntry.ubRed   = pSGPPaletteEntry[uiLoop].r;
 				STCIPaletteEntry.ubGreen = pSGPPaletteEntry[uiLoop].g;
 				STCIPaletteEntry.ubBlue  = pSGPPaletteEntry[uiLoop].b;
-				fwrite(&STCIPaletteEntry, sizeof(STCIPaletteEntry), 1, pOutput);
+				if (!File_writeAll(file.get(), reinterpret_cast<const uint8_t*>(&STCIPaletteEntry), sizeof(STCIPaletteEntry)))
+				{
+					RustPointer<char> err(getRustError());
+					SLOGW("WriteSTIFile: %s", err.get());
+				}
 			}
 		}
 		if (Header.fFlags & STCI_ETRLE_COMPRESSED)
 		{
-			fwrite( pSubImageBuffer, uiSubImageBufferSize, 1, pOutput );
+			if (!File_writeAll(file.get(), reinterpret_cast<const uint8_t*>(subImages.data()), subImages.size() * sizeof(STCISubImage)))
+			{
+				RustPointer<char> err(getRustError());
+				SLOGW("WriteSTIFile: %s", err.get());
+			}
 		}
 	}
 
 	// write file data
 	Assert(Header.fFlags & STCI_ETRLE_COMPRESSED);
 	Assert(pOutputBuffer);
-	fwrite( pOutputBuffer, Header.uiStoredSize, 1, pOutput );
-
-	// write app-specific data (blanked to 0)
-	for (uiLoop = 0; uiLoop < Header.uiAppDataSize; uiLoop++)
+	if (!File_writeAll(file.get(), reinterpret_cast<const uint8_t*>(pOutputBuffer), Header.uiStoredSize))
 	{
-		fputc( 0, pOutput );
+		RustPointer<char> err(getRustError());
+		SLOGW("WriteSTIFile: %s", err.get());
 	}
 
-	fclose( pOutput );
+	// write app-specific data (blanked to 0)
+	const uint8_t zero = 0;
+	for (uiLoop = 0; uiLoop < Header.uiAppDataSize; uiLoop++)
+	{
+		if (!File_writeAll(file.get(), &zero, sizeof(zero)))
+		{
+			RustPointer<char> err(getRustError());
+			SLOGW("WriteSTIFile: %s", err.get());
+		}
+	}
 
 	if( pOutputBuffer != NULL )
 	{
-		MemFree( pOutputBuffer );
+		delete[] pOutputBuffer;
 	}
-
 }
 
 
@@ -174,7 +190,9 @@ static BOOLEAN GoPastWall(INT16* psNewX, INT16* psNewY, UINT16 usWidth, UINT16 u
 static BOOLEAN GoToNextSubImage(INT16* psNewX, INT16* psNewY, UINT8* p8BPPBuffer, UINT16 usWidth, UINT16 usHeight, INT16 sOrigX, INT16 sOrigY);
 
 
-static BOOLEAN ConvertToETRLE(UINT8** const ppDest, UINT32* const puiDestLen, STCISubImage** const ppSubImageBuffer, UINT16* const pusNumberOfSubImages, UINT8* const p8BPPBuffer, const UINT16 usWidth, const UINT16 usHeight, const UINT32 fFlags)
+/// Converts an indexed image to ETRLE subimages.
+/// The caller is responsible for the memory left in *ppDest.
+static BOOLEAN ConvertToETRLE(UINT8** const ppDest, UINT32* const puiDestLen, std::vector<STCISubImage>& subImages, UINT8* const p8BPPBuffer, const UINT16 usWidth, const UINT16 usHeight, const UINT32 fFlags)
 try
 {
 	INT16						sCurrX;
@@ -186,7 +204,6 @@ try
 	BOOLEAN					fOk = TRUE;
 	BOOLEAN					fStore;
 	BOOLEAN					fNextExists;
-	STCISubImage		TempSubImage;
 	UINT32					uiSubImageCompressedSize;
 	UINT32					uiSpaceLeft;
 
@@ -204,9 +221,8 @@ try
 
 		// we want a 1-element SubImage array for this...
 		// allocate!
-		*pusNumberOfSubImages = 1;
-		*ppSubImageBuffer = MALLOC(STCISubImage);
-		STCISubImage* const pCurrSubImage = *ppSubImageBuffer;
+		subImages.assign(1, STCISubImage{});
+		STCISubImage* const pCurrSubImage = &subImages.back();
 		pCurrSubImage->sOffsetX = 0;
 		pCurrSubImage->sOffsetY = 0;
 		pCurrSubImage->usWidth = usWidth;
@@ -228,37 +244,34 @@ try
 	{
 		// skip any initial wall bytes to find the first subimage
 		if (!GoPastWall(&sCurrX, &sCurrY, usWidth, usHeight, p8BPPBuffer, 0, 0)) return FALSE;
-		*ppSubImageBuffer = NULL;
-		*pusNumberOfSubImages = 0;
+		subImages.clear();
 
 		while (fContinue)
 		try
 		{
-			// allocate more memory for SubImage structures, and set the current pointer to the last one
-			*ppSubImageBuffer = REALLOC(*ppSubImageBuffer, STCISubImage, *pusNumberOfSubImages + 1);
-			STCISubImage* const pCurrSubImage = *ppSubImageBuffer + *pusNumberOfSubImages;
+			STCISubImage subImage = STCISubImage{};
 
-			pCurrSubImage->sOffsetX = sCurrX;
-			pCurrSubImage->sOffsetY = sCurrY;
+			subImage.sOffsetX = sCurrX;
+			subImage.sOffsetY = sCurrY;
 			// determine the subimage's full size
-			if (!DetermineSubImageSize( p8BPPBuffer, usWidth, usHeight, pCurrSubImage ))
+			if (!DetermineSubImageSize( p8BPPBuffer, usWidth, usHeight, &subImage ))
 			{
 				fOk = FALSE;
 				break;
 			}
-			if (*pusNumberOfSubImages == 0 && pCurrSubImage->usWidth == usWidth && pCurrSubImage->usHeight == usHeight)
+			if (subImages.size() == 0 && subImage.usWidth == usWidth && subImage.usHeight == usHeight)
 			{
 				printf( "\tWarning: no walls (subimage delimiters) found.\n" );
 			}
 
-			TempSubImage = *pCurrSubImage;
-			if (DetermineSubImageUsedSize( p8BPPBuffer, usWidth, usHeight, &TempSubImage))
+			STCISubImage tempSubImage = subImage;
+			if (DetermineSubImageUsedSize( p8BPPBuffer, usWidth, usHeight, &tempSubImage))
 			{
 				// image has nontransparent data; we definitely want to store it
 				fStore = TRUE;
 				if (!(fFlags & CONVERT_ETRLE_NO_SUBIMAGE_SHRINKING))
 				{
-					*pCurrSubImage = TempSubImage;
+					subImage = tempSubImage;
 				}
 			}
 			else if (fFlags & CONVERT_ETRLE_DONT_SKIP_BLANKS)
@@ -286,21 +299,21 @@ try
 			if (fStore)
 			{
 				// we want to store this subimage!
-				uiSubImageCompressedSize = ETRLECompressSubImage( pOutputNext, uiSpaceLeft, p8BPPBuffer, usWidth, usHeight, pCurrSubImage );
+				uiSubImageCompressedSize = ETRLECompressSubImage( pOutputNext, uiSpaceLeft, p8BPPBuffer, usWidth, usHeight, &subImage );
 				if (uiSubImageCompressedSize == 0)
 				{
 					fOk = FALSE;
 					break;
 				}
-				pCurrSubImage->uiDataOffset = (*puiDestLen - uiSpaceLeft);
-				pCurrSubImage->uiDataLength = uiSubImageCompressedSize;
+				subImage.uiDataOffset = (*puiDestLen - uiSpaceLeft);
+				subImage.uiDataLength = uiSubImageCompressedSize;
 				// this is a cheap hack; the sOffsetX and sOffsetY values have been used
 				// to store the location of the subimage within the whole image.  Now
 				// we want the offset within the subimage, so, we subtract the coordatines
 				// for the upper-left corner of the subimage.
-				pCurrSubImage->sOffsetX -= sCurrX;
-				pCurrSubImage->sOffsetY -= sCurrY;
-				(*pusNumberOfSubImages)++;
+				subImage.sOffsetX -= sCurrX;
+				subImage.sOffsetY -= sCurrY;
+				subImages.push_back(subImage);
 				pOutputNext += uiSubImageCompressedSize;
 				uiSpaceLeft -= uiSubImageCompressedSize;
 			}
@@ -315,10 +328,6 @@ try
 	}
 	if (!fOk)
 	{
-		if (*ppSubImageBuffer != NULL)
-		{
-			MemFree( *ppSubImageBuffer );
-		}
 		return( FALSE );
 	}
 

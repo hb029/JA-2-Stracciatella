@@ -104,7 +104,7 @@ void InitNewOverheadDB(TileSetID const ubTilesetID)
 			use_tileset = GENERIC_1;
 		}
 
-		std::string adjusted_file(GCM->getTilesetResourceName(use_tileset, std::string("t/") + filename));
+		ST::string adjusted_file(GCM->getTilesetResourceName(use_tileset, ST::string("t/") + filename));
 		SGPVObject* vo;
 		try
 		{
@@ -113,7 +113,7 @@ void InitNewOverheadDB(TileSetID const ubTilesetID)
 		catch (...)
 		{
 			// Load one we know about
-			vo = AddVideoObjectFromFile(GCM->getTilesetResourceName(0, std::string("t/") + "grass.sti").c_str());
+			vo = AddVideoObjectFromFile(GCM->getTilesetResourceName(0, ST::string("t/") + "grass.sti").c_str());
 		}
 
 		gSmTileSurf[i].vo = vo;
@@ -804,14 +804,14 @@ static void RenderOverheadOverlays(void)
 	{
 		CFOR_EACH_WORLD_ITEM(wi)
 		{
-			if (wi->bVisible != VISIBLE && !(gTacticalStatus.uiFlags & SHOW_ALL_ITEMS))
+			if (wi.bVisible != VISIBLE && !(gTacticalStatus.uiFlags & SHOW_ALL_ITEMS))
 			{
 				continue;
 			}
 
 			INT16 sX;
 			INT16 sY;
-			GetOverheadScreenXYFromGridNo(wi->sGridNo, &sX, &sY);
+			GetOverheadScreenXYFromGridNo(wi.sGridNo, &sX, &sY);
 
 			sX += STD_SCREEN_X;
 			sY += STD_SCREEN_Y;
@@ -820,7 +820,7 @@ static void RenderOverheadOverlays(void)
 			sY += 6;
 
 			UINT32 col;
-			if (gsOveritemPoolGridNo == wi->sGridNo)
+			if (gsOveritemPoolGridNo == wi.sGridNo)
 			{
 				col = FROMRGB(255, 0, 0);
 			}
@@ -828,7 +828,7 @@ static void RenderOverheadOverlays(void)
 			{
 				col = FROMRGB(0, 0, 0);
 			}
-			else switch (wi->bVisible)
+			else switch (wi.bVisible)
 			{
 				case HIDDEN_ITEM:      col = FROMRGB(  0,   0, 255); break;
 				case BURIED:           col = FROMRGB(255,   0,   0); break;

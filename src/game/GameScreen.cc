@@ -61,10 +61,11 @@
 #include "UILayout.h"
 #include "GameState.h"
 #include "EditScreen.h"
+#include "Logger.h"
+#include "Strategic_Movement.h"
 #include "Campaign_Types.h"
 #include "GameSettings.h"
-#include "Game_Event_Hook.h"
-#include "Logger.h"
+#include "Game_Events.h"
 
 #define ARE_IN_FADE_IN( )		( gfFadeIn || gfFadeInitialized )
 
@@ -102,7 +103,7 @@ static void BlitMFont(VIDEO_OVERLAY* const ovr)
 {
 	SetFontAttributes(ovr->uiFontID, ovr->ubFontFore, DEFAULT_SHADOW, ovr->ubFontBack);
 	SGPVSurface::Lock l(ovr->uiDestBuff);
-	MPrintBuffer(l.Buffer<UINT16>(), l.Pitch(), ovr->sX, ovr->sY, ovr->zText);
+	MPrintBuffer(l.Buffer<UINT16>(), l.Pitch(), ovr->sX, ovr->sY, ovr->codepoints);
 }
 
 

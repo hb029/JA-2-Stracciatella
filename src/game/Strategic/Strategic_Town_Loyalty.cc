@@ -32,6 +32,14 @@
 #include "FileMan.h"
 #include "Logger.h"
 
+#include <string_theory/string>
+
+#include <algorithm>
+#include <iterator>
+#include <vector>
+
+// the max loyalty rating for any given town
+#define MAX_LOYALTY_VALUE 100
 
 // loyalty Omerta drops to and maxes out at if the player betrays the rebels
 #define HOSTILE_OMERTA_LOYALTY_RATING 10
@@ -69,7 +77,7 @@ TOWN_LOYALTY gTownLoyalty[ NUM_TOWNS ];
 
 
 // Town names and locations
-TownSectorInfo g_town_sectors[40];
+std::vector<TownSectorInfo> g_town_sectors;
 
 
 #define BASIC_COST_FOR_CIV_MURDER	(10 * GAIN_PTS_PER_LOYALTY_PT)
@@ -615,8 +623,7 @@ void RemoveRandomItemsInSector(INT16 const sSectorX, INT16 const sSectorY, INT16
 	 * unvisited sectors, but let's check anyway */
 	Assert(GetSectorFlagStatus(sSectorX, sSectorY, sSectorZ, SF_ALREADY_VISITED));
 
-	wchar_t wSectorName[128];
-	GetSectorIDString(sSectorX, sSectorY, sSectorZ, wSectorName, lengthof(wSectorName), TRUE);
+	ST::string wSectorName = GetSectorIDString(sSectorX, sSectorY, sSectorZ, TRUE);
 
 	// go through list of items in sector and randomly remove them
 
@@ -627,48 +634,43 @@ void RemoveRandomItemsInSector(INT16 const sSectorX, INT16 const sSectorY, INT16
 	{
 		/* if the player has never been there, there's no temp file, and 0 items
 		 * will get returned, preventing any stealing */
-		UINT32     uiNumberOfItems;
-		WORLDITEM* pItemList;
-		LoadWorldItemsFromTempItemFile(sSectorX, sSectorY, sSectorZ, &uiNumberOfItems, &pItemList);
-		if (uiNumberOfItems == 0) return;
+		std::vector<WORLDITEM> pItemList = LoadWorldItemsFromTempItemFile(sSectorX, sSectorY, sSectorZ);
+		if (pItemList.size() == 0) return;
 
-		UINT32 uiNewTotal = uiNumberOfItems;
+		bool somethingWasStolen = false;
 
 		// set up item list ptrs
-		WORLDITEM const* const end = pItemList + uiNumberOfItems;
-		for (WORLDITEM* wi = pItemList; wi != end; ++wi)
+		for (WORLDITEM& wi : pItemList)
 		{
 			//if the item exists, and is visible and reachable, see if it should be stolen
-			if (!wi->fExists)                          continue;
-			if (wi->bVisible != VISIBLE)               continue;
-			if (!(wi->usFlags & WORLD_ITEM_REACHABLE)) continue;
-			if (Random(100) >= ubChance)               continue;
+			if (!wi.fExists)                          continue;
+			if (wi.bVisible != VISIBLE)               continue;
+			if (!(wi.usFlags & WORLD_ITEM_REACHABLE)) continue;
+			if (Random(100) >= ubChance)              continue;
 
 			// remove
-			--uiNewTotal;
-			wi->fExists = FALSE;
+			somethingWasStolen = true;
+			wi.fExists = FALSE;
 
-			SLOGD("%ls stolen in %ls!", ItemNames[wi->o.usItem], wSectorName);
+			SLOGD("%s stolen in %s!", ItemNames[wi.o.usItem].c_str(), wSectorName.c_str());
 		}
 
 		// only save if something was stolen
-		if (uiNewTotal < uiNumberOfItems)
+		if (somethingWasStolen)
 		{
-			SaveWorldItemsToTempItemFile(sSectorX, sSectorY, sSectorZ, uiNumberOfItems, pItemList);
+			SaveWorldItemsToTempItemFile(sSectorX, sSectorY, sSectorZ, pItemList);
 		}
-
-		MemFree(pItemList);
 	}
 	else	// handle a loaded sector
 	{
 		FOR_EACH_WORLD_ITEM(wi)
 		{
 			// note, can't do reachable test here because we'd have to do a path call
-			if (wi->bVisible != VISIBLE) continue;
-			if (!(wi->usFlags & WORLD_ITEM_REACHABLE)) continue;
+			if (wi.bVisible != VISIBLE) continue;
+			if (!(wi.usFlags & WORLD_ITEM_REACHABLE)) continue;
 			if (Random(100) >= ubChance) continue;
 
-			SLOGD("%ls stolen in %ls!", ItemNames[wi->o.usItem], wSectorName);
+			SLOGD("%s stolen in %s!", ItemNames[wi.o.usItem].c_str(), wSectorName.c_str());
 			RemoveItemFromPool(wi);
 		}
 	}
@@ -677,19 +679,15 @@ void RemoveRandomItemsInSector(INT16 const sSectorX, INT16 const sSectorY, INT16
 
 void BuildListOfTownSectors()
 {
-	memset(g_town_sectors, 0, sizeof(g_town_sectors));
-
-	TownSectorInfo* i = g_town_sectors;
 	for (INT32 x = 1; x != MAP_WORLD_X - 1; ++x)
 	{
 		for (INT32 y = 1; y != MAP_WORLD_Y - 1; ++y)
 		{
 			INT8 const town = StrategicMap[CALCULATE_STRATEGIC_INDEX(x, y)].bNameId;
 			if (town < FIRST_TOWN || NUM_TOWNS <= town) continue;
-
-			i->sector = SECTOR(x, y);
-			i->town   = town;
-			++i;
+			g_town_sectors.push_back(
+				TownSectorInfo{ (UINT8)town, SECTOR(x, y) }
+			);
 		}
 	}
 }
@@ -701,7 +699,7 @@ void SaveStrategicTownLoyaltyToSaveGameFile(HWFILE const f)
 	FOR_EACH(TOWN_LOYALTY const, i, gTownLoyalty)
 	{
 		BYTE  data[26];
-		BYTE* d = data;
+		DataWriter d{data};
 		INJ_U8(  d, i->ubRating)
 		INJ_SKIP(d, 1)
 		INJ_I16( d, i->sChange)
@@ -709,7 +707,7 @@ void SaveStrategicTownLoyaltyToSaveGameFile(HWFILE const f)
 		INJ_SKIP(d, 1)
 		INJ_BOOL(d, i->fLiberatedAlready)
 		INJ_SKIP(d, 19)
-		Assert(d == endof(data));
+		Assert(d.getConsumed() == lengthof(data));
 
 		FileWrite(f, data, sizeof(data));
 	}
@@ -724,7 +722,7 @@ void LoadStrategicTownLoyaltyFromSavedGameFile(HWFILE const f)
 		BYTE data[26];
 		FileRead(f, data, sizeof(data));
 
-		BYTE const* d = data;
+		DataReader d{data};
 		EXTR_U8(  d, i->ubRating)
 		EXTR_SKIP(d, 1)
 		EXTR_I16( d, i->sChange)
@@ -732,7 +730,7 @@ void LoadStrategicTownLoyaltyFromSavedGameFile(HWFILE const f)
 		EXTR_SKIP(d, 1)
 		EXTR_BOOL(d, i->fLiberatedAlready)
 		EXTR_SKIP(d, 19)
-		Assert(d == endof(data));
+		Assert(d.getConsumed() == lengthof(data));
 	}
 }
 
@@ -756,6 +754,7 @@ void ReduceLoyaltyForRebelsBetrayed(void)
 		}
 		else
 		{
+
 			// loyalty in other places is also strongly affected by this falling out with rebels, but this is not permanent
 			SetTownLoyalty(bTownId, (UINT8) (gTownLoyalty[ bTownId ].ubRating / 3));
 		}
@@ -815,8 +814,8 @@ static INT32 IsTownUnderCompleteControlByEnemy(INT8 bTownId)
 void AdjustLoyaltyForCivsEatenByMonsters( INT16 sSectorX, INT16 sSectorY, UINT8 ubHowMany)
 {
 	UINT32 uiLoyaltyChange = 0;
-	wchar_t str[256];
-	wchar_t pSectorString[128];
+	ST::string str;
+	ST::string pSectorString;
 
 	UINT8 const bTownId = GetTownIdForSector(SECTOR(sSectorX, sSectorY));
 
@@ -827,8 +826,8 @@ void AdjustLoyaltyForCivsEatenByMonsters( INT16 sSectorX, INT16 sSectorY, UINT8 
 	}
 
 	//Report this to player
-	GetSectorIDString( sSectorX, sSectorY, 0, pSectorString, lengthof(pSectorString), TRUE );
-	swprintf( str, lengthof(str), gpStrategicString[ STR_DIALOG_CREATURES_KILL_CIVILIANS ], ubHowMany, pSectorString );
+	pSectorString = GetSectorIDString(sSectorX, sSectorY, 0, TRUE);
+	str = st_format_printf(gpStrategicString[ STR_DIALOG_CREATURES_KILL_CIVILIANS ], ubHowMany, pSectorString);
 	DoScreenIndependantMessageBox( str, MSG_BOX_FLAG_OK, MapScreenDefaultOkBoxCallback );
 
 	// use same formula as if it were a civilian "murder" in tactical!!!

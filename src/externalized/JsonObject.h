@@ -1,8 +1,7 @@
 #pragma once
 
-#include <string>
-
 #include "rapidjson/document.h"
+#include <string_theory/string>
 
 class JsonObject
 {
@@ -19,7 +18,7 @@ public:
 	void AddMember(const char *name, uint16_t    value) { m_value.AddMember<uint16_t>(rapidjson::StringRef(name), value, m_alloc); }
 	void AddMember(const char *name, bool        value) { m_value.AddMember<bool>(rapidjson::StringRef(name), value, m_alloc); }
 
-	void AddMember(const char *name, const std::string &value)
+	void AddMember(const char *name, const ST::string &value)
 	{
 		m_value.AddMember(rapidjson::StringRef(name), rapidjson::StringRef(value.c_str()), m_alloc);
 	}
@@ -60,12 +59,27 @@ public:
 		return m_value[name].GetInt();
 	}
 
+	unsigned int GetUInt(const char* name) const
+	{
+		return m_value[name].GetUint();
+	}
+
 	bool GetBool(const char *name) const
 	{
 		return m_value[name].GetBool();
 	}
 
-	bool getOptionalBool(const char *name) const
+	double GetDouble(const char *name) const
+	{
+		return m_value[name].GetDouble();
+	}
+
+	const rapidjson::Value &GetValue(const char *name) const
+	{
+		return m_value[name];
+	}
+
+	bool getOptionalBool(const char *name, bool defaultValue = false) const
 	{
 		if(m_value.HasMember(name))
 		{
@@ -73,7 +87,31 @@ public:
 		}
 		else
 		{
-			return false;
+			return defaultValue;
+		}
+	}
+
+	double getOptionalDouble(const char* name, double defaultValue = 0) const
+	{
+		if (m_value.HasMember(name))
+		{
+			return m_value[name].GetDouble();
+		}
+		else
+		{
+			return defaultValue;
+		}
+	}
+
+	int getOptionalInt(const char* name, int defaultValue = 0) const
+	{
+		if (m_value.HasMember(name))
+		{
+			return m_value[name].GetInt();
+		}
+		else
+		{
+			return defaultValue;
 		}
 	}
 

@@ -16,15 +16,16 @@ enum SGPFileFlags
 	SGPFILE_REAL = 1U << 0
 };
 
-struct LibraryFile;
+struct File;
+struct VfsFile;
 
 struct SGPFile
 {
 	SGPFileFlags flags;
 	union
 	{
-		FILE*       file;
-		LibraryFile* lib;
+		File* file;
+		VfsFile* vfile;
 	} u;
 };
 

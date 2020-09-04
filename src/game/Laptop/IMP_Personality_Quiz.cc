@@ -16,6 +16,10 @@
 #include "Button_System.h"
 #include "Font_Control.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
+#include <algorithm>
 
 static BUTTON_PICS* giIMPPersonalityQuizButtonImage[2];
 static GUIButtonRef giIMPPersonalityQuizButton[2];
@@ -67,7 +71,7 @@ void EnterIMPPersonalityQuiz( void )
 {
 
 	// void answers out the quiz
-	memset( &iQuizAnswerList, -1, sizeof( INT32 ) * MAX_NUMBER_OF_IMP_QUESTIONS );
+	std::fill_n(iQuizAnswerList, MAX_NUMBER_OF_IMP_QUESTIONS, -1);
 
 	// if we are entering for first time, reset
 	if( giCurrentPersonalityQuizQuestion == MAX_NUMBER_OF_IMP_QUESTIONS )
@@ -148,7 +152,7 @@ void HandleIMPPersonalityQuiz( void )
 }
 
 
-static GUIButtonRef MakeButton(BUTTON_PICS* const img, const wchar_t* const text, const INT16 x, const INT16 y, const GUI_CALLBACK click)
+static GUIButtonRef MakeButton(BUTTON_PICS* const img, const ST::string& text, const INT16 x, const INT16 y, const GUI_CALLBACK click)
 {
 	const INT16 text_col   = FONT_WHITE;
 	const INT16 shadow_col = DEFAULT_SHADOW;
@@ -296,7 +300,7 @@ static void BtnQuizAnswerCallback(GUI_BUTTON*, INT32 reason);
 static void AddIMPPersonalityQuizAnswerButtons(INT32 iNumberOfButtons)
 {
 	// will add iNumberofbuttons to the answer button list
-	for (UINT32 i = 0; i < iNumberOfButtons; i++)
+	for (INT32 i = 0; i < iNumberOfButtons; i++)
 	{
 		INT32 XLoc = LAPTOP_SCREEN_UL_X + (i < 4 ? BTN_FIRST_COLUMN_X : BTN_SECOND_COLUMN_X);
 		INT32 YLoc = LAPTOP_SCREEN_WEB_UL_Y + 97 + i % 4 * 50;
@@ -306,8 +310,7 @@ static void AddIMPPersonalityQuizAnswerButtons(INT32 iNumberOfButtons)
 		giIMPPersonalityQuizAnswerButton[i] = Button;
 		Button->SetUserData(i);
 		Button->SpecifyTextOffsets(23, 12, TRUE);
-		wchar_t sString[32];
-		swprintf(sString, lengthof(sString), L"%d", i + 1);
+		ST::string sString = ST::format("{}", i + 1);
 		Button->SpecifyGeneralTextAttributes(sString, FONT12ARIAL, FONT_WHITE, FONT_BLACK);
 		Button->SetCursor(CURSOR_WWW);
 	}
@@ -744,10 +747,10 @@ static void PrintQuizQuestionNumber(void)
 	SetFontAttributes(FONT12ARIAL, FONT_WHITE);
 
 	// print current question number
-	mprintf(LAPTOP_SCREEN_UL_X + 345, LAPTOP_SCREEN_WEB_UL_Y + 370, L"%d", giCurrentPersonalityQuizQuestion + 1);
+	MPrint(LAPTOP_SCREEN_UL_X + 345, LAPTOP_SCREEN_WEB_UL_Y + 370, ST::format("{}", giCurrentPersonalityQuizQuestion + 1));
 
 	// total number of questions
-	MPrint(LAPTOP_SCREEN_UL_X + 383, LAPTOP_SCREEN_WEB_UL_Y + 370, L"16");
+	MPrint(LAPTOP_SCREEN_UL_X + 383, LAPTOP_SCREEN_WEB_UL_Y + 370, "16");
 }
 
 
@@ -777,74 +780,77 @@ static void HandleIMPQuizKeyBoard(void)
 	while (DequeueEvent(&InputEvent))
 	{
 		if (!fSkipFrame)
+	{
+		// HOOK INTO MOUSE HOOKS
+
+
+		/*
+		if( (InputEvent.usEvent == KEY_DOWN ) && ( InputEvent.usParam >= '1' ) && ( InputEvent.usParam <= '9') )
 		{
-			// HOOK INTO MOUSE HOOKS
-			if ((InputEvent.usEvent == KEY_DOWN) && (InputEvent.usParam >= '1') && (InputEvent.usParam <= '9'))
+			if( ( UINT16 )( iNumberOfPersonaButtons ) >= InputEvent.usParam - '0' )
 			{
-				if ((UINT16)(iNumberOfPersonaButtons) >= InputEvent.usParam - '0')
-				{
-					// reset buttons
-					ResetQuizAnswerButtons();
+				// reset buttons
+				ResetQuizAnswerButtons( );
 
-					// ok, check to see if button was disabled, if so, re enable
-					CheckStateOfTheConfirmButton();
+				// ok, check to see if button was disabled, if so, re enable
+				CheckStateOfTheConfirmButton( );
 
-					// toggle this button on
-					giIMPPersonalityQuizAnswerButton[InputEvent.usParam - '1']->uiFlags |= BUTTON_CLICKED_ON;
+				// toggle this button on
+				giIMPPersonalityQuizAnswerButton[InputEvent.usParam - '1']->uiFlags |= BUTTON_CLICKED_ON;
 
-					iCurrentAnswer = InputEvent.usParam - '1';
+				iCurrentAnswer = InputEvent.usParam - '1';
 
-					PrintImpText();
+				PrintImpText( );
 
-					// the current and last question numbers
-					PrintQuizQuestionNumber();
+				// the current and last question numbers
+				PrintQuizQuestionNumber( );
 
-					fReDrawCharProfile = TRUE;
-					fSkipFrame = TRUE;
-				}
-			}
-			else if (iCurrentAnswer != -1 && InputEvent.usEvent == KEY_DOWN && InputEvent.usParam == SDLK_RETURN)
-			{
-				// reset all the buttons
-				ResetQuizAnswerButtons();
-
-				// copy the answer into the list
-				iQuizAnswerList[giCurrentPersonalityQuizQuestion] = iCurrentAnswer;
-
-				// reset answer for next question
-				iCurrentAnswer = -1;
-
-				// next question, JOHNNY!
-				giCurrentPersonalityQuizQuestion++;
-				giMaxPersonalityQuizQuestion++;
-
-
-				// OPPS!, done..time to finish up
-				if (giCurrentPersonalityQuizQuestion > 15)
-				{
-					iCurrentImpPage = IMP_PERSONALITY_FINISH;
-					// process
-					CompileQuestionsInStatsAndWhatNot();
-				}
-
+				fReDrawCharProfile = TRUE;
 				fSkipFrame = TRUE;
-			}
-			else if ((InputEvent.usEvent == KEY_DOWN) && (InputEvent.usParam == '='))
-			{
-				MoveAheadAQuestion();
-				fSkipFrame = TRUE;
-			}
-			else if ((InputEvent.usEvent == KEY_DOWN) && (InputEvent.usParam == '-'))
-			{
-				MoveBackAQuestion();
-				fSkipFrame = TRUE;
-			}
-			else
-			{
-				MouseSystemHook(InputEvent.usEvent, MousePos.iX, MousePos.iY);
-				HandleKeyBoardShortCutsForLapTop(InputEvent.usEvent, InputEvent.usParam, InputEvent.usKeyState);
 			}
 		}
+		else if (iCurrentAnswer != -1 && InputEvent.usEvent == KEY_DOWN && InputEvent.usParam == SDLK_RETURN)
+		{
+			// reset all the buttons
+			ResetQuizAnswerButtons( );
+
+			// copy the answer into the list
+			iQuizAnswerList[ giCurrentPersonalityQuizQuestion ] = iCurrentAnswer;
+
+			// reset answer for next question
+			iCurrentAnswer = -1;
+
+			// next question, JOHNNY!
+			giCurrentPersonalityQuizQuestion++;
+			giMaxPersonalityQuizQuestion++;
+
+
+			// OPPS!, done..time to finish up
+			if( giCurrentPersonalityQuizQuestion > 15)
+			{
+				iCurrentImpPage = IMP_PERSONALITY_FINISH;
+				// process
+				CompileQuestionsInStatsAndWhatNot( );
+			}
+
+			fSkipFrame = TRUE;
+		}
+		else if( ( InputEvent.usEvent == KEY_DOWN ) && ( InputEvent.usParam == '=' ) )
+		{
+			MoveAheadAQuestion( );
+			fSkipFrame = TRUE;
+		}
+		else if( ( InputEvent.usEvent == KEY_DOWN ) && ( InputEvent.usParam == '-' ) )
+		{
+			MoveBackAQuestion( );
+			fSkipFrame = TRUE;
+		}
+		else*/
+		{
+			MouseSystemHook(InputEvent.usEvent, MousePos.iX, MousePos.iY);
+			HandleKeyBoardShortCutsForLapTop(InputEvent.usEvent, InputEvent.usParam, InputEvent.usKeyState);
+		}
+	}
 	}
 }
 

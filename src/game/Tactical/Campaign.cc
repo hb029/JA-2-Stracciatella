@@ -29,6 +29,13 @@
 #include "EMail.h"
 #include "Logger.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
+#include "ContentManager.h"
+#include "GameInstance.h"
+#include "policy/GamePolicy.h"
+
 // Convert hired mercs' stats subpoint changes into actual point changes where warranted
 static void ProcessUpdateStats(MERCPROFILESTRUCT&, SOLDIERTYPE*);
 
@@ -53,7 +60,7 @@ void StatChange(SOLDIERTYPE& s, StatKind const stat, UINT16 const n_chances, Sta
 
 	if (s.bAssignment == ASSIGNMENT_POW)
 	{
-		SLOGE("StatChange: %ls improving stats while POW! stat %d", s.name, stat);
+		SLOGE("StatChange: %s improving stats while POW! stat %d", s.name.c_str(), stat);
 		return;
 	}
 
@@ -592,8 +599,7 @@ static void ChangeStat(MERCPROFILESTRUCT& p, SOLDIERTYPE* const pSoldier, StatKi
 							if (!MayExecute()) return true;
 
 							// Tell player about stat increase
-							wchar_t buf[128];
-							BuildStatChangeString(buf, lengthof(buf), soldier_.name, change_type_increase_, pts_changed_, stat_);
+							ST::string buf = BuildStatChangeString(soldier_.name, change_type_increase_, pts_changed_, stat_);
 							ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, buf);
 							return false;
 						}
@@ -609,10 +615,8 @@ static void ChangeStat(MERCPROFILESTRUCT& p, SOLDIERTYPE* const pSoldier, StatKi
 			}
 			else
 			{
-				wchar_t wTempString[ 128 ];
-
 				// tell player about it
-				BuildStatChangeString( wTempString, lengthof(wTempString), pSoldier->name, fChangeTypeIncrease, sPtsChanged, ubStat );
+				ST::string wTempString = BuildStatChangeString(pSoldier->name, fChangeTypeIncrease, sPtsChanged, ubStat);
 				ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, wTempString );
 			}
 
@@ -1109,13 +1113,13 @@ void HandleUnhiredMercDeaths( INT32 iProfileID )
 	switch( gGameOptions.ubDifficultyLevel )
 	{
 		case DIF_LEVEL_EASY:
-			ubMaxDeaths = 1;
+			ubMaxDeaths = gamepolicy(unhired_merc_deaths_easy);
 			break;
 		case DIF_LEVEL_MEDIUM:
-			ubMaxDeaths = 2;
+			ubMaxDeaths = gamepolicy(unhired_merc_deaths_medium);
 			break;
 		case DIF_LEVEL_HARD:
-			ubMaxDeaths = 3;
+			ubMaxDeaths = gamepolicy(unhired_merc_deaths_hard);
 			break;
 		default:
 			Assert(FALSE);
@@ -1173,9 +1177,10 @@ static UINT8 CalcImportantSectorControl(void);
 
 
 // These HAVE to total 100% at all times!!!
-#define PROGRESS_PORTION_KILLS		25
-#define PROGRESS_PORTION_CONTROL	25
-#define PROGRESS_PORTION_INCOME	50
+#define PROGRESS_PORTION_TOTAL		(gamepolicy(progress_weight_kills) + gamepolicy(progress_weight_control) + gamepolicy(progress_weight_income))
+#define PROGRESS_PORTION_KILLS		(100 * gamepolicy(progress_weight_kills) / PROGRESS_PORTION_TOTAL)
+#define PROGRESS_PORTION_CONTROL	(100 * gamepolicy(progress_weight_control) / PROGRESS_PORTION_TOTAL)
+#define PROGRESS_PORTION_INCOME		(100 * gamepolicy(progress_weight_income) / PROGRESS_PORTION_TOTAL)
 
 
 // returns a number between 0-100, this is an estimate of how far a player has progressed through the game
@@ -1219,13 +1224,13 @@ UINT8 CurrentPlayerProgressPercentage(void)
 	switch( gGameOptions.ubDifficultyLevel )
 	{
 		case DIF_LEVEL_EASY:
-			ubKillsPerPoint = 7;
+			ubKillsPerPoint = gamepolicy(kills_per_point_easy);
 			break;
 		case DIF_LEVEL_MEDIUM:
-			ubKillsPerPoint = 10;
+			ubKillsPerPoint = gamepolicy(kills_per_point_medium);
 			break;
 		case DIF_LEVEL_HARD:
-			ubKillsPerPoint = 15;
+			ubKillsPerPoint = gamepolicy(kills_per_point_hard);
 			break;
 		default:
 			Assert(FALSE);
@@ -1233,8 +1238,15 @@ UINT8 CurrentPlayerProgressPercentage(void)
 			break;
 	}
 
-	usKillsProgress = gStrategicStatus.usPlayerKills / ubKillsPerPoint;
-	if (usKillsProgress > PROGRESS_PORTION_KILLS)
+	if (ubKillsPerPoint > 0)
+	{
+		usKillsProgress = gStrategicStatus.usPlayerKills / ubKillsPerPoint;
+		if (usKillsProgress > PROGRESS_PORTION_KILLS)
+		{
+			usKillsProgress = PROGRESS_PORTION_KILLS;
+		}
+	}
+	else
 	{
 		usKillsProgress = PROGRESS_PORTION_KILLS;
 	}
@@ -1278,25 +1290,27 @@ void HourlyProgressUpdate(void)
 	if (ubCurrentProgress > gStrategicStatus.ubHighestProgress)
 	{
 		// CJC:  note when progress goes above certain values for the first time
+		#define first_event_trigger( progress_threshold ) (ubCurrentProgress >= progress_threshold && gStrategicStatus.ubHighestProgress < progress_threshold)
 
 		// at 35% start the Madlab quest
-		if ( ubCurrentProgress >= 35 && gStrategicStatus.ubHighestProgress < 35 )
+		if (first_event_trigger(gamepolicy(progress_event_madlab_min)))
 		{
 			HandleScientistAWOLMeanwhileScene();
 		}
 
 		// at 50% make Mike available to the strategic AI
-		if ( ubCurrentProgress >= 50 && gStrategicStatus.ubHighestProgress < 50 )
+		if (first_event_trigger(gamepolicy(progress_event_mike_min)))
 		{
 			SetFactTrue( FACT_MIKE_AVAILABLE_TO_ARMY );
 		}
 
 		// at 70% add Iggy to the world
-		if ( ubCurrentProgress >= 70 && gStrategicStatus.ubHighestProgress < 70 )
+		if (first_event_trigger(gamepolicy(progress_event_iggy_min)))
 		{
 			gMercProfiles[ IGGY ].sSectorX = 5;
 			gMercProfiles[ IGGY ].sSectorY = MAP_ROW_C;
 		}
+		#undef first_event_trigger
 
 		gStrategicStatus.ubHighestProgress = ubCurrentProgress;
 
@@ -1344,7 +1358,7 @@ void AwardExperienceBonusToActiveSquad( UINT8 ubExpBonusType )
 }
 
 
-void BuildStatChangeString(wchar_t* const wString, size_t const Length, wchar_t const* const wName, BOOLEAN const fIncrease, INT16 const sPtsChanged, StatKind const ubStat)
+ST::string BuildStatChangeString(const ST::string& name, BOOLEAN fIncrease, INT16 sPtsChanged, StatKind ubStat)
 {
 	UINT8 ubStringIndex;
 	UINT16 absPointsChanged = ABS( (int)sPtsChanged );
@@ -1372,7 +1386,7 @@ void BuildStatChangeString(wchar_t* const wString, size_t const Length, wchar_t 
 		ubStringIndex += 2;
 	}
 
-	swprintf(wString, Length, L"%ls %ls %d %ls %ls", wName,
+	return ST::format("{} {} {} {} {}", name,
 			sPreStatBuildString[fIncrease ? 1 : 0], absPointsChanged,
 			sPreStatBuildString[ubStringIndex],
 			sStatGainStrings[ubStat - FIRST_CHANGEABLE_STAT]);

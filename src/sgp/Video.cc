@@ -1,7 +1,3 @@
-#include <algorithm>
-#include <ctime>
-#include <stdexcept>
-
 #include "Debug.h"
 #include "Fade_Screen.h"
 #include "FileMan.h"
@@ -17,9 +13,6 @@
 #include "VObject_Blitters.h"
 #include "VSurface.h"
 #include "Video.h"
-#include <errno.h>
-#include <fcntl.h>
-#include <stdarg.h>
 #include "UILayout.h"
 #include "PlatformIO.h"
 #include "Font.h"
@@ -29,6 +22,13 @@
 #include "GameInstance.h"
 
 #include "Logger.h"
+
+#include <algorithm>
+#include <ctime>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdarg.h>
+#include <stdexcept>
 
 #define BUFFER_READY      0x00
 #define BUFFER_DIRTY      0x02
@@ -49,6 +49,7 @@
 #define BLUE_MASK 0x001F
 #define ALPHA_MASK 0
 
+#define OVERSAMPLING_SCALE 4
 
 static BOOLEAN gfVideoCapture = FALSE;
 static UINT32  guiFramePeriod = 1000 / 15;
@@ -96,6 +97,20 @@ static VideoScaleQuality ScaleQuality = VideoScaleQuality::LINEAR;
 
 static void RecreateBackBuffer();
 static void DeletePrimaryVideoSurfaces(void);
+
+// returns if desktop resolution larger game resolution
+BOOLEAN IsDesktopLargeEnough()
+{
+	SDL_DisplayMode dm;
+	if (SDL_GetDesktopDisplayMode(0, &dm) == 0)
+	{
+		if (dm.w < SCREEN_WIDTH || dm.h < SCREEN_HEIGHT)
+		{
+			return false;
+		}
+	}
+	return true;
+}
 
 void VideoSetFullScreen(const BOOLEAN enable)
 {
@@ -176,18 +191,42 @@ void InitializeVideoManager(const VideoScaleQuality quality)
 	}
 
 
-	if (ScaleQuality == VideoScaleQuality::PERFECT) {
+	if (ScaleQuality == VideoScaleQuality::PERFECT) 
+	{
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 #if SDL_VERSION_ATLEAST(2,0,5)
+		if (!IsDesktopLargeEnough())
+		{
+			// Pixel-perfect mode cannot handle scaling down, and will 
+			// result in a empty black screen if the window size is 
+			// smaller than logical render resolution.
+			throw std::runtime_error("Game resolution must not be larger than desktop size. "
+				"Please reduce game resolution or choose another scaling mode.");
+		}
+		SDL_SetWindowMinimumSize(g_game_window, SCREEN_WIDTH, SCREEN_HEIGHT);
 		SDL_RenderSetIntegerScale(GameRenderer, SDL_TRUE);
 #else
+		SLOGW("Pixel-perfect scaling is not available");
 		ScaleQuality = VideoScaleQuality::NEAR_PERFECT;
 #endif
 	}
-	else if (ScaleQuality == VideoScaleQuality::NEAR_PERFECT) {
+	else if (ScaleQuality == VideoScaleQuality::NEAR_PERFECT) 
+	{
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+		ScaledScreenTexture = SDL_CreateTexture(GameRenderer,
+			SDL_PIXELFORMAT_RGB565,
+			SDL_TEXTUREACCESS_TARGET,
+			SCREEN_WIDTH * OVERSAMPLING_SCALE, SCREEN_HEIGHT * OVERSAMPLING_SCALE);
+
+		if (ScaledScreenTexture == NULL) 
+		{
+			SLOGE("SDL_CreateTexture for ScaledScreenTexture failed: %s\n", SDL_GetError());
+		}
+
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 	}
-	else {
+	else 
+	{
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 
@@ -198,20 +237,6 @@ void InitializeVideoManager(const VideoScaleQuality quality)
 
 	if (ScreenTexture == NULL) {
 		SLOGE("SDL_CreateTexture for ScreenTexture failed: %s\n", SDL_GetError());
-	}
-
-	if (ScaleQuality == VideoScaleQuality::NEAR_PERFECT) {
-		int scale = 4;
-
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-		ScaledScreenTexture = SDL_CreateTexture(GameRenderer,
-			SDL_PIXELFORMAT_RGB565,
-			SDL_TEXTUREACCESS_TARGET,
-			SCREEN_WIDTH * scale, SCREEN_HEIGHT * scale);
-
-		if (ScaledScreenTexture == NULL) {
-			SLOGE("SDL_CreateTexture for ScaledScreenTexture failed: %s\n", SDL_GetError());
-		}
 	}
 
 	FrameBuffer = SDL_CreateRGBSurface(
@@ -463,7 +488,7 @@ static void ScrollJA2Background(INT16 sScrollXIncrement, INT16 sScrollYIncrement
 		UINT h = StripRegions[i].h;
 		for (UINT j = y; j < y + h; ++j)
 		{
-			memset(gpZBuffer + j * SCREEN_WIDTH + x, 0, w * sizeof(*gpZBuffer));
+			std::fill_n(gpZBuffer + j * SCREEN_WIDTH + x, w, 0);
 		}
 
 		RenderStaticWorldRect(x, y, x + w, y + h, TRUE);
@@ -493,7 +518,7 @@ static void ScrollJA2Background(INT16 sScrollXIncrement, INT16 sScrollYIncrement
 }
 
 
-static void WriteTGAHeader(FILE* const f)
+static void WriteTGAHeader(File* file)
 {
 	/*
 	 *  0 byte ID length
@@ -524,46 +549,48 @@ static void WriteTGAHeader(FILE* const f)
 		PIXEL_DEPTH,
 		0
 	};
-	fwrite(data, sizeof(data), 1, f);
+	if (!File_writeAll(file, data, sizeof(data)))
+	{
+		RustPointer<char> err(getRustError());
+		SLOGW("WriteTGAHeader: %s", err.get());
+	}
 }
 
 
 /* Create a file for a screenshot, which is guaranteed not to exist yet. */
-static FILE* CreateScreenshotFile(void)
+static RustPointer<File> CreateScreenshotFile(void)
 {
-	const std::string exec_dir = GCM->getScreenshotFolder();
-	do
+	const ST::string exec_dir = GCM->getScreenshotFolder();
+	while (true)
 	{
 		char filename[2048];
 		sprintf(filename, "%s/SCREEN%03d.TGA", exec_dir.c_str(), guiPrintFrameBufferIndex++);
-#ifndef _WIN32
-#	define O_BINARY 0
-#endif
-		int const fd = open3(filename, O_WRONLY | O_CREAT | O_EXCL | O_BINARY, 0644);
-		if (fd >= 0)
+		RustPointer<File> file(File_open(filename, FILE_OPEN_WRITE | FILE_OPEN_CREATE_NEW));
+		if (file)
 		{
-			FILE* const f = fdopen(fd, "wb");
-			if (f == NULL) close(fd);
-			return f;
+			return file;
 		}
 	}
-	while (errno == EEXIST);
-	return NULL;
 }
 
 
 static void TakeScreenshot()
 {
-	FILE* const f = CreateScreenshotFile();
-	if (!f) return;
+	RustPointer<File> file = CreateScreenshotFile();
+	if (!file)
+	{
+		RustPointer<char> err(getRustError());
+		SLOGE("TakeScreenshot: %s", err.get());
+		return;
+	}
 
-	WriteTGAHeader(f);
+	WriteTGAHeader(file.get());
 
 	// If not 5/5/5, create buffer
 	UINT16* buf = 0;
 	if (gusRedMask != 0x7C00 || gusGreenMask != 0x03E0 || gusBlueMask != 0x001F)
 	{
-		buf = MALLOCN(UINT16, SCREEN_WIDTH);
+		buf = new UINT16[SCREEN_WIDTH]{};
 	}
 
 	UINT16 const* src = static_cast<UINT16 const*>(ScreenBuffer->pixels);
@@ -573,17 +600,23 @@ static void TakeScreenshot()
 		{ // ATE: Fix this such that it converts pixel format to 5/5/5
 			memcpy(buf, src + y * SCREEN_WIDTH, SCREEN_WIDTH * sizeof(*buf));
 			ConvertRGBDistribution565To555(buf, SCREEN_WIDTH);
-			fwrite(buf, sizeof(*buf), SCREEN_WIDTH, f);
+			if (!File_writeAll(file.get(), reinterpret_cast<const UINT8*>(buf), sizeof(*buf) * SCREEN_WIDTH))
+			{
+				RustPointer<char> err(getRustError());
+				SLOGW("TakeScreenshot: %s", err.get());
+			}
 		}
 		else
 		{
-			fwrite(src + y * SCREEN_WIDTH, SCREEN_WIDTH * 2, 1, f);
+			if (!File_writeAll(file.get(), reinterpret_cast<const UINT8*>(src + y * SCREEN_WIDTH), sizeof(*buf) * SCREEN_WIDTH))
+			{
+				RustPointer<char> err(getRustError());
+				SLOGW("TakeScreenshot: %s", err.get());
+			}
 		}
 	}
 
-	if (buf) MemFree(buf);
-
-	fclose(f);
+	if (buf) delete[] buf;
 }
 
 static void SnapshotSmall(void);
@@ -801,17 +834,22 @@ static void RefreshMovieCache(void)
 
 	PauseTime(TRUE);
 
-	const std::string exec_dir = GCM->getVideoCaptureFolder();
+	const ST::string exec_dir = GCM->getVideoCaptureFolder();
 
 	for (INT32 cnt = 0; cnt < giNumFrames; cnt++)
 	{
 		CHAR8 cFilename[2048];
 		sprintf(cFilename, "%s/JA%5.5d.TGA", exec_dir.c_str(), uiPicNum++);
 
-		FILE* disk = fopen(cFilename, "wb");
-		if (disk == NULL) return;
+		RustPointer<File> file(File_open(cFilename, FILE_OPEN_WRITE));
+		if (!file)
+		{
+			RustPointer<char> err(getRustError());
+			SLOGE("RefreshMovieCache: %s", err.get());
+			return;
+		}
 
-		WriteTGAHeader(disk);
+		WriteTGAHeader(file.get());
 
 		UINT16* pDest = gpFrameData[cnt];
 
@@ -819,11 +857,13 @@ static void RefreshMovieCache(void)
 		{
 			for (INT32 iCountX = 0; iCountX < SCREEN_WIDTH; iCountX ++)
 			{
-				fwrite(pDest + iCountY * SCREEN_WIDTH + iCountX, sizeof(UINT16), 1, disk);
+				if (!File_writeAll(file.get(), reinterpret_cast<const uint8_t*>(pDest + iCountY * SCREEN_WIDTH + iCountX), sizeof(UINT16)))
+				{
+					RustPointer<char> err(getRustError());
+					SLOGW("RefreshMovieCache: %s", err.get());
+				}
 			}
 		}
-
-		fclose(disk);
 	}
 
 	PauseTime(FALSE);

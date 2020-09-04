@@ -1,19 +1,25 @@
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/army")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/content")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/internals")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/policy")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/strategic")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/tactical")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/ui")
 
 file(GLOB LOCAL_JA2_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 set(LOCAL_JA2_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/AmmoTypeModel.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/CalibreModel.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/DealerModel.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/DealerInventory.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/DefaultContentManager.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/ItemModel.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/JsonUtility.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/LoadingScreenModel.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/MagazineModel.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/MercProfile.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/ModPackContentManager.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/ShippingDestinationModel.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/Soldier.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/WeaponModels.cc
 )

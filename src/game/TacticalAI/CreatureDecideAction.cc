@@ -88,7 +88,12 @@ void CreatureCall( SOLDIERTYPE * pCaller )
 			ubCallerType = CALLER_FEMALE;
 			break;
 	}
-	if (pCaller->bHunting) // which should only be set for females outside of the hive
+	if (pCaller->usActionData >= NUM_CREATURE_CALLS)
+	{
+		SLOGW("unexpected action data %u, defaulting call priority to 0", pCaller->usActionData);
+		bFullPriority = 0;
+	}
+	else if (pCaller->bHunting) // which should only be set for females outside of the hive
 	{
 		bFullPriority = gbHuntCallPriority[pCaller->usActionData];
 	}
@@ -656,7 +661,7 @@ static INT8 CreatureDecideActionRed(SOLDIERTYPE* pSoldier, UINT8 ubUnconsciousOK
 			{
 				if ((INT16) PreRandom(100) < iChance)
 				{
-					SLOGD("%ls decides to call an alert!", pSoldier->name);
+					SLOGD("%s decides to call an alert!", pSoldier->name.c_str());
 					pSoldier->usActionData = CALL_1_PREY;
 					return(AI_ACTION_CREATURE_CALL);
 				}
@@ -988,7 +993,7 @@ static INT8 CreatureDecideActionBlack(SOLDIERTYPE* pSoldier)
 	BestShot.ubPossible  = FALSE;	// by default, assume Shooting isn't possible
 	BestStab.ubPossible  = FALSE;	// by default, assume Stabbing isn't possible
 
-	memset(&BestAttack, 0, sizeof(BestAttack)); // XXX HACK000E
+	BestAttack = ATTACKTYPE{};
 
 	bSpitIn = NO_SLOT;
 
@@ -1217,9 +1222,9 @@ static INT8 CreatureDecideActionBlack(SOLDIERTYPE* pSoldier)
 				pSoldier->bAimShotLocation = AIM_SHOT_RANDOM;
 			}
 			SLOGD("%d(%s) %s %d(%s) at gridno %d (%d APs aim)\n",
-				pSoldier->ubID, pSoldier->name,
+				pSoldier->ubID, pSoldier->name.c_str(),
 				(ubBestAttackAction == AI_ACTION_FIRE_GUN)?"SHOOTS":((ubBestAttackAction == AI_ACTION_TOSS_PROJECTILE)?"TOSSES AT":"STABS"),
-				BestAttack.opponent, BestAttack.opponent->name,
+				BestAttack.opponent, BestAttack.opponent->name.c_str(),
 				BestAttack.sTarget, BestAttack.ubAimTime);
 			return(ubBestAttackAction);
 		}

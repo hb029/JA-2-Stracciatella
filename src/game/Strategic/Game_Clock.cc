@@ -31,6 +31,9 @@
 #include "FileMan.h"
 #include "UILayout.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
 
 //#define DEBUG_GAME_CLOCK
 
@@ -80,7 +83,7 @@ static         MercPopUpBox* g_paused_popup_box;
 UINT32         guiDay;
 UINT32         guiHour;
 UINT32         guiMin;
-wchar_t        gswzWorldTimeStr[20];
+ST::string     gswzWorldTimeStr;
 INT32          giTimeCompressSpeeds[ NUM_TIME_COMPRESS_SPEEDS ] = { 0, 1, 5 * 60, 30 * 60, 60 * 60 };
 static UINT16  usPausedActualWidth;
 static UINT16  usPausedActualHeight;
@@ -107,7 +110,7 @@ void InitNewGameClock( )
 	guiDay = ( guiGameClock / NUM_SEC_IN_DAY );
 	guiHour = ( guiGameClock - ( guiDay * NUM_SEC_IN_DAY ) ) / NUM_SEC_IN_HOUR;
 	guiMin	= ( guiGameClock - ( ( guiDay * NUM_SEC_IN_DAY ) + ( guiHour * NUM_SEC_IN_HOUR ) ) ) / NUM_SEC_IN_MIN;
-	swprintf(WORLDTIMESTR, lengthof(WORLDTIMESTR), L"%ls %d, %02d:%02d", pDayStrings, guiDay, guiHour, guiMin);
+	WORLDTIMESTR = ST::format("{} {}, {02d}:{02d}", pDayStrings, guiDay, guiHour, guiMin);
 	guiTimeCurrentSectorWasLastLoaded = 0;
 	guiGameSecondsPerRealSecond = 0;
 	gubClockResolution = 1;
@@ -220,7 +223,7 @@ static void AdvanceClock(UINT8 ubWarpCode)
 	guiHour = ( guiGameClock - ( guiDay * NUM_SEC_IN_DAY ) ) / NUM_SEC_IN_HOUR;
 	guiMin	= ( guiGameClock - ( ( guiDay * NUM_SEC_IN_DAY ) + ( guiHour * NUM_SEC_IN_HOUR ) ) ) / NUM_SEC_IN_MIN;
 
-	swprintf(WORLDTIMESTR, lengthof(WORLDTIMESTR), L"%ls %d, %02d:%02d", gpGameClockString, guiDay, guiHour, guiMin);
+	WORLDTIMESTR = ST::format("{} {}, {02d}:{02d}", gpGameClockString, guiDay, guiHour, guiMin);
 
 	if( gfResetAllPlayerKnowsEnemiesFlags && !gTacticalStatus.fEnemyInSector )
 	{
@@ -278,7 +281,7 @@ void RenderClock(void)
 	INT16 y = CLOCK_Y;
 	RestoreExternBackgroundRect(x, y, CLOCK_WIDTH, CLOCK_HEIGHT);
 
-	const wchar_t* const str = (gfPauseDueToPlayerGamePause ? pPausedGameText[0] : WORLDTIMESTR);
+	ST::string str = (gfPauseDueToPlayerGamePause ? pPausedGameText[0] : WORLDTIMESTR);
 	FindFontCenterCoordinates(x, y, CLOCK_WIDTH, CLOCK_HEIGHT, str, CLOCK_FONT, &x, &y);
 	MPrint(x, y, str);
 }
@@ -613,11 +616,11 @@ void UpdateClock()
 	UINT32 uiThousandthsOfThisSecondProcessed;
 	UINT32 uiTimeSlice;
 	UINT32 uiNewTimeProcessed;
-	UINT32 uiAmountToAdvanceTime;
 	static UINT8 ubLastResolution = 1;
 	static UINT32 uiLastSecondTime = 0;
 	static UINT32 uiLastTimeProcessed = 0;
 #ifdef DEBUG_GAME_CLOCK
+	UINT32 uiAmountToAdvanceTime;
 	UINT32 uiOrigNewTime;
 	UINT32 uiOrigLastSecondTime;
 	UINT32 uiOrigThousandthsOfThisSecondProcessed;
@@ -642,7 +645,7 @@ void UpdateClock()
 		return;
 	}
 
-	if( gTacticalStatus.uiFlags & INCOMBAT )
+	if(gTacticalStatus.uiFlags & INCOMBAT)
 		return; //time is currently stopped!
 
 
@@ -688,9 +691,9 @@ void UpdateClock()
 
 			uiNewTimeProcessed = MAX( uiNewTimeProcessed, uiLastTimeProcessed );
 
+			#ifdef DEBUG_GAME_CLOCK
 			uiAmountToAdvanceTime = uiNewTimeProcessed - uiLastTimeProcessed;
 
-			#ifdef DEBUG_GAME_CLOCK
 				if( uiAmountToAdvanceTime > 0x80000000 || guiGameClock + uiAmountToAdvanceTime < guiPreviousGameClock )
 				{
 					uiNewTimeProcessed = uiNewTimeProcessed;
@@ -774,7 +777,7 @@ void LoadGameClock(HWFILE const hFile)
 	guiHour = ( guiGameClock - ( guiDay * NUM_SEC_IN_DAY ) ) / NUM_SEC_IN_HOUR;
 	guiMin	= ( guiGameClock - ( ( guiDay * NUM_SEC_IN_DAY ) + ( guiHour * NUM_SEC_IN_HOUR ) ) ) / NUM_SEC_IN_MIN;
 
-	swprintf(WORLDTIMESTR, lengthof(WORLDTIMESTR), L"%ls %d, %02d:%02d", pDayStrings, guiDay, guiHour, guiMin);
+	WORLDTIMESTR = ST::format("{} {}, {02d}:{02d}", pDayStrings, guiDay, guiHour, guiMin);
 
 	if( !gfBasement && !gfCaves )
 		gfDoLighting = TRUE;
@@ -797,7 +800,7 @@ void CreateMouseRegionForPauseOfClock(void)
 
 		fClockMouseRegionCreated = TRUE;
 
-		wchar_t const* const help = gfGamePaused ?
+		ST::string help = gfGamePaused ?
 			pPausedGameText[1] : pPausedGameText[2];
 		gClockMouseRegion.SetFastHelpText(help);
 	}

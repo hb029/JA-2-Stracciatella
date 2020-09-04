@@ -53,6 +53,8 @@ static BOOLEAN gfDrawPathPoints = FALSE;
 
 #include "Logger.h"
 
+#include <algorithm>
+
 BOOLEAN gfPlotPathToExitGrid = FALSE;
 BOOLEAN gfRecalculatingExistingPathCost = FALSE;
 UINT8 gubGlobalPathFlags = 0;
@@ -188,7 +190,7 @@ static path_t *pClosedHead;
 	{\
 		pNew = pathQ + (queRequests);\
 		queRequests++;\
-		memset( pNew->pNext, 0, sizeof( path_t *) * ABSMAX_SKIPLIST_LEVEL );\
+		std::fill_n(pNew->pNext, ABSMAX_SKIPLIST_LEVEL, nullptr);\
 		pNew->bLevel = RandomSkipListLevel();\
 	}\
 	else if (iClosedListSize > 0)\
@@ -198,7 +200,7 @@ static path_t *pClosedHead;
 		pNew->pNext[0]->pNext[1] = pNew->pNext[1];\
 		iClosedListSize--;\
 		queRequests++;\
-		memset( pNew->pNext, 0, sizeof( path_t *) * ABSMAX_SKIPLIST_LEVEL );\
+		std::fill_n(pNew->pNext, ABSMAX_SKIPLIST_LEVEL, nullptr);\
 		pNew->bLevel = RandomSkipListLevel();\
 	}\
 	else\
@@ -230,7 +232,7 @@ static path_t *pClosedHead;
 		pClosedHead->pNext[0] = pNew->pNext[0];\
 		iClosedListSize--;\
 		queRequests++;\
-		memset( pNew->pNext, 0, sizeof( path_t *) * ABSMAX_SKIPLIST_LEVEL );\
+		std::fill_n(pNew->pNext, ABSMAX_SKIPLIST_LEVEL, nullptr);\
 		pNew->bLevel = RandomSkipListLevel();\
 	}\
 	else\
@@ -256,7 +258,7 @@ static path_t *pClosedHead;
 	{\
 		pNew = pathQ + (queRequests);\
 		queRequests++;\
-		memset( pNew->pNext, 0, sizeof( path_t *) * ABSMAX_SKIPLIST_LEVEL );\
+		std::fill_n(pNew->pNext, ABSMAX_SKIPLIST_LEVEL, nullptr);\
 		pNew->bLevel = RandomSkipListLevel();\
 	}\
 	else if (iClosedListSize > 0)\
@@ -266,7 +268,7 @@ static path_t *pClosedHead;
 		pNew->pNext[0]->pNext[1] = pNew->pNext[1];\
 		iClosedListSize--;\
 		queRequests++;\
-		memset( pNew->pNext, 0, sizeof( path_t *) * ABSMAX_SKIPLIST_LEVEL );\
+		std::fill_n(pNew->pNext, ABSMAX_SKIPLIST_LEVEL, nullptr);\
 		pNew->bLevel = RandomSkipListLevel();\
 	}\
 	else\
@@ -290,7 +292,7 @@ static path_t *pClosedHead;
 {\
 	pCurr = pQueueHead;\
 	uiCost = TOTALCOST( pNew );\
-	memset( pUpdate, 0, MAX_SKIPLIST_LEVEL * sizeof( path_t *) );\
+	std::fill_n(pUpdate, MAX_SKIPLIST_LEVEL, nullptr);\
 	for (iCurrLevel = bSkipListLevel - 1; iCurrLevel >= 0; iCurrLevel--)\
 	{\
 		pNext = pCurr->pNext[iCurrLevel];\
@@ -407,10 +409,10 @@ static INT8 RandomSkipListLevel(void)
 
 void InitPathAI(void)
 {
-	pathQ         = MALLOCN( path_t,        ABSMAX_PATHQ);
-	trailCost     = MALLOCN( TRAILCELLTYPE, MAPLENGTH);
-	trailCostUsed = MALLOCNZ(UINT8,         MAPLENGTH);
-	trailTree     = MALLOCN( trail_t,       ABSMAX_TRAIL_TREE);
+	pathQ         = new path_t[ABSMAX_PATHQ]{};
+	trailCost     = new TRAILCELLTYPE[MAPLENGTH]{};
+	trailCostUsed = new UINT8[MAPLENGTH]{};
+	trailTree     = new trail_t[ABSMAX_TRAIL_TREE]{};
 	pQueueHead = &(pathQ[QHEADNDX]);
 	pClosedHead = &(pathQ[QPOOLNDX]);
 }
@@ -418,10 +420,10 @@ void InitPathAI(void)
 
 void ShutDownPathAI( void )
 {
-	MemFree( pathQ );
-	MemFree( trailCostUsed );
-	MemFree( trailCost );
-	MemFree( trailTree );
+	delete[] pathQ;
+	delete[] trailCostUsed;
+	delete[] trailCost;
+	delete[] trailTree;
 }
 
 
@@ -437,7 +439,7 @@ static void ReconfigurePathAI(INT32 iNewMaxSkipListLevel, INT32 iNewMaxTrailTree
 	iMaxPathQ = iNewMaxPathQ;
 	// relocate the head of the closed list to the end of the array portion being used
 	pClosedHead = &(pathQ[QPOOLNDX]);
-	memset( pClosedHead, 0, sizeof( path_t ) );
+	*pClosedHead = path_t{};
 }
 
 
@@ -448,7 +450,7 @@ static void RestorePathAIToDefaults(void)
 	iMaxPathQ = MAX_PATHQ;
 	// relocate the head of the closed list to the end of the array portion being used
 	pClosedHead = &(pathQ[QPOOLNDX]);
-	memset( pClosedHead, 0, sizeof( path_t ) );
+	*pClosedHead = path_t{};
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -473,7 +475,8 @@ INT32 FindBestPath(SOLDIERTYPE* s, INT16 sDestination, INT8 ubLevel, INT16 usMov
 	#ifdef VEHICLE
 		//BOOLEAN fTurnSlow = FALSE;
 		//BOOLEAN fReverse = FALSE; // stuff for vehicles turning
-		BOOLEAN fMultiTile, fVehicle;
+		BOOLEAN fMultiTile;
+		//BOOLEAN fVehicle;
 		//INT32 ubLastDir, iPrevToLastDir;
 		//INT8 bVehicleCheckDir;
 		//UINT16 adjLoc;
@@ -499,7 +502,7 @@ INT32 FindBestPath(SOLDIERTYPE* s, INT16 sDestination, INT8 ubLevel, INT16 usMov
 	BOOLEAN fVisitSpotsOnlyOnce;
 	INT32 iOriginationX, iOriginationY, iX, iY;
 
-	BOOLEAN fTurnBased;
+	//BOOLEAN fTurnBased;
 	BOOLEAN fPathingForPlayer;
 	INT32   iDoorGridNo=-1;
 	BOOLEAN fDoorIsObstacleIfClosed= 0; // if false, door is obstacle if it is open
@@ -524,7 +527,7 @@ INT32 FindBestPath(SOLDIERTYPE* s, INT16 sDestination, INT8 ubLevel, INT16 usMov
 	UINT16 usCounter = 0;
 #endif
 
-	fVehicle = FALSE;
+	//fVehicle = FALSE;
 	iOriginationX = iOriginationY = 0;
 	iOrigination = (INT32) s->sGridNo;
 
@@ -551,7 +554,7 @@ INT32 FindBestPath(SOLDIERTYPE* s, INT16 sDestination, INT8 ubLevel, INT16 usMov
 		fFlags |= gubGlobalPathFlags;
 	}
 
-	fTurnBased = (gTacticalStatus.uiFlags & INCOMBAT);
+	//fTurnBased = (gTacticalStatus.uiFlags & INCOMBAT);
 
 	fPathingForPlayer = ( (s->bTeam == OUR_TEAM) && (!gTacticalStatus.fAutoBandageMode) && !(s->uiStatusFlags & SOLDIER_PCUNDERAICONTROL) );
 	fNonFenceJumper = !( IS_MERC_BODY_TYPE( s ) );
@@ -600,7 +603,7 @@ INT32 FindBestPath(SOLDIERTYPE* s, INT16 sDestination, INT8 ubLevel, INT16 usMov
 	if (gubGlobalPathCount == 255)
 	{
 		// reset arrays!
-		memset( trailCostUsed, 0, MAPLENGTH );
+		std::fill_n(trailCostUsed, MAPLENGTH, 0);
 		gubGlobalPathCount = 1;
 	}
 	else
@@ -665,7 +668,7 @@ INT32 FindBestPath(SOLDIERTYPE* s, INT16 sDestination, INT8 ubLevel, INT16 usMov
 
 		if ( pStructureFileRef )
 		{
-			fVehicle = ( (s->uiStatusFlags & SOLDIER_VEHICLE) != 0 );
+			//fVehicle = ( (s->uiStatusFlags & SOLDIER_VEHICLE) != 0 );
 
 			fContinuousTurnNeeded = ( ( s->uiStatusFlags & (SOLDIER_MONSTER | SOLDIER_ANIMAL | SOLDIER_VEHICLE) ) != 0 );
 
@@ -719,13 +722,13 @@ INT32 FindBestPath(SOLDIERTYPE* s, INT16 sDestination, INT8 ubLevel, INT16 usMov
 	queRequests = 2;
 
 	//initialize the path data structures
-	memset( pathQ, 0, iMaxPathQ * sizeof( path_t ) );
-	memset( trailTree, 0, iMaxTrailTree * sizeof( trail_t ) );
+	std::fill_n(pathQ, iMaxPathQ, path_t{});
+	std::fill_n(trailTree, iMaxTrailTree, trail_t{});
 
 #if defined( PATHAI_VISIBLE_DEBUG )
 	if (gfDisplayCoverValues && gfDrawPathPoints)
 	{
-		memset( gsCoverValue, 0x7F, sizeof( INT16 ) * WORLD_MAX );
+		std::fill_n(gsCoverValue, WORLD_MAX, 0x7F7F);
 	}
 #endif
 
@@ -977,6 +980,11 @@ INT32 FindBestPath(SOLDIERTYPE* s, INT16 sDestination, INT8 ubLevel, INT16 usMov
 
 			newLoc = curLoc + DirIncrementer[ubCnt];
 
+			if ( newLoc < 0 || newLoc >= GRIDSIZE )
+			{
+				SLOGW(ST::format("Path Finding algorithm tried to go out of bounds at {}, in an attempt to find path from {} to {}", newLoc, iOrigination, iDestination));
+				goto NEXTDIR;
+			}
 
 			if ( fVisitSpotsOnlyOnce && trailCostUsed[newLoc] == gubGlobalPathCount )
 			{
@@ -1254,12 +1262,6 @@ INT32 FindBestPath(SOLDIERTYPE* s, INT16 sDestination, INT8 ubLevel, INT16 usMov
 			else
 			{
 				nextCost = TRAVELCOST_FLAT;
-			}
-
-			if ( newLoc > GRIDSIZE )
-			{
-				// WHAT THE??? hack.
-				goto NEXTDIR;
 			}
 
 			// if contemplated tile is NOT final dest and someone there, disqualify route
@@ -1566,7 +1568,7 @@ INT32 FindBestPath(SOLDIERTYPE* s, INT16 sDestination, INT8 ubLevel, INT16 usMov
 				{
 					pNewPtr = pathQ + (queRequests);
 					queRequests++;
-					memset( pNewPtr->pNext, 0, sizeof( path_t *) * ABSMAX_SKIPLIST_LEVEL );
+					std::fill_n(pNewPtr->pNext, ABSMAX_SKIPLIST_LEVEL, nullptr);
 					pNewPtr->bLevel = RandomSkipListLevel();
 				}
 				else if (iClosedListSize > 0)
@@ -1575,7 +1577,7 @@ INT32 FindBestPath(SOLDIERTYPE* s, INT16 sDestination, INT8 ubLevel, INT16 usMov
 					pClosedHead->pNext[0] = pNewPtr->pNext[0];
 					iClosedListSize--;
 					queRequests++;
-					memset( pNewPtr->pNext, 0, sizeof( path_t *) * ABSMAX_SKIPLIST_LEVEL );
+					std::fill_n(pNewPtr->pNext, ABSMAX_SKIPLIST_LEVEL, nullptr);
 					pNewPtr->bLevel = RandomSkipListLevel();
 				}
 				else
@@ -1660,7 +1662,7 @@ INT32 FindBestPath(SOLDIERTYPE* s, INT16 sDestination, INT8 ubLevel, INT16 usMov
 				{
 					pCurr = pQueueHead;
 					uiCost = TOTALCOST( pNewPtr );
-					memset( pUpdate, 0, MAX_SKIPLIST_LEVEL * sizeof( path_t *) );
+					std::fill_n(pUpdate, MAX_SKIPLIST_LEVEL, nullptr);
 					for (iCurrLevel = bSkipListLevel - 1; iCurrLevel >= 0; iCurrLevel--)
 					{
 						pNext = pCurr->pNext[iCurrLevel];
@@ -1853,14 +1855,14 @@ ENDOFLOOP:
 		{
 
 			z=_z;
-
-			for (ubCnt=0; z != 0 && ubCnt < lengthof(guiPathingData); ubCnt++)
+			UINT16 iCnt;
+			for (iCnt = 0; z != 0 && iCnt < lengthof(guiPathingData); iCnt++)
 			{
-				guiPathingData[ ubCnt ] = trailTree[z].stepDir;
+				guiPathingData[ iCnt ] = trailTree[z].stepDir;
 
 				z = trailTree[z].nextLink;
 			}
-
+			ubCnt = iCnt;
 			giPathDataSize = ubCnt;
 
 		}
@@ -1917,7 +1919,7 @@ void GlobalReachableTest( INT16 sStartGridNo )
 {
 	SOLDIERTYPE s;
 
-	memset( &s, 0, sizeof( SOLDIERTYPE ) );
+	s = SOLDIERTYPE{};
 	s.sGridNo = sStartGridNo;
 	s.bLevel = 0;
 	s.bTeam = 1;
@@ -1939,7 +1941,7 @@ void LocalReachableTest( INT16 sStartGridNo, INT8 bRadius )
 	INT32 iCurrentGridNo = 0;
 	INT32 iX, iY;
 
-	memset( &s, 0, sizeof( SOLDIERTYPE ) );
+	s = SOLDIERTYPE{};
 	s.sGridNo = sStartGridNo;
 
 	//if we are moving on the gorund level
@@ -1979,7 +1981,7 @@ void GlobalItemsReachableTest( INT16 sStartGridNo1, INT16 sStartGridNo2 )
 {
 	SOLDIERTYPE s;
 
-	memset( &s, 0, sizeof( SOLDIERTYPE ) );
+	s = SOLDIERTYPE{};
 	s.sGridNo = sStartGridNo1;
 	s.bLevel = 0;
 	s.bTeam = 1;
@@ -2004,7 +2006,7 @@ void RoofReachableTest( INT16 sStartGridNo, UINT8 ubBuildingID )
 {
 	SOLDIERTYPE s;
 
-	memset( &s, 0, sizeof( SOLDIERTYPE ) );
+	s = SOLDIERTYPE{};
 	s.sGridNo = sStartGridNo;
 	s.bLevel = 1;
 	s.bTeam = 1;
@@ -2077,7 +2079,7 @@ void ErasePath()
 	//	Grid[cnt].fstep = 0;
 
 	giPlotCnt = 0;
-	memset(guiPlottedPath,0,256*sizeof(UINT32));
+	std::fill_n(guiPlottedPath, 256, 0);
 }
 
 
@@ -2309,7 +2311,7 @@ INT16 PlotPath(SOLDIERTYPE* const pSold, const INT16 sDestGridno, const INT8 bCo
 
 			//if (gTacticalStatus.uiFlags & INCOMBAT) // OR USER OPTION "show paths" ON... ***
 			{
-				if (bPlot && iCnt < iLastGrid - 1 && giPlotCnt < lengthof(guiPlottedPath))
+				if (bPlot && iCnt < iLastGrid - 1 && giPlotCnt < static_cast<INT32>(lengthof(guiPlottedPath)))
 				{
 					guiPlottedPath[giPlotCnt++] = sTempGrid;
 

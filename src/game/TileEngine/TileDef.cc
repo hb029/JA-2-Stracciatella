@@ -65,7 +65,7 @@ void CreateTileDatabase()
 		for (cnt2 = 0; cnt2 < NumRegions; ++cnt2)
 		{
 			TILE_ELEMENT TileElement;
-			memset(&TileElement, 0, sizeof(TileElement));
+			TileElement = TILE_ELEMENT{};
 			TileElement.usRegionIndex = (UINT16)cnt2;
 			TileElement.hTileSurface	= TileSurf->vo;
 			TileElement.sBuddyNum			= -1;
@@ -126,7 +126,7 @@ void CreateTileDatabase()
 		for (; cnt2 < gNumTilesPerType[cnt1]; ++cnt2)
 		{
 			TILE_ELEMENT TileElement;
-			memset(&TileElement, 0, sizeof(TileElement));
+			TileElement = TILE_ELEMENT{};
 			TileElement.usRegionIndex  = 0;
 			TileElement.hTileSurface   = TileSurf->vo;
 			TileElement.fType          = (UINT16)TileSurf->fType;
@@ -138,9 +138,9 @@ void CreateTileDatabase()
 	}
 
 	//Calculate mem usgae
-	SLOGD("Database Sizes: %d vs %d", gTileDatabaseSize, NUMBEROFTILES);
-	SLOGD("Database Types: %d", NUMBEROFTILETYPES);
-	SLOGD("Database Item Mem: %d", gTileDatabaseSize * sizeof(TILE_ELEMENT));
+	SLOGD(ST::format("Database Sizes: {} vs {}", gTileDatabaseSize, NUMBEROFTILES));
+	SLOGD(ST::format("Database Types: {}", NUMBEROFTILETYPES));
+	SLOGD(ST::format("Database Item Mem: {}", gTileDatabaseSize * sizeof(TILE_ELEMENT)));
 }
 
 
@@ -281,8 +281,8 @@ UINT16 GetWallOrientation(UINT16 usIndex)
 
 void AllocateAnimTileData(TILE_ELEMENT* const pTileElem, UINT8 const ubNumFrames)
 {
-	pTileElem->pAnimData            = MALLOC(TILE_ANIMATION_DATA);
-	pTileElem->pAnimData->pusFrames = MALLOCN(UINT16, ubNumFrames);
+	pTileElem->pAnimData            = new TILE_ANIMATION_DATA{};
+	pTileElem->pAnimData->pusFrames = new UINT16[ubNumFrames]{};
 
 	// Set # if frames!
 	pTileElem->pAnimData->ubNumFrames = ubNumFrames;
@@ -294,9 +294,9 @@ static void FreeAnimTileData(TILE_ELEMENT* pTileElem)
 	if ( pTileElem->pAnimData != NULL )
 	{
 		// Free frames list
-		MemFree( pTileElem->pAnimData->pusFrames );
+		delete[] pTileElem->pAnimData->pusFrames;
 
 		// Free frames
-		MemFree( pTileElem->pAnimData );
+		delete pTileElem->pAnimData;
 	}
 }

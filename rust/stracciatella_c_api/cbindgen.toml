@@ -1,0 +1,45 @@
+autogen_warning = "/* DO NOT MODIFY MANUALLY! Changes will be discarded during build. */"
+include_version = true
+language = "C++"
+sys_includes = [
+    # std::unique_ptr
+    "memory",
+]
+
+# Top of stracciatella.h
+header = '''
+#pragma once'''
+
+# Bottom of stracciatella.h
+trailer = '''
+/// Callable that deletes rust memory.
+struct RustDelete
+{
+	void operator()(char* ptr) const { CString_destroy(ptr); }
+	void operator()(EngineOptions* ptr) const { EngineOptions_destroy(ptr); }
+	void operator()(File* ptr) const { File_close(ptr); }
+	void operator()(TempDir* ptr) const { TempDir_destroy(ptr); }
+	void operator()(VecCString* ptr) const { VecCString_destroy(ptr); }
+	void operator()(VecU8* ptr) const { VecU8_destroy(ptr); }
+	void operator()(Vfs* ptr) const { Vfs_destroy(ptr); }
+	void operator()(VfsFile* ptr) const { VfsFile_close(ptr); }
+};
+
+/// Alias to a std::unique_ptr that deletes with RustDelete.
+///
+/// By using this alias you are delegating memory management to the C++ compiler.
+template<typename T>
+using RustPointer = std::unique_ptr<T, RustDelete>;'''
+
+
+[parse]
+parse_deps = true
+include = ["stracciatella"]
+
+
+[export]
+exclude = [
+    "ENTRY_BYTES",
+    "HEADER_BYTES",
+    "UNIX_EPOCH_AS_FILETIME",
+]

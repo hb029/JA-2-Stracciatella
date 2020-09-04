@@ -20,6 +20,9 @@
 #include "Button_System.h"
 #include "ScreenIDs.h"
 #include "Font_Control.h"
+#include "GamePolicy.h"
+#include "GameInstance.h"
+#include "ContentManager.h"
 
 
 #define MAIN_PAGE_BUTTON_TEXT_WIDTH 95
@@ -28,8 +31,6 @@
 static BUTTON_PICS* giIMPMainPageButtonImage[6];
 GUIButtonRef giIMPMainPageButton[6];
 
-extern	INT32 giMaxPersonalityQuizQuestion;
-extern	BOOLEAN fStartOverFlag;
 extern INT32 iCurrentVoices;
 
 // mouse regions for not entablable warning
@@ -125,7 +126,7 @@ void HandleIMPMainPage( void )
 }
 
 
-static void MakeButton(UINT idx, const char* img_file, const wchar_t* text, INT16 x, INT16 y, GUI_CALLBACK click)
+static void MakeButton(UINT idx, const char* img_file, const ST::string& text, INT16 x, INT16 y, GUI_CALLBACK click)
 {
 	BUTTON_PICS* const img = LoadButtonImage(img_file, 0, 1);
 	giIMPMainPageButtonImage[idx] = img;
@@ -159,11 +160,12 @@ static void CreateIMPMainPageButtons(void)
 	giIMPMainPageButton[0]->SpecifyTextSubOffsets(0, -1, FALSE);
 
 	// the begin profiling button
-	const wchar_t* const profiling_text = (iCurrentProfileMode == 0 || iCurrentProfileMode > 2 ? pImpButtonText[1] : pImpButtonText[22]);
+	ST::string profiling_text = (iCurrentProfileMode == 0 || iCurrentProfileMode > 2 ? pImpButtonText[1] : pImpButtonText[22]);
 	MakeButton(1, LAPTOPDIR "/button_2.sti", profiling_text, dx + 136, dy + 174, BtnIMPMainPageBeginCallback);
 
-	// the personality button
-	MakeButton(2, LAPTOPDIR "/button_8.sti", pImpButtonText[2], dx + 13, dy + 245, BtnIMPMainPagePersonalityCallback);
+	// the personality/specialties button
+	ST::string btnText = gamepolicy(imp_pick_skills_directly) ? pImpButtonText[26] : pImpButtonText[2];
+	MakeButton(2, LAPTOPDIR "/button_8.sti", btnText, dx + 13, dy + 245, BtnIMPMainPagePersonalityCallback);
 
 	// the attribs button
 	MakeButton(3, LAPTOPDIR "/button_8.sti", pImpButtonText[3], dx + 133, dy + 245, BtnIMPMainPageAttributesCallback);
@@ -172,14 +174,14 @@ static void CreateIMPMainPageButtons(void)
 	MakeButton(4, LAPTOPDIR "/button_8.sti", pImpButtonText[4], dx + 253, dy + 245, BtnIMPMainPagePortraitCallback);
 
 	// the voice button
-	wchar_t sString[128];
+	ST::string sString;
 	if (iCurrentProfileMode == 5)
 	{
-		swprintf(sString, lengthof(sString), pImpButtonText[5], iCurrentVoices + 1);
+		sString = st_format_printf(pImpButtonText[5], iCurrentVoices + 1);
 	}
 	else
 	{
-		swprintf(sString, lengthof(sString), pImpButtonText[25]);
+		sString = pImpButtonText[25];
 	}
 	MakeButton(5, LAPTOPDIR "/button_8.sti", sString, dx + 373, dy + 245, BtnIMPMainPageVoiceCallback);
 }
@@ -226,8 +228,6 @@ static void BtnIMPMainPageBackCallback(GUI_BUTTON *btn, INT32 reason)
 		iCurrentProfileMode = 0;
 		fFinishedCharGeneration = FALSE;
 		ResetCharacterStats();
-		giMaxPersonalityQuizQuestion = 0;
-		fStartOverFlag = TRUE;
 	}
 }
 

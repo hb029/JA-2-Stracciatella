@@ -16,7 +16,7 @@ STRATEGIC_STATUS gStrategicStatus;
 
 void InitStrategicStatus(void)
 {
-	memset( &gStrategicStatus, 0, sizeof( STRATEGIC_STATUS ) );
+	gStrategicStatus = STRATEGIC_STATUS{};
 	//Add special non-zero start conditions here...
 
 	InitArmyGunTypes();
@@ -390,7 +390,7 @@ UINT8 RankIndexToSoldierClass( UINT8 ubRankIndex )
 
 TEST(StrategicStatus, asserts)
 {
-	EXPECT_EQ(sizeof(STRATEGIC_STATUS), 192);
+	EXPECT_EQ(sizeof(STRATEGIC_STATUS), 192u);
 }
 
 #endif

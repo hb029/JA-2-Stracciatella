@@ -1,44 +1,47 @@
-#include "Directories.h"
-#include "Font_Control.h"
-#include "MapScreen.h"
 #include "Map_Screen_Helicopter.h"
-#include "LaptopSave.h"
-#include "MessageBoxScreen.h"
-#include "Vehicles.h"
-#include "Finances.h"
-#include "Quests.h"
-#include "Game_Clock.h"
-#include "Queen_Command.h"
-#include "Strategic_Pathing.h"
-#include "Random.h"
-#include "Game_Event_Hook.h"
-#include "Dialogue_Control.h"
-#include "Message.h"
-#include "Strategic_Movement.h"
-#include "Soldier_Profile.h"
+
 #include "Assignments.h"
+#include "ContentManager.h"
+#include "Debug.h"
+#include "Dialogue_Control.h"
+#include "Directories.h"
+#include "Finances.h"
+#include "Font_Control.h"
+#include "GameInstance.h"
+#include "Game_Clock.h"
+#include "Game_Event_Hook.h"
+#include "Isometric_Utils.h"
+#include "LaptopSave.h"
+#include "MapScreen.h"
+#include "Map_Screen_Interface.h"
+#include "Map_Screen_Interface_Border.h"
+#include "Meanwhile.h"
+#include "Message.h"
+#include "MessageBoxScreen.h"
+#include "Overhead.h"
+#include "Player_Command.h"
 #include "PreBattle_Interface.h"
+#include "Queen_Command.h"
+#include "Quests.h"
+#include "Random.h"
+#include "RenderWorld.h"
+#include "SamSiteModel.h"
+#include "Scheduling.h"
+#include "Soldier_Create.h"
+#include "Soldier_Profile.h"
+#include "SoundMan.h"
+#include "Sound_Control.h"
+#include "Squads.h"
 #include "StrategicMap.h"
+#include "Strategic_Event_Handler.h"
+#include "Strategic_Movement.h"
+#include "Strategic_Pathing.h"
+#include "Text.h"
+#include "TileDat.h"
+#include "UILayout.h"
+#include "Vehicles.h"
 #include "WorldDef.h"
 #include "WorldMan.h"
-#include "TileDat.h"
-#include "Map_Screen_Interface.h"
-#include "Text.h"
-#include "Squads.h"
-#include "Player_Command.h"
-#include "Sound_Control.h"
-#include "Meanwhile.h"
-#include "Map_Screen_Interface_Border.h"
-#include "Strategic_Event_Handler.h"
-#include "Overhead.h"
-#include "Soldier_Create.h"
-#include "RenderWorld.h"
-#include "SoundMan.h"
-#include "Isometric_Utils.h"
-#include "Scheduling.h"
-#include "Debug.h"
-#include "UILayout.h"
-
 
 // the amounts of time to wait for hover stuff
 #define TIME_DELAY_FOR_HOVER_WAIT						10		// minutes
@@ -50,7 +53,6 @@
 
 // current temp path for dest char
 extern PathSt* pTempHelicopterPath;
-extern UINT8 ubSAMControlledSectors[ MAP_WORLD_X ][ MAP_WORLD_Y ];
 
 // whether helicopted variables have been set up
 BOOLEAN fSkyRiderSetUp = FALSE;
@@ -284,7 +286,7 @@ BOOLEAN HandleHeliEnteringSector( INT16 sX, INT16 sY )
 			StopTimeCompression();
 		}
 
-		if( IsRefuelSiteInSector( CALCULATE_STRATEGIC_INDEX(sX, sY) ) )
+		if (IsRefuelAvailableInSector(CALCULATE_STRATEGIC_INDEX(sX, sY)))
 		{
 			LandHelicopter();
 		}
@@ -605,6 +607,11 @@ bool IsRefuelSiteInSector(INT16 const sector)
 	return false;
 }
 
+bool IsRefuelAvailableInSector(INT16 const sector)
+{
+	return NearestRefuelPoint(false).sector == sector;
+}
+
 void UpdateRefuelSiteAvailability( void )
 {
 	INT32 iCounter = 0;
@@ -755,7 +762,8 @@ static void HandleSkyRiderMonologueAboutDrassenSAMSite(UINT32 const uiSpecialCod
 			SkyriderDialogue(MENTION_DRASSEN_SAM_SITE);
 			SkyriderDialogueWithSpecialEvent(SKYRIDER_MONOLOGUE_EVENT_DRASSEN_SAM_SITE, 1);
 
-			if (StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(pSamList[1])].fEnemyControlled)
+			auto samList = GCM->getSamSites();
+			if (StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(samList[SAM_SITE_TWO]->sectorId)].fEnemyControlled)
 			{
 				SkyriderDialogue(SECOND_HALF_OF_MENTION_DRASSEN_SAM_SITE);
 			}
@@ -770,7 +778,7 @@ static void HandleSkyRiderMonologueAboutDrassenSAMSite(UINT32 const uiSpecialCod
 
 		case 1: // Highlight Drassen SAM site sector
 			fShowDrassenSAMHighLight = TRUE;
-			SetSAMSiteAsFound(1);
+			SetSAMSiteAsFound(SAM_SITE_TWO);
 			break;
 
 		case 2:
@@ -820,9 +828,9 @@ static void HandleSkyRiderMonologueAboutOtherSAMSites(UINT32 const uiSpecialCode
 		case 1: // Highlight other SAMs
 			fShowOtherSAMHighLight = TRUE;
 			// Reveal other 3 SAM sites
-			SetSAMSiteAsFound(0);
-			SetSAMSiteAsFound(3);
-			SetSAMSiteAsFound(4);
+			SetSAMSiteAsFound(SAM_SITE_ONE);
+			SetSAMSiteAsFound(SAM_SITE_THREE);
+			SetSAMSiteAsFound(SAM_SITE_FOUR);
 			break;
 
 		case 2:
@@ -888,6 +896,8 @@ void HandleAnimationOfSectors( void )
 	static BOOLEAN fOldShowEstoniRefuelHighLight = FALSE;
 	static BOOLEAN fOldShowOtherSAMHighLight = FALSE;
 
+	auto samList = GCM->getSamSites();
+
 	// find out which mode we are in and animate for that mode
 
 	// Drassen SAM site
@@ -895,7 +905,7 @@ void HandleAnimationOfSectors( void )
 	{
 		fOldShowDrassenSAMHighLight = TRUE;
 		// Drassen's SAM site is #2
-		HandleBlitOfSectorLocatorIcon(pSamList[1], LOCATOR_COLOR_RED);
+		HandleBlitOfSectorLocatorIcon(samList[SAM_SITE_TWO]->sectorId, LOCATOR_COLOR_RED);
 		fSkipSpeakersLocator = TRUE;
 	}
 	else if( fOldShowDrassenSAMHighLight )
@@ -921,9 +931,9 @@ void HandleAnimationOfSectors( void )
 	if( fShowOtherSAMHighLight )
 	{
 		fOldShowOtherSAMHighLight = TRUE;
-		HandleBlitOfSectorLocatorIcon(pSamList[0], LOCATOR_COLOR_RED);
-		HandleBlitOfSectorLocatorIcon(pSamList[2], LOCATOR_COLOR_RED);
-		HandleBlitOfSectorLocatorIcon(pSamList[3], LOCATOR_COLOR_RED);
+		HandleBlitOfSectorLocatorIcon(samList[SAM_SITE_ONE]->sectorId,   LOCATOR_COLOR_RED);
+		HandleBlitOfSectorLocatorIcon(samList[SAM_SITE_THREE]->sectorId, LOCATOR_COLOR_RED);
+		HandleBlitOfSectorLocatorIcon(samList[SAM_SITE_FOUR]->sectorId,  LOCATOR_COLOR_RED);
 		fSkipSpeakersLocator = TRUE;
 	}
 	else if( fOldShowOtherSAMHighLight )
@@ -1038,7 +1048,7 @@ static void HeliCrashSoundStopCallback(void* pData)
 
 static BOOLEAN HandleSAMSiteAttackOfHelicopterInSector(INT16 sSectorX, INT16 sSectorY)
 {
-	UINT8 ubSamNumber = 0;
+	INT8 bSamSiteID = -1;
 	INT8 bSAMCondition;
 	UINT8 ubChance;
 
@@ -1050,17 +1060,18 @@ static BOOLEAN HandleSAMSiteAttackOfHelicopterInSector(INT16 sSectorX, INT16 sSe
 	}
 
 	// which SAM controls this sector?
-	ubSamNumber = ubSAMControlledSectors[ sSectorX ][ sSectorY ];
+	bSamSiteID = GCM->getControllingSamSite(SECTOR(sSectorX, sSectorY));
 
-	// if none of them
-	if (ubSamNumber == 0)
+	// if none of them (-1 means the sector is not covered by a SAM)
+	if (bSamSiteID < 0)
 	{
-		return( FALSE);
+		return FALSE;
 	}
 
-	// get the condition of that SAM site (NOTE: SAM #s are 1-4, but indexes are 0-3!!!)
-	Assert( ubSamNumber <= NUMBER_OF_SAMS );
-	bSAMCondition = StrategicMap[ SECTOR_INFO_TO_STRATEGIC_INDEX( pSamList[ ubSamNumber - 1 ] ) ].bSAMCondition;
+	// get the condition of that SAM site (NOTE: SAM IDs are 0-3)
+	Assert(bSamSiteID < NUMBER_OF_SAMS );
+	UINT8 ubSAMSectorID = GCM->getSamSites()[bSamSiteID]->sectorId;
+	bSAMCondition = StrategicMap[ SECTOR_INFO_TO_STRATEGIC_INDEX(ubSAMSectorID) ].bSAMCondition;
 
 	// if the SAM site is too damaged to be a threat
 	if( bSAMCondition < MIN_CONDITION_FOR_SAM_SITE_TO_WORK )
@@ -1348,14 +1359,14 @@ static void PaySkyriderBill(void)
 			// no problem, pay the man
 			// add the transaction
 			AddTransactionToPlayersBook( PAYMENT_TO_NPC, SKYRIDER, GetWorldTotalMin( ), -iTotalAccumulatedCostByPlayer );
-			ScreenMsg( FONT_MCOLOR_DKRED, MSG_INTERFACE, pSkyriderText[ 0 ], iTotalAccumulatedCostByPlayer );
+			ScreenMsg( FONT_MCOLOR_DKRED, MSG_INTERFACE, st_format_printf(pSkyriderText[ 0 ], iTotalAccumulatedCostByPlayer) );
 		}
 		else
 		{
 			// money owed
 			if( LaptopSaveInfo.iCurrentBalance > 0 )
 			{
-				ScreenMsg( FONT_MCOLOR_DKRED, MSG_INTERFACE, pSkyriderText[ 0 ], LaptopSaveInfo.iCurrentBalance );
+				ScreenMsg( FONT_MCOLOR_DKRED, MSG_INTERFACE, st_format_printf(pSkyriderText[ 0 ], LaptopSaveInfo.iCurrentBalance) );
 				gMercProfiles[ SKYRIDER ].iBalance = LaptopSaveInfo.iCurrentBalance - iTotalAccumulatedCostByPlayer;
 				// add the transaction
 				AddTransactionToPlayersBook( PAYMENT_TO_NPC, SKYRIDER, GetWorldTotalMin( ), -LaptopSaveInfo.iCurrentBalance );
@@ -1366,7 +1377,7 @@ static void PaySkyriderBill(void)
 			}
 
 			HeliCharacterDialogue(OWED_MONEY_TO_SKYRIDER);
-			ScreenMsg( FONT_MCOLOR_DKRED, MSG_INTERFACE, pSkyriderText[ 1 ], -gMercProfiles[ SKYRIDER ].iBalance );
+			ScreenMsg( FONT_MCOLOR_DKRED, MSG_INTERFACE, st_format_printf(pSkyriderText[ 1 ], -gMercProfiles[ SKYRIDER ].iBalance) );
 
 			// kick everyone out! (we know we're in a safe sector if we're paying)
 			MoveAllInHelicopterToFootMovementGroup( );
@@ -1393,14 +1404,14 @@ void PayOffSkyriderDebtIfAny( )
 		// add the transaction
 		AddTransactionToPlayersBook( PAYMENT_TO_NPC, SKYRIDER, GetWorldTotalMin( ), -iPayAmount );
 		// tell player
-		ScreenMsg( FONT_MCOLOR_DKRED, MSG_INTERFACE, pSkyriderText[ 0 ], iPayAmount );
+		ScreenMsg( FONT_MCOLOR_DKRED, MSG_INTERFACE, st_format_printf(pSkyriderText[ 0 ], iPayAmount) );
 		// now whaddawe owe?
 		iAmountOwed = - gMercProfiles[ SKYRIDER ].iBalance;
 
 		// if it wasn't enough
 		if ( iAmountOwed > 0 )
 		{
-			ScreenMsg( FONT_MCOLOR_DKRED, MSG_INTERFACE, pSkyriderText[ 1 ], iAmountOwed );
+			ScreenMsg( FONT_MCOLOR_DKRED, MSG_INTERFACE, st_format_printf(pSkyriderText[ 1 ], iAmountOwed) );
 			HeliCharacterDialogue(OWED_MONEY_TO_SKYRIDER);
 		}
 	}
@@ -1413,7 +1424,7 @@ static void MakeHeliReturnToBase(void)
 
 	sectorID = CALCULATE_STRATEGIC_INDEX(v.sSectorX, v.sSectorY);
 	// if already at a refueling point
-	if ( IsRefuelSiteInSector( sectorID ) )
+	if (IsRefuelAvailableInSector(sectorID))
 	{
 		LandHelicopter();
 	}

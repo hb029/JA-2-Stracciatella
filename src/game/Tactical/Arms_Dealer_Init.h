@@ -5,15 +5,7 @@
 #include "Item_Types.h"
 #include "JA2Types.h"
 
-
-//the enums for the different kinds of arms dealers
-enum
-{
-	ARMS_DEALER_BUYS_SELLS,
-	ARMS_DEALER_SELLS_ONLY,
-	ARMS_DEALER_BUYS_ONLY,
-	ARMS_DEALER_REPAIRS,
-};
+#include <vector>
 
 
 //The following defines indicate what items can be sold by the arms dealer
@@ -60,12 +52,6 @@ enum
 #define ARMS_DEALER_CREATURE_PARTS	0x02000000
 #define ARMS_DEALER_ROCKET_RIFLE	0x04000000
 
-#define ARMS_DEALER_ONLY_USED_ITEMS	0x08000000
-#define ARMS_DEALER_GIVES_CHANGE	0x10000000 //The arms dealer will give the required change when doing a transaction
-#define ARMS_DEALER_ACCEPTS_GIFTS	0x20000000 //The arms dealer is the kind of person who will accept gifts
-#define ARMS_DEALER_SOME_USED_ITEMS	0x40000000 //The arms dealer can have used items in his inventory
-#define ARMS_DEALER_HAS_NO_INVENTORY	0x80000000 //The arms dealer does not carry any inventory
-
 
 #define ARMS_DEALER_ALL_GUNS		ARMS_DEALER_HANDGUNCLASS | ARMS_DEALER_SMGCLASS | ARMS_DEALER_RIFLECLASS | ARMS_DEALER_MGCLASS | ARMS_DEALER_SHOTGUNCLASS
 
@@ -89,29 +75,8 @@ enum
 #define ARMS_DEALER_FLAG__FRANZ_HAS_SOLD_VIDEO_CAMERA_TO_PLAYER 0x00000001 // Franz Hinkle has sold the video camera to the player
 
 
-// THIS STRUCTURE HAS UNCHANGING INFO THAT DOESN'T GET SAVED/RESTORED/RESET
-struct ARMS_DEALER_INFO
-{
-	union
-	{
-		struct
-		{
-			FLOAT buy;  // The price modifier used when this dealer is BUYING something.
-			FLOAT sell; // The price modifier used when this dealer is SELLING something.
-		} price;
-		struct
-		{
-			FLOAT speed; // Modifier to the speed at which a repairman repairs things
-			FLOAT cost;  // Modifier to the price a repairman charges for repairs
-		} repair;
-	} u;
 
-	UINT8  ubShopKeeperID; // Merc Id for the dealer
-	UINT8  ubTypeOfArmsDealer; // Whether he buys/sells, sells, buys, or repairs
-	INT32  iInitialCash; // How much cash dealer starts with (we now reset to this amount once / day)
-	UINT32 uiFlags; // various flags which control the dealer's operations
-};
-
+class DealerModel;
 
 // THIS STRUCTURE GETS SAVED/RESTORED/RESET
 struct ARMS_DEALER_STATUS
@@ -172,16 +137,13 @@ struct DEALER_ITEM_HEADER
 	UINT8   ubPerfectItems; // non-special (perfect) items held by dealer
 	UINT8   ubStrayAmmo; // partially-depleted ammo mags are stored here as #bullets, and can be converted to full packs
 
-	UINT8   ubElementsAlloced; // number of DEALER_SPECIAL_ITEM array elements alloced for the special item array
-	DEALER_SPECIAL_ITEM *SpecialItem; // dynamic array of special items with this same item index
+	std::vector<DEALER_SPECIAL_ITEM> SpecialItem; // dynamic array of special items with this same item index
 
 	UINT32  uiOrderArrivalTime; // Day the items ordered will arrive on.  It's UINT32 in case we change this to minutes.
 	UINT8   ubQtyOnOrder; // The number of items currently on order
 	BOOLEAN fPreviouslyEligible; // whether or not dealer has been eligible to sell this item in days prior to today
 };
 
-
-extern const ARMS_DEALER_INFO ArmsDealerInfo[NUM_ARMS_DEALERS];
 extern ARMS_DEALER_STATUS gArmsDealerStatus[ NUM_ARMS_DEALERS ];
 extern DEALER_ITEM_HEADER gArmsDealersInventory[ NUM_ARMS_DEALERS ][ MAXITEMS ];
 
@@ -210,7 +172,8 @@ void LoadArmsDealerInventoryFromSavedGameFile(HWFILE, UINT32 savegame_version);
 
 void DailyUpdateOfArmsDealersInventory(void);
 
-UINT8		GetTypeOfArmsDealer( UINT8 ubDealerID );
+const DealerModel* GetDealer(UINT8);
+ArmsDealerType GetTypeOfArmsDealer( UINT8 ubDealerID );
 
 BOOLEAN	DoesDealerDoRepairs(ArmsDealerID);
 BOOLEAN RepairmanIsFixingItemsButNoneAreDoneYet( UINT8 ubProfileID );

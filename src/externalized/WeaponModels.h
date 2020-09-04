@@ -1,14 +1,14 @@
 #pragma once
 
-#include <stdint.h>
-
-#include <map>
-#include <string>
-
 // XXX
 #include "game/Tactical/Weapons.h"
 
 #include "ItemModel.h"
+
+#include <string_theory/string>
+
+#include <map>
+#include <stdint.h>
 
 class JsonObject;
 class JsonObjectReader;
@@ -18,6 +18,10 @@ struct MagazineModel;
 
 #define NO_WEAPON_SOUND ((SoundID)-1)
 #define NO_WEAPON_SOUND_STR ("")
+
+#define WEAPON_TYPE_NOWEAPON ("NOWEAPON")
+#define WEAPON_TYPE_PUNCH ("PUNCH")
+#define WEAPON_TYPE_THROWN ("THROWN")
 
 struct WeaponModel : ItemModel
 {
@@ -31,7 +35,7 @@ struct WeaponModel : ItemModel
 	virtual void serializeTo(JsonObject &obj) const;
 
 	static WeaponModel* deserialize(JsonObjectReader &obj,
-	const std::map<std::string, const CalibreModel*> &calibreMap);
+	const std::map<ST::string, const CalibreModel*> &calibreMap);
 
 	virtual const WeaponModel* asWeapon() const   { return this; }
 
@@ -46,13 +50,13 @@ struct WeaponModel : ItemModel
 	virtual bool canBeAttached(uint16_t attachment) const;
 
 	/** Get standard replacement gun name. */
-	virtual const std::string & getStandardReplacement() const;
+	virtual const ST::string & getStandardReplacement() const;
 
 	int getRateOfFire() const;
 
-	std::string sound;
-	std::string burstSound;
-	std::string standardReplacement;
+	ST::string sound;
+	ST::string burstSound;
+	ST::string standardReplacement;
 	bool attachSilencer;
 	bool attachSniperScope;
 	bool attachLaserScope;
@@ -81,6 +85,7 @@ struct WeaponModel : ItemModel
 	UINT8    ubHitVolume;
 	SoundID  sReloadSound;
 	SoundID  sLocknLoadSound;
+	UINT16   usSmokeEffect;    // item index of the smoke effect on ammo miss
 
 protected:
 	void serializeAttachments(JsonObject &obj) const;
@@ -88,7 +93,9 @@ protected:
 
 struct NoWeapon : WeaponModel
 {
-	NoWeapon(uint16_t indexIndex, const char * internalName, uint16_t Range);
+	NoWeapon(uint16_t indexIndex, const char * internalName);
+
+	NoWeapon(uint16_t itemIndex, const char* internalName, uint32_t itemClass, uint8_t cursor);
 
 	virtual void serializeTo(JsonObject &obj) const;
 };
@@ -362,7 +369,8 @@ struct MonsterSpit : WeaponModel
 			uint16_t Range,
 			uint8_t AttackVolume,
 			uint8_t HitVolume,
-			const char * Sound);
+			const char * Sound,
+			uint16_t smokeEffect);
 
 	virtual void serializeTo(JsonObject &obj) const;
 };

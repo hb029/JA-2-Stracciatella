@@ -1,6 +1,3 @@
-#include <math.h>
-#include <stdexcept>
-
 #include "Directories.h"
 #include "Font_Control.h"
 #include "Handle_Items.h"
@@ -42,6 +39,10 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 #include "Logger.h"
+
+#include <algorithm>
+#include <math.h>
+#include <stdexcept>
 
 #define NO_TEST_OBJECT				0
 #define TEST_OBJECT_NO_COLLISIONS		1
@@ -132,7 +133,7 @@ static void RecountObjectSlots(void)
 REAL_OBJECT* CreatePhysicalObject(OBJECTTYPE const* const pGameObj, float const dLifeLength, float const xPos, float const yPos, float const zPos, float const xForce, float const yForce, float const zForce, SOLDIERTYPE* const owner, UINT8 const ubActionCode, SOLDIERTYPE* const target)
 {
 	REAL_OBJECT* const o = GetFreeObjectSlot();
-	memset(o, 0, sizeof(*o));
+	*o = REAL_OBJECT{};
 
 	o->Obj = *pGameObj;
 
@@ -147,7 +148,7 @@ REAL_OBJECT* CreatePhysicalObject(OBJECTTYPE const* const pGameObj, float const 
 	o->fAllocated              = TRUE;
 	o->fAlive                  = TRUE;
 	o->fApplyFriction          = FALSE;
-	o->iSoundID                = NO_SAMPLE;
+	o->uiSoundID               = NO_SAMPLE;
 	o->OneOverMass             = 1 / mass;
 	o->Position.x              = xPos;
 	o->Position.y              = yPos;
@@ -369,9 +370,9 @@ static BOOLEAN PhysicsUpdateLife(REAL_OBJECT* pObject, float DeltaTime)
 
 		if ( !pObject->fTestObject )
 		{
-			if ( pObject->iSoundID != NO_SAMPLE )
+			if ( pObject->uiSoundID != NO_SAMPLE )
 			{
-				SoundStop( pObject->iSoundID );
+				SoundStop( pObject->uiSoundID );
 			}
 
 			if ( pObject->ubActionCode == THROW_ARM_ITEM && !pObject->fInWater )
@@ -475,15 +476,15 @@ static BOOLEAN PhysicsIntegrate(REAL_OBJECT* pObject, float DeltaTime)
 
 	if ( pObject->fPotentialForDebug )
 	{
-		SLOGD("Object %d: Force		%f %f %f",  REALOBJ2ID(pObject),
-			pObject->Force.x, pObject->Force.y, pObject->Force.z);
-		SLOGD("Object %d: Velocity %f %f %f",  REALOBJ2ID(pObject),
-			pObject->Velocity.x, pObject->Velocity.y, pObject->Velocity.z);
-		SLOGD("Object %d: Position %f %f %f",  REALOBJ2ID(pObject),
-			pObject->Position.x, pObject->Position.y, pObject->Position.z);
-		SLOGD("Object %d: Delta Pos %f %f %f", REALOBJ2ID(pObject),
+		SLOGD(ST::format("Object {}: Force     {} {} {}", REALOBJ2ID(pObject),
+			pObject->Force.x, pObject->Force.y, pObject->Force.z));
+		SLOGD(ST::format("Object {}: Velocity  {} {} {}", REALOBJ2ID(pObject),
+			pObject->Velocity.x, pObject->Velocity.y, pObject->Velocity.z));
+		SLOGD(ST::format("Object {}: Position  {} {} {}", REALOBJ2ID(pObject),
+			pObject->Position.x, pObject->Position.y, pObject->Position.z));
+		SLOGD(ST::format("Object {}: Delta Pos {} {} {}", REALOBJ2ID(pObject),
 			pObject->OldPosition.x - pObject->Position.x, pObject->OldPosition.y - pObject->Position.y,
-			pObject->OldPosition.z - pObject->Position.z);
+			pObject->OldPosition.z - pObject->Position.z));
 	}
 
 	if ( pObject->Obj.usItem == MORTAR_SHELL && !pObject->fTestObject && pObject->ubActionCode == THROW_ARM_ITEM )
@@ -491,9 +492,9 @@ static BOOLEAN PhysicsIntegrate(REAL_OBJECT* pObject, float DeltaTime)
 		// Start soud if we have reached our max height
 		if ( pObject->OldVelocity.z >= 0 && pObject->Velocity.z < 0 )
 		{
-			if ( pObject->iSoundID == NO_SAMPLE )
+			if ( pObject->uiSoundID == NO_SAMPLE )
 			{
-				pObject->iSoundID =	PlayJA2Sample(MORTAR_WHISTLE, HIGHVOLUME, 1, MIDDLEPAN);
+				pObject->uiSoundID =	PlayJA2Sample(MORTAR_WHISTLE, HIGHVOLUME, 1, MIDDLEPAN);
 			}
 		}
 	}
@@ -831,7 +832,7 @@ static BOOLEAN PhysicsCheckForCollisions(REAL_OBJECT* pObject, INT32* piCollisio
 			if ( !pObject->fTestObject )
 			{
 				// Break window!
-				SLOGD("Object %d: Collision Window", REALOBJ2ID(pObject));
+				SLOGD(ST::format("Object {}: Collision Window", REALOBJ2ID(pObject)));
 
 				sGridNo = MAPROWCOLTOPOS( ( (INT16)pObject->Position.y / CELL_Y_SIZE ), ( (INT16)pObject->Position.x / CELL_X_SIZE ) );
 
@@ -901,7 +902,7 @@ static BOOLEAN PhysicsCheckForCollisions(REAL_OBJECT* pObject, INT32* piCollisio
 					pObject->fInWater = TRUE;
 
 					// Make ripple
-					memset( &AniParams, 0, sizeof( ANITILE_PARAMS ) );
+					AniParams = ANITILE_PARAMS{};
 					AniParams.sGridNo = sGridNo;
 					AniParams.ubLevelID = ANI_STRUCT_LEVEL;
 					AniParams.usTileIndex = THIRDMISS1;
@@ -1033,13 +1034,13 @@ static BOOLEAN PhysicsCheckForCollisions(REAL_OBJECT* pObject, INT32* piCollisio
 
 			if ( pObject->fPotentialForDebug )
 			{
-				SLOGD("Object %d: Collision %d", REALOBJ2ID(pObject), iCollisionCode);
-				SLOGD("Object %d: Collision Normal %f %f %f", REALOBJ2ID(pObject),
-					vTemp.x, vTemp.y, vTemp.z);
-				SLOGD("Object %d: Collision OldPos %f %f %f", REALOBJ2ID(pObject),
-					pObject->Position.x, pObject->Position.y, pObject->Position.z);
-				SLOGD("Object %d: Collision Velocity %f %f %f", REALOBJ2ID(pObject),
-					pObject->CollisionVelocity.x, pObject->CollisionVelocity.y, pObject->CollisionVelocity.z);
+				SLOGD(ST::format("Object {}: Collision {}", REALOBJ2ID(pObject), iCollisionCode));
+				SLOGD(ST::format("Object {}: Collision Normal {} {} {}", REALOBJ2ID(pObject),
+					vTemp.x, vTemp.y, vTemp.z));
+				SLOGD(ST::format("Object {}: Collision OldPos {} {} {}", REALOBJ2ID(pObject),
+					pObject->Position.x, pObject->Position.y, pObject->Position.z));
+				SLOGD(ST::format("Object {}: Collision Velocity {} {} {}", REALOBJ2ID(pObject),
+					pObject->CollisionVelocity.x, pObject->CollisionVelocity.y, pObject->CollisionVelocity.z));
 			}
 		}
 		else
@@ -1112,8 +1113,7 @@ static BOOLEAN PhysicsMoveObject(REAL_OBJECT* pObject)
 			{
 				if ( sNewGridNo != pObject->sGridNo )
 				{
-					ANITILE_PARAMS	AniParams;
-
+					ANITILE_PARAMS	AniParams{};
 					AniParams.sGridNo = (INT16)sNewGridNo;
 					AniParams.ubLevelID = ANI_STRUCT_LEVEL;
 					AniParams.sDelay = (INT16)( 100 + PreRandom( 100 ) );
@@ -1195,7 +1195,7 @@ static BOOLEAN PhysicsMoveObject(REAL_OBJECT* pObject)
 
 		if ( pObject->fPotentialForDebug )
 		{
-			SLOGD("Object %d: uiNumTilesMoved: %d", REALOBJ2ID(pObject), pObject->uiNumTilesMoved);
+			SLOGD(ST::format("Object {}d: uiNumTilesMoved: {}", REALOBJ2ID(pObject), pObject->uiNumTilesMoved));
 		}
 	}
 
@@ -1311,7 +1311,7 @@ static vector_3 FindBestForceForTrajectory(INT16 sSrcGridNo, INT16 sGridNo, INT1
 	{
 		(*pdMagForce) = dForce;
 	}
-	SLOGD("Number of integration: %d", iNumChecks );
+	SLOGD(ST::format("Number of integration: {}", iNumChecks));
 
 	return( vForce );
 }
@@ -1929,9 +1929,9 @@ void CalculateLaunchItemParamsForThrow(SOLDIERTYPE* const pSoldier, INT16 sGridN
 
 
 	// Allocate Throw Parameters
-	pSoldier->pThrowParams = MALLOCZ(THROW_PARAMS);
+	pSoldier->pThrowParams = new THROW_PARAMS{};
 
-	pSoldier->pTempObject  = MALLOC(OBJECTTYPE);
+	pSoldier->pTempObject  = new OBJECTTYPE{};
 
 	*pSoldier->pTempObject = *pItem;
 	pSoldier->pThrowParams->dX = (float)sSrcX;
@@ -2115,7 +2115,7 @@ static BOOLEAN DoCatchObject(REAL_OBJECT* pObject)
 	{
 		pObject->fDropItem = FALSE;
 
-		ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, pMessageStrings[ MSG_MERC_CAUGHT_ITEM ], pSoldier->name, ShortItemNames[ usItem ] );
+		ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(pMessageStrings[ MSG_MERC_CAUGHT_ITEM ], pSoldier->name, ShortItemNames[ usItem ]) );
 	}
 
 	return( TRUE );
@@ -2217,8 +2217,17 @@ static void HandleArmedObjectImpact(REAL_OBJECT* pObject)
 	{
 		if ( pObject->Obj.usItem == BREAK_LIGHT )
 		{
-			// Add a light effect...
-			NewLightEffect( pObject->sGridNo, LIGHT_FLARE_MARK_1 );
+			//if the light object will be created OFF the ground
+			if (pObject->Position.z > 0)
+			{
+				//we cannot create the light source above the ground, or on a roof.  The system doesnt support it.
+				AddItemToPool(pObject->sGridNo, &(pObject->Obj), VISIBLE, 1, 0, -1);
+			}
+			else
+			{
+				// Add a light effect...
+				NewLightEffect(pObject->sGridNo, LIGHT_FLARE_MARK_1);
+			}
 		}
 		else if ( GCM->getItem(pObject->Obj.usItem)->isGrenade()  )
 		{
@@ -2280,7 +2289,7 @@ void LoadPhysicsTableFromSavedGameFile(HWFILE const hFile)
 	UINT16 usCnt=0;
 
 	//make sure the objects are not allocated
-	memset( ObjectSlots, 0, NUM_OBJECT_SLOTS * sizeof( REAL_OBJECT ) );
+	std::fill_n(ObjectSlots, NUM_OBJECT_SLOTS, REAL_OBJECT{});
 
 	//Load the number of REAL_OBJECTs in the array
 	FileRead(hFile, &guiNumObjectSlots, sizeof(UINT32));

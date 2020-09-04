@@ -16,6 +16,7 @@
 #include "IMP_Personality_Entrance.h"
 #include "IMP_Attribute_Selection.h"
 #include "IMP_Personality_Quiz.h"
+#include "IMP_SkillTraits.h"
 #include "IMP_Begin_Screen.h"
 #include "IMP_Personality_Finish.h"
 #include "IMP_Confirm.h"
@@ -26,6 +27,10 @@
 #include "Text.h"
 #include "Soldier_Profile_Type.h"
 
+#include <string_theory/string>
+
+#include <algorithm>
+#include <iterator>
 
 BOOLEAN fReDrawCharProfile = FALSE;
 BOOLEAN fButtonPendingFlag = FALSE;
@@ -52,8 +57,8 @@ INT32 iMechanical = 55;
 BOOLEAN fCharacterIsMale = TRUE;
 
 // name and nick name
-wchar_t pFullName[NAME_LENGTH];
-wchar_t pNickName[NICKNAME_LENGTH];
+ST::string pFullName;
+ST::string pNickName;
 
 // skills
 INT32 iSkillA = 0;
@@ -76,6 +81,8 @@ extern INT32 iCurrentPortrait;
 extern int iCurrentVoices;
 extern	INT32 giMaxPersonalityQuizQuestion;
 extern	BOOLEAN fStartOverFlag;
+
+BOOLEAN fLoadingCharacterForPreviousImpProfile = FALSE;
 
 extern void SetAttributes( void );
 
@@ -142,7 +149,7 @@ void HandleCharProfile(void)
 		if (!fDoneLoadPending)
 		{
 			//make sure we are not hosing memory
-			Assert( iCurrentImpPage <= IMP_NUM_PAGES );
+			Assert( iCurrentImpPage < IMP_NUM_PAGES );
 
 
 			fFastLoadFlag = HasTheCurrentIMPPageBeenVisited( );
@@ -200,6 +207,9 @@ void HandleCharProfile(void)
 			break;
 		case( IMP_PERSONALITY_QUIZ ):
 			HandleIMPPersonalityQuiz( );
+			break;
+		case( IMP_SKILLTRAITS ):
+			HandleIMPSkillTrait();
 			break;
 		case( IMP_PERSONALITY_FINISH ):
 			HandleIMPPersonalityFinish( );
@@ -259,6 +269,9 @@ void RenderCharProfile(void)
 			break;
 		case( IMP_PERSONALITY_QUIZ ):
 			RenderIMPPersonalityQuiz( );
+			break;
+		case(IMP_SKILLTRAITS):
+			RenderIMPSkillTrait();
 			break;
 		case( IMP_PERSONALITY_FINISH ):
 			RenderIMPPersonalityFinish( );
@@ -338,6 +351,10 @@ static void ExitOldIMPMode(void)
 			DestroyIMPButtons( );
 			ExitIMPPersonalityQuiz( );
 			break;
+		case( IMP_SKILLTRAITS ):
+			DestroyIMPButtons();
+			ExitIMPSkillTrait();
+			break;
 		case( IMP_PERSONALITY_FINISH ):
 			DestroyIMPButtons( );
 			ExitIMPPersonalityFinish( );
@@ -403,6 +420,10 @@ static void EnterNewIMPMode(void)
 			CreateIMPButtons( );
 			EnterIMPPersonalityQuiz( );
 			break;
+		case(IMP_SKILLTRAITS):
+			CreateIMPButtons();
+			EnterIMPSkillTrait();
+			break;
 		case( IMP_PERSONALITY_FINISH ):
 			CreateIMPButtons( );
 			EnterIMPPersonalityFinish( );
@@ -467,8 +488,8 @@ void ResetCharacterStats( void )
 	iAttitude = 0;
 
 	// names
-	memset( &pFullName, 0 , sizeof( pFullName) );
-	memset( &pNickName, 0 , sizeof( pNickName) );
+	pFullName = ST::null;
+	pNickName = ST::null;
 }
 
 
@@ -620,6 +641,7 @@ static void BtnIMPCancelCallback(GUI_BUTTON *btn, INT32 reason)
 				break;
 
 			case IMP_PERSONALITY_QUIZ:
+			case IMP_SKILLTRAITS:
 			case IMP_PERSONALITY_FINISH:
 				giMaxPersonalityQuizQuestion = 0;
 				fStartOverFlag = TRUE;
@@ -657,7 +679,7 @@ static BOOLEAN HasTheCurrentIMPPageBeenVisited(void)
 	// returns if we have vsisted the current IMP PageAlready
 
 	//make sure we are not hosing memory
-	Assert( iCurrentImpPage <= IMP_NUM_PAGES );
+	Assert(iCurrentImpPage < IMP_NUM_PAGES);
 
-	return ( fVisitedIMPSubPages[ iCurrentImpPage ]);
+	return fVisitedIMPSubPages[iCurrentImpPage];
 }

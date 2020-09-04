@@ -72,6 +72,10 @@
 #include "Soldier.h"
 #include "Logger.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
+
 #define NUM_ITEMS_LISTED		8
 #define NUM_ITEM_FLASH_SLOTS		50
 #define MIN_LOB_RANGE			6
@@ -286,7 +290,7 @@ ItemHandleResult HandleItem(SOLDIERTYPE* const s, INT16 usGridNo, const INT8 bLe
 						if (s->bTeam == OUR_TEAM)
 						{
 							PlayJA2Sample(RG_ID_IMPRINTED, HIGHVOLUME, 1, MIDDLE);
-							ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, L"\"%ls\"", TacticalStr[GUN_GOT_FINGERPRINT]);
+							ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, ST::format("\"{}\"", TacticalStr[GUN_GOT_FINGERPRINT]));
 							return ITEM_HANDLE_BROKEN;
 						}
 					}
@@ -381,7 +385,7 @@ ItemHandleResult HandleItem(SOLDIERTYPE* const s, INT16 usGridNo, const INT8 bLe
 				DoMercBattleSound(s, BATTLE_SOUND_LAUGH1);
 				s->bDoBurst    = TRUE;
 				s->bWeaponMode = WM_BURST;
-				ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, gzLateLocalizedString[STR_LATE_26], s->name);
+				ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(gzLateLocalizedString[STR_LATE_26], s->name));
 			}
 		}
 
@@ -997,7 +1001,7 @@ void SoldierHandleDropItem( SOLDIERTYPE *pSoldier )
 		AddItemToPool(pSoldier->sGridNo, pSoldier->pTempObject, VISIBLE, pSoldier->bLevel, 0 , -1);
 		NotifySoldiersToLookforItems( );
 
-		MemFree( pSoldier->pTempObject );
+		delete pSoldier->pTempObject;
 		pSoldier->pTempObject = NULL;
 	}
 }
@@ -1056,7 +1060,7 @@ void HandleSoldierThrowItem( SOLDIERTYPE *pSoldier, INT16 sGridNo )
 					AddItemToPool(sGridNo, pSoldier->pTempObject, VISIBLE, pSoldier->bLevel, 0, -1);
 					NotifySoldiersToLookforItems( );
 
-					MemFree( pSoldier->pTempObject );
+					delete pSoldier->pTempObject;
 					pSoldier->pTempObject = NULL;
 				}
 			}
@@ -1091,7 +1095,7 @@ void SoldierGiveItem( SOLDIERTYPE *pSoldier, SOLDIERTYPE *pTargetSoldier, OBJECT
 
 		pSoldier->bPendingActionData5 = bInvPos;
 		// Copy temp object
-		pSoldier->pTempObject	= MALLOC(OBJECTTYPE);
+		pSoldier->pTempObject	= new OBJECTTYPE{};
 		*pSoldier->pTempObject = *pObject;
 
 
@@ -1123,7 +1127,7 @@ void SoldierGiveItem( SOLDIERTYPE *pSoldier, SOLDIERTYPE *pTargetSoldier, OBJECT
 
 void SoldierDropItem(SOLDIERTYPE* const pSoldier, OBJECTTYPE* const pObj)
 {
-	pSoldier->pTempObject = MALLOC(OBJECTTYPE);
+	pSoldier->pTempObject = new OBJECTTYPE{};
 	*pSoldier->pTempObject = *pObj;
 	PickDropItemAnimation( pSoldier );
 }
@@ -1253,7 +1257,7 @@ void SoldierGetItemFromWorld(SOLDIERTYPE* const s, const INT32 iItemIndex, const
 				continue; // try to place any others
 			}
 
-			RemoveItemFromPool(&wi);
+			RemoveItemFromPool(wi);
 		}
 
 		// ATE; If here, and we failed to add any more stuff, put failed one in our cursor...
@@ -1262,7 +1266,7 @@ void SoldierGetItemFromWorld(SOLDIERTYPE* const s, const INT32 iItemIndex, const
 			gfDontChargeAPsToPickup = TRUE;
 			WORLDITEM& wi = GetWorldItem(pItemPoolToDelete->iItemIndex);
 			HandleAutoPlaceFail(s, &wi.o, sGridNo);
-			RemoveItemFromPool(&wi);
+			RemoveItemFromPool(wi);
 		}
 	}
 	else
@@ -1285,7 +1289,7 @@ void SoldierGetItemFromWorld(SOLDIERTYPE* const s, const INT32 iItemIndex, const
 			}
 			else
 			{
-				RemoveItemFromPool(&wi);
+				RemoveItemFromPool(wi);
 
 				if (!AutoPlaceObject(s, &o, TRUE))
 				{
@@ -1320,6 +1324,11 @@ void SoldierGetItemFromWorld(SOLDIERTYPE* const s, const INT32 iItemIndex, const
 			// We've found something!
 			TacticalCharacterDialogue(s, QUOTE_SPOTTED_SOMETHING_ONE + Random(2));
 		}
+	}
+
+	if (!gfDontChargeAPsToPickup)
+	{
+		DeductPoints(s, AP_PICKUP_ITEM, 0);
 	}
 
 	gpTempSoldier = s;
@@ -1616,7 +1625,7 @@ INT32 InternalAddItemToPool(INT16* const psGridNo, OBJECTTYPE* const pObject, Vi
 
 	// Check for and existing pool on the object layer
 
-	ITEM_POOL* const new_item = MALLOC(ITEM_POOL);
+	ITEM_POOL* const new_item = new ITEM_POOL{};
 	new_item->pNext      = NULL;
 	new_item->iItemIndex = iWorldItem;
 
@@ -1752,7 +1761,7 @@ static void RemoveItemPool(INT16 sGridNo, UINT8 ubLevel)
 	// Check for and existing pool on the object layer
 	while ((pItemPool = GetItemPool(sGridNo, ubLevel)) != NULL)
 	{
-		RemoveItemFromPool(&GetWorldItem(pItemPool->iItemIndex));
+		RemoveItemFromPool(GetWorldItem(pItemPool->iItemIndex));
 	}
 }
 
@@ -1769,7 +1778,7 @@ void RemoveAllUnburiedItems( INT16 sGridNo, UINT8 ubLevel )
 		}
 		else
 		{
-			RemoveItemFromPool(&wi);
+			RemoveItemFromPool(wi);
 			// get new start pointer
 			pItemPool = GetItemPool(sGridNo, ubLevel);
 		}
@@ -1858,20 +1867,20 @@ void SetItemsVisibilityHidden(GridNo const grid_no, UINT8 const level)
 }
 
 
-void RemoveItemFromPool(WORLDITEM* const wi)
+void RemoveItemFromPool(WORLDITEM& wi)
 {
 	ITEM_POOL* prev = NULL;
-	ITEM_POOL* item = GetItemPool(wi->sGridNo, wi->ubLevel);
+	ITEM_POOL* item = GetItemPool(wi.sGridNo, wi.ubLevel);
 	for (;; prev = item, item = item->pNext)
 	{
 		// Could not find item? Maybe somebody got it before we got there!
 		if (item == NULL)
 			return;
-		if (&GetWorldItem(item->iItemIndex) == wi)
+		if (&GetWorldItem(item->iItemIndex) == &wi)
 			break;
 	}
 
-	RemoveItemGraphicFromWorld(wi->sGridNo, wi->ubLevel, item->pLevelNode);
+	RemoveItemGraphicFromWorld(wi.sGridNo, wi.ubLevel, item->pLevelNode);
 
 	RemoveFlashItemSlot(item);
 
@@ -1884,7 +1893,7 @@ void RemoveItemFromPool(WORLDITEM* const wi)
 	else if (next != NULL)
 	{
 		// This node was the head, set next as head at this gridno
-		for (LEVELNODE* l = GetStructNodes(wi->sGridNo, wi->ubLevel); l != NULL; l = l->pNext)
+		for (LEVELNODE* l = GetStructNodes(wi.sGridNo, wi.ubLevel); l != NULL; l = l->pNext)
 		{
 			if (!(l->uiFlags & LEVELNODE_ITEM))
 				continue;
@@ -1894,13 +1903,13 @@ void RemoveItemFromPool(WORLDITEM* const wi)
 	else
 	{
 		// This was the last item in the pool
-		gpWorldLevelData[wi->sGridNo].uiFlags &= ~MAPELEMENT_ITEMPOOL_PRESENT;
+		gpWorldLevelData[wi.sGridNo].uiFlags &= ~MAPELEMENT_ITEMPOOL_PRESENT;
 
 		// If there is a structure with the has item on top flag set, reset it,
 		// because there are no more items here
-		if (wi->bRenderZHeightAboveLevel > 0)
+		if (wi.bRenderZHeightAboveLevel > 0)
 		{
-			STRUCTURE* const s = FindStructure(wi->sGridNo, STRUCTURE_HASITEMONTOP);
+			STRUCTURE* const s = FindStructure(wi.sGridNo, STRUCTURE_HASITEMONTOP);
 			if (s != NULL)
 			{
 				s->fFlags &= ~STRUCTURE_HASITEMONTOP;
@@ -1911,7 +1920,7 @@ void RemoveItemFromPool(WORLDITEM* const wi)
 	}
 
 	RemoveItemFromWorld(item->iItemIndex);
-	MemFree(item);
+	delete item;
 }
 
 
@@ -1925,7 +1934,7 @@ void MoveItemPools(INT16 const sStartPos, INT16 const sEndPos)
 	{
 		WORLDITEM& wi            = GetWorldItem(pItemPool->iItemIndex);
 		WORLDITEM  TempWorldItem = wi;
-		RemoveItemFromPool(&wi);
+		RemoveItemFromPool(wi);
 		AddItemToPool(sEndPos, &TempWorldItem.o, INVISIBLE, TempWorldItem.ubLevel, TempWorldItem.usFlags, TempWorldItem.bRenderZHeightAboveLevel);
 	}
 }
@@ -2057,11 +2066,11 @@ void DrawItemPoolList(const ITEM_POOL* const pItemPool, const INT8 bZLevel, cons
 		}
 
 		WORLDITEM const& wi  = GetWorldItem(i->iItemIndex);
-		wchar_t   const* txt = ShortItemNames[wi.o.usItem];
-		wchar_t                buf[100];
+		ST::string txt = ShortItemNames[wi.o.usItem];
+		ST::string buf;
 		if (wi.o.ubNumberOfObjects > 1)
 		{
-			swprintf(buf, lengthof(buf), L"%ls (%d)", txt, wi.o.ubNumberOfObjects);
+			buf = ST::format("{} ({})", txt, wi.o.ubNumberOfObjects);
 			txt = buf;
 		}
 
@@ -2107,10 +2116,10 @@ void DrawItemPoolList(const ITEM_POOL* const pItemPool, const INT8 bZLevel, cons
 		}
 
 		WORLDITEM const&       wi  = GetWorldItem(i->iItemIndex);
-		wchar_t   const* const txt = ShortItemNames[wi.o.usItem];
+		ST::string txt = ShortItemNames[wi.o.usItem];
 		if (wi.o.ubNumberOfObjects > 1)
 		{
-			GDirtyPrintF(x, y, L"%ls (%d)", txt, wi.o.ubNumberOfObjects);
+			GDirtyPrint(x, y, ST::format("{} ({})", txt, wi.o.ubNumberOfObjects));
 		}
 		else
 		{
@@ -2306,7 +2315,7 @@ SOLDIERTYPE* VerifyGiveItem(SOLDIERTYPE* const pSoldier)
 			AddItemToPool(pSoldier->sGridNo, pSoldier->pTempObject, VISIBLE, pSoldier->bLevel, 0 , -1);
 
 			// Place it on the ground!
-			ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, TacticalStr[ ITEM_HAS_BEEN_PLACED_ON_GROUND_STR ], ShortItemNames[ pSoldier->pTempObject->usItem ] );
+			ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(TacticalStr[ ITEM_HAS_BEEN_PLACED_ON_GROUND_STR ], ShortItemNames[ pSoldier->pTempObject->usItem ]) );
 
 			// OK, disengage buddy
 			pSoldier->uiStatusFlags &= (~SOLDIER_ENGAGEDINACTION );
@@ -2316,7 +2325,7 @@ SOLDIERTYPE* VerifyGiveItem(SOLDIERTYPE* const pSoldier)
 				GetMan(ubTargetMercID).uiStatusFlags &= ~SOLDIER_ENGAGEDINACTION;
 			}
 
-			MemFree( pSoldier->pTempObject );
+			delete pSoldier->pTempObject;
 			pSoldier->pTempObject = NULL;
 
 		}
@@ -2343,7 +2352,7 @@ void SoldierGiveItemFromAnimation( SOLDIERTYPE *pSoldier )
 		return;
 	}
 	TempObject = *pSoldier->pTempObject;
-	MemFree( pSoldier->pTempObject );
+	delete pSoldier->pTempObject;
 	pSoldier->pTempObject = NULL;
 
 
@@ -2463,7 +2472,7 @@ void SoldierGiveItemFromAnimation( SOLDIERTYPE *pSoldier )
 
 				// We could not place it!
 				// Drop it on the ground?
-				ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, TacticalStr[ ITEM_HAS_BEEN_PLACED_ON_GROUND_STR ], ShortItemNames[ usItemNum ] );
+				ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(TacticalStr[ ITEM_HAS_BEEN_PLACED_ON_GROUND_STR ], ShortItemNames[ usItemNum ]) );
 
 				// OK, disengage buddy
 				pSoldier->uiStatusFlags &= (~SOLDIER_ENGAGEDINACTION );
@@ -2479,7 +2488,7 @@ void SoldierGiveItemFromAnimation( SOLDIERTYPE *pSoldier )
 				}
 
 				// OK, it's given, display message!
-				ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, TacticalStr[ ITEM_HAS_BEEN_GIVEN_TO_STR ], ShortItemNames[ usItemNum ], pTSoldier->name );
+				ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(TacticalStr[ ITEM_HAS_BEEN_GIVEN_TO_STR ], ShortItemNames[ usItemNum ], pTSoldier->name) );
 				if (usItemNum == MONEY)
 				{
 					// are we giving money to an NPC, to whom we owe money?
@@ -2492,12 +2501,12 @@ void SoldierGiveItemFromAnimation( SOLDIERTYPE *pSoldier )
 							gMercProfiles[pTSoldier->ubProfile].iBalance = 0;
 
 							// report the payment and set facts to indicate people not being owed money
-							ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, TacticalStr[ GUY_HAS_BEEN_PAID_IN_FULL_STR ], pTSoldier->name );
+							ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(TacticalStr[ GUY_HAS_BEEN_PAID_IN_FULL_STR ], pTSoldier->name) );
 						}
 						else
 						{
 							// report the payment
-							ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, TacticalStr[ GUY_STILL_OWED_STR ], pTSoldier->name, -gMercProfiles[pTSoldier->ubProfile].iBalance );
+							ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(TacticalStr[ GUY_STILL_OWED_STR ], pTSoldier->name, -gMercProfiles[pTSoldier->ubProfile].iBalance) );
 						}
 					}
 				}
@@ -2559,7 +2568,7 @@ static void StartBombMessageBox(SOLDIERTYPE* const s, INT16 const gridno)
 	gpTempSoldier = s;
 	gsTempGridno  = gridno;
 
-	wchar_t    const* text;
+	ST::string text;
 	OBJECTTYPE const& o = s->inv[HANDPOS];
 	if (o.usItem == REMOTETRIGGER)
 	{
@@ -2751,7 +2760,7 @@ static void SetOffBoobyTrap()
 	WORLDITEM& wi = GetWorldItem(g_booby_trap_item);
 	g_booby_trap_item = -1;
 	IgniteExplosion(0, gpWorldLevelData[wi.sGridNo].sHeight + wi.bRenderZHeightAboveLevel, wi.sGridNo, MINI_GRENADE, 0);
-	RemoveItemFromPool(&wi);
+	RemoveItemFromPool(wi);
 }
 
 
@@ -2925,19 +2934,18 @@ static void BoobyTrapMessageBoxCallBack(MessageBoxReturnValue const ubExitValue)
 			if ( AutoPlaceObject( gpBoobyTrapSoldier, &Object, TRUE ) )
 			{
 				// remove it from the ground
-				RemoveItemFromPool(&wi);
+				RemoveItemFromPool(wi);
 			}
 			else
 			{
 				// make sure the item in the world is untrapped
-				OBJECTTYPE& o = wi.o;
-				o.bTrap   = 0;
-				o.fFlags &= ~OBJECT_KNOWN_TO_BE_TRAPPED;
+				// ATE: Copy object into world items
+				wi.o = Object;
 
 				// ATE; If we failed to add to inventory, put failed one in our cursor...
 				gfDontChargeAPsToPickup = TRUE;
-				HandleAutoPlaceFail(gpBoobyTrapSoldier, &o, gsBoobyTrapGridNo);
-				RemoveItemFromPool(&wi);
+				HandleAutoPlaceFail(gpBoobyTrapSoldier, &(wi.o), gsBoobyTrapGridNo);
+				RemoveItemFromPool(wi);
 			}
 		}
 		else
@@ -3124,7 +3132,7 @@ BOOLEAN NearbyGroundSeemsWrong(SOLDIERTYPE* const s, const INT16 sGridNo, const 
 		// check for boobytraps
 		CFOR_EACH_WORLD_BOMB(wb)
 		{
-			WORLDITEM& wi = GetWorldItem(wb->iItemIndex);
+			WORLDITEM& wi = GetWorldItem(wb.iItemIndex);
 			if (wi.sGridNo != sNextGridNo)
 				continue;
 
@@ -3426,11 +3434,11 @@ static void ClearAllItemPools(void)
 
 
 // Refresh item pools
-void RefreshItemPools(const WORLDITEM* const pItemList, const INT32 iNumberOfItems)
+void RefreshItemPools(const std::vector<WORLDITEM>& pItemList)
 {
 	ClearAllItemPools( );
 
-	RefreshWorldItemsIntoItemPools(  pItemList, iNumberOfItems );
+	RefreshWorldItemsIntoItemPools(pItemList);
 }
 
 
@@ -3457,7 +3465,7 @@ INT16 FindNearestAvailableGridNoForItem( INT16 sSweetGridNo, INT8 ubRadius )
 
 	//create dummy soldier, and use the pathing to determine which nearby slots are
 	//reachable.
-	memset( &soldier, 0, sizeof( SOLDIERTYPE ) );
+	soldier = SOLDIERTYPE{};
 	soldier.bTeam = 1;
 	soldier.sGridNo = sSweetGridNo;
 

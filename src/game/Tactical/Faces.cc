@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "Directories.h"
 #include "Font.h"
 #include "HImage.h"
@@ -39,6 +37,11 @@
 #include "JAScreens.h"
 #include "ScreenIDs.h"
 #include "UILayout.h"
+
+#include <string_theory/format>
+#include <string_theory/string>
+
+#include <stdexcept>
 
 
 // Defines
@@ -177,7 +180,7 @@ FACETYPE& InitFace(const ProfileID id, SOLDIERTYPE* const s, const UINT32 uiInit
 	sprintf(ImageFile, face_file, face_id);
 	SGPVObject* const vo = AddVideoObjectFromFile(ImageFile);
 
-	memset(&f, 0, sizeof(f));
+	f = FACETYPE{};
 	f.uiFlags               = uiInitFlags;
 	f.fAllocated            = TRUE;
 	f.fDisabled             = TRUE; // default to off!
@@ -509,8 +512,6 @@ static void BlinkAutoFace(FACETYPE& f)
 		NewEye(f);
 
 		INT16 sFrame = f.sEyeFrame;
-		if (sFrame > 4) sFrame = 4;
-
 		if (sFrame > 0)
 		{
 			// Blit Accordingly!
@@ -808,8 +809,7 @@ static void HandleRenderFaceAdjustments(FACETYPE& f, BOOLEAN const fDisplayBuffe
 			{
 				SetFontDestBuffer(uiRenderBuffer);
 
-				wchar_t sString[32];
-				swprintf(sString, lengthof(sString), L"%d", s->bOppCnt);
+				ST::string sString = ST::format("{}", s->bOppCnt);
 
 				SetFontAttributes(TINYFONT1, FONT_DKRED, DEFAULT_SHADOW, FONT_NEARBLACK);
 
@@ -975,8 +975,7 @@ static void HandleRenderFaceAdjustments(FACETYPE& f, BOOLEAN const fDisplayBuffe
 			{
 				SetFontDestBuffer(uiRenderBuffer);
 
-				wchar_t sString[32];
-				swprintf(sString, lengthof(sString), L"%d/%d", sPtsAvailable, usMaximumPts);
+				ST::string sString = ST::format("{}/{}", sPtsAvailable, usMaximumPts);
 
 				SetFontAttributes(FONT10ARIAL, FONT_YELLOW);
 
@@ -1053,8 +1052,7 @@ static void NewEye(FACETYPE& f)
 {
 	switch(f.sEyeFrame)
 	{
-		case 0 :
-			//f.sEyeFrame = (INT16)Random(2); // normal - can blink or frown
+		case 0: // normal
 			if ( f.ubExpression == ANGRY )
 			{
 				f.ubEyeWait = 0;
@@ -1066,78 +1064,35 @@ static void NewEye(FACETYPE& f)
 				f.sEyeFrame = 4;
 			}
 			else
-			//if (f.sEyeFrame && Talk.talking && Talk.expression != DYING)
-			///    f.sEyeFrame = 3;
-			//else
 				f.sEyeFrame = 1;
 			break;
-		case 1 :
-			// starting to blink  - has to finish unless dying
-			//if (Talk.expression == DYING)
-			//    f.sEyeFrame = 1;
-			//else
+
+		case 1 : // blink (eyelid down)
 			f.sEyeFrame = 2;
 			break;
-		case 2 :
-			//f.sEyeFrame = (INT16)Random(2); // finishing blink - can go normal or frown
-			//if (f.sEyeFrame && Talk.talking)
-			//    f.sEyeFrame = 3;
-			//else
-			//   if (Talk.expression == ANGRY)
-				// f.sEyeFrame = 3;
-			//   else
+		case 2 : // blink (eyelid up)
 			f.sEyeFrame = 0;
 			break;
 
-		case 3 : //f.sEyeFrame = 4; break; // frown
-
+		case 3 : // frown (eyebrown down)
 			f.ubEyeWait++;
-
 			if ( f.ubEyeWait > 6 )
 			{
 				f.sEyeFrame = 0;
 			}
 			break;
 
-		case 4 :
-
+		case 4 : // surprise (eyebrow up)
 			f.ubEyeWait++;
-
 			if ( f.ubEyeWait > 6 )
 			{
 				f.sEyeFrame = 0;
 			}
 			break;
 
-		case 5 :
-			f.sEyeFrame = 6;
+		default:
+			SLOGW("unexpected eye frame (%d)", f.sEyeFrame);
 			f.sEyeFrame = 0;
-			break;
-
-		case 6 :
-			f.sEyeFrame = 7;
-			break;
-		case 7 :
-			f.sEyeFrame = (INT16)Random(2); // can stop frowning or continue
-		//if (f.sEyeFrame && Talk.expression != DYING)
-		//   f.sEyeFrame = 8;
-		//else
-		//    f.sEyeFrame = 0;
-		//break;
-		case 8 :
-			f.sEyeFrame =  9;
-			break;
-		case 9 :
-			f.sEyeFrame = 10;
-			break;
-		case 10:
-			f.sEyeFrame = 11;
-			break;
-		case 11:
-			f.sEyeFrame = 12;
-			break;
-		case 12:
-			f.sEyeFrame =  0;
 			break;
 	}
 }
@@ -1294,7 +1249,7 @@ static void FaceRestoreSavedBackgroundRect(FACETYPE const& f, INT16 const sDestL
 }
 
 
-void SetFaceTalking(FACETYPE& f, char const* const zSoundFile, wchar_t const* const zTextString)
+void SetFaceTalking(FACETYPE& f, const char* zSoundFile, const ST::string& zTextString)
 {
 	// Set face to talking
 	f.fTalking          = TRUE;

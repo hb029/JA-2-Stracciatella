@@ -460,7 +460,7 @@ try
 	AnimationLevel const ubLevelID = (c->def.bLevel == 0 ? ANI_STRUCT_LEVEL : ANI_ONROOF_LEVEL);
 
 	ANITILE_PARAMS AniParams;
-	memset(&AniParams, 0, sizeof(AniParams));
+	AniParams = ANITILE_PARAMS{};
 	AniParams.sGridNo        = c->def.sGridNo;
 	AniParams.ubLevelID      = ubLevelID;
 	AniParams.sDelay         = 150;
@@ -513,7 +513,7 @@ try
 
 	// Get root filename... this removes path and extension
 	// Used to find struct data for this corpse...
-	std::string zFilename(FileMan::getFileNameWithoutExt(AniParams.zCachedFile));
+	ST::string zFilename(FileMan::getFileNameWithoutExt(AniParams.zCachedFile));
 
 	// Add structure data.....
 	CheckForAndAddTileCacheStructInfo(n, c->def.sGridNo, ani->sCachedTileID, GetCorpseStructIndex(pCorpseDef, TRUE));
@@ -544,7 +544,7 @@ static void FreeCorpsePalettes(ROTTING_CORPSE* pCorpse)
 	{
 		if ( pCorpse->pShades[ cnt ] != NULL )
 		{
-			MemFree( pCorpse->pShades[ cnt ] );
+			delete[] pCorpse->pShades[ cnt ];
 			pCorpse->pShades[ cnt ] = NULL;
 		}
 	}
@@ -627,7 +627,7 @@ BOOLEAN TurnSoldierIntoCorpse(SOLDIERTYPE& s)
 	}
 
 	// Setup some values!
-	memset( &Corpse, 0, sizeof( Corpse ) );
+	Corpse = ROTTING_CORPSE_DEFINITION{};
 	Corpse.ubBodyType = s.ubBodyType;
 	Corpse.sGridNo    = s.sGridNo;
 	Corpse.bLevel     = s.bLevel;
@@ -638,10 +638,10 @@ BOOLEAN TurnSoldierIntoCorpse(SOLDIERTYPE& s)
 		Corpse.sHeightAdjustment = s.sHeightAdjustment - WALL_HEIGHT;
 	}
 
-	SET_PALETTEREP_ID(Corpse.HeadPal,  s.HeadPal);
-	SET_PALETTEREP_ID(Corpse.VestPal,  s.VestPal);
-	SET_PALETTEREP_ID(Corpse.SkinPal,  s.SkinPal);
-	SET_PALETTEREP_ID(Corpse.PantsPal, s.PantsPal);
+	Corpse.HeadPal  = s.HeadPal;
+	Corpse.VestPal  = s.VestPal;
+	Corpse.SkinPal  = s.SkinPal;
+	Corpse.PantsPal = s.PantsPal;
 
 	if (s.bCamo != 0)
 	{
@@ -810,7 +810,7 @@ static void AddCrowToCorpse(ROTTING_CORPSE* pCorpse)
 	if (GetRoom(pCorpse->def.sGridNo) != NO_ROOM) return;
 
 	// Put him flying over corpse pisition
-	memset( &MercCreateStruct, 0, sizeof( MercCreateStruct ) );
+	MercCreateStruct = SOLDIERCREATE_STRUCT{};
 	MercCreateStruct.ubProfile = NO_PROFILE;
 	MercCreateStruct.sSectorX = gWorldSectorX;
 	MercCreateStruct.sSectorY = gWorldSectorY;
@@ -1053,7 +1053,7 @@ void VaporizeCorpse( INT16 sGridNo, UINT16 usStructureID )
 	if ( GridNoOnScreen( sBaseGridNo ) )
 	{
 		// Add explosion
-		memset( &AniParams, 0, sizeof( ANITILE_PARAMS ) );
+		AniParams = ANITILE_PARAMS{};
 		AniParams.sGridNo = sBaseGridNo;
 		AniParams.ubLevelID = ANI_STRUCT_LEVEL;
 		AniParams.sDelay = (INT16)( 80 );
@@ -1102,7 +1102,7 @@ INT16 FindNearestAvailableGridNoForCorpse( ROTTING_CORPSE_DEFINITION *pDef, INT8
 
 	// Get root filename... this removes path and extension
 	// Used to find struct data for this corpse...
-	std::string zFilename(FileMan::getFileNameWithoutExt(zCorpseFilenames[pDef->ubType]));
+	ST::string zFilename(FileMan::getFileNameWithoutExt(zCorpseFilenames[pDef->ubType]));
 
 	pStructureFileRef = GetCachedTileStructureRefFromFilename( zFilename.c_str() );
 
@@ -1118,7 +1118,7 @@ INT16 FindNearestAvailableGridNoForCorpse( ROTTING_CORPSE_DEFINITION *pDef, INT8
 
 	//create dummy soldier, and use the pathing to determine which nearby slots are
 	//reachable.
-	memset( &soldier, 0, sizeof( SOLDIERTYPE ) );
+	soldier = SOLDIERTYPE{};
 	soldier.bTeam = 1;
 	soldier.sGridNo = sSweetGridNo;
 
@@ -1228,7 +1228,6 @@ BOOLEAN IsValidDecapitationCorpse(const ROTTING_CORPSE* const c)
 ROTTING_CORPSE *GetCorpseAtGridNo( INT16 sGridNo, INT8 bLevel )
 {
 	STRUCTURE *pStructure, *pBaseStructure;
-	INT16 sBaseGridNo;
 
 	pStructure = FindStructure( sGridNo, STRUCTURE_CORPSE );
 
@@ -1237,12 +1236,9 @@ ROTTING_CORPSE *GetCorpseAtGridNo( INT16 sGridNo, INT8 bLevel )
 		// Get base....
 		pBaseStructure = FindBaseStructure( pStructure );
 
-		// Find base gridno...
-		sBaseGridNo = pBaseStructure->sGridNo;
-
 		if ( pBaseStructure != NULL )
 		{
-			return( FindCorpseBasedOnStructure( sBaseGridNo, pBaseStructure ) );
+			return( FindCorpseBasedOnStructure( pBaseStructure->sGridNo, pBaseStructure ) );
 		}
 	}
 

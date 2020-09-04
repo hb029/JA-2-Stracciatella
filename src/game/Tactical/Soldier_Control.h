@@ -11,6 +11,8 @@
 #include "Overhead_Types.h"
 #include "Item_Types.h"
 
+#include <string_theory/string>
+
 
 // ANDREW: these are defines for OKDestanation usage - please move to approprite file
 #define IGNOREPEOPLE					0
@@ -303,6 +305,9 @@ enum
 };
 
 
+#define SOLDIERTYPE_NAME_LENGTH 10
+
+
 struct SOLDIERTYPE
 {
 	// ID
@@ -340,7 +345,7 @@ struct SOLDIERTYPE
 	UINT8 ubAttackingHand;
 	// traits
 	INT16 sWeightCarriedAtTurnStart;
-	wchar_t name[ 10 ];
+	ST::string name;
 
 	INT8 bVisible; // to render or not to render...
 
@@ -456,10 +461,10 @@ struct SOLDIERTYPE
 
 
 	// PALETTE MANAGEMENT STUFF
-	PaletteRepID HeadPal; // 30
-	PaletteRepID PantsPal; // 30
-	PaletteRepID VestPal; // 30
-	PaletteRepID SkinPal; // 30
+	ST::string HeadPal;
+	ST::string PantsPal;
+	ST::string VestPal;
+	ST::string SkinPal;
 
 	UINT16 *pShades[ NUM_SOLDIER_SHADES ]; // Shading tables
 	UINT16 *pGlowShades[ 20 ]; //
@@ -706,7 +711,7 @@ struct SOLDIERTYPE
 	UINT32 uiTimeSameBattleSndDone;
 	INT8 bOldBattleSnd;
 	BOOLEAN fContractPriceHasIncreased;
-	INT32 iBurstSoundID;
+	UINT32 uiBurstSoundID;
 	BOOLEAN fFixingSAMSite;
 	BOOLEAN fFixingRobot;
 	INT8 bSlotItemTakenFrom;
@@ -794,7 +799,7 @@ struct SOLDIERTYPE
 	BOOLEAN fDoingExternalDeath;
 	INT8 bCorpseQuoteTolerance;
 	INT32 iPositionSndID;
-	INT32 iTuringSoundID;
+	UINT32 uiTuringSoundID;
 	UINT8 ubLastDamageReason;
 	BOOLEAN fComplainedThatTired;
 	INT16 sLastTwoLocations[2];
@@ -808,7 +813,7 @@ struct SOLDIERTYPE
 #define CFOR_EACH_SOLDIER_INV_SLOT(iter, soldier) \
 	BASE_FOR_EACH_SOLDIER_INV_SLOT(OBJECTTYPE const, iter, soldier)
 
-#define HEALTH_INCREASE				0x0001
+#define HEALTH_INCREASE					0x0001
 #define STRENGTH_INCREASE				0x0002
 #define DEX_INCREASE					0x0004
 #define AGIL_INCREASE					0x0008
@@ -854,7 +859,7 @@ struct ANIM_PROF
 struct PaletteReplacementType
 {
 	UINT8            ubType;
-	PaletteRepID     ID;
+	ST::string       ID;
 	UINT8            ubPaletteSize;
 	SGPPaletteEntry* rgb;
 };
@@ -932,8 +937,8 @@ void ReviveSoldier( SOLDIERTYPE *pSoldier );
 
 // Palette functions for soldiers
 void  CreateSoldierPalettes(SOLDIERTYPE&);
-UINT8 GetPaletteRepIndexFromID(const PaletteRepID pal_rep);
-void  SetPaletteReplacement(SGPPaletteEntry*, PaletteRepID);
+UINT8 GetPaletteRepIndexFromID(const ST::string& pal_rep);
+void  SetPaletteReplacement(SGPPaletteEntry* p8BPPPalette, const ST::string& aPalRep);
 void  LoadPaletteData(void);
 void  DeletePaletteData(void);
 

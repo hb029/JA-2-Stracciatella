@@ -327,25 +327,6 @@ static char const* const szAmbientEffects[NUM_AMBIENTS] =
 	SOUNDSDIR "/night_bird3.wav"
 };
 
-static UINT8 const AmbientVols[NUM_AMBIENTS] =
-{
-	25,		// lightning 1
-	25,		// lightning 2
-	10,		// rain 1
-	25,		// bird 1
-	25,		// bird 2
-	10,		// crickets 1
-	10,		// crickets 2
-	25,		// cricket 1
-	25,		// cricket 2
-	25,		// owl 1
-	25,		// owl 2
-	25,		// owl 3
-	25,		// night bird 1
-	25		// night bird 2
-};
-
-
 void ShutdownJA2Sound(void)
 {
 	SoundStopAll();
@@ -426,7 +407,7 @@ UINT32 PlayLocationJA2Sample(UINT16 const grid_no, SoundID const idx, UINT32 con
 }
 
 
-UINT32 PlayLocationJA2Sample(UINT16 const grid_no, const std::string &sample, UINT32 const base_vol, UINT32 const loops)
+UINT32 PlayLocationJA2Sample(UINT16 const grid_no, const ST::string &sample, UINT32 const base_vol, UINT32 const loops)
 {
 	UINT32 const vol = SoundVolume(base_vol, grid_no);
 	UINT32 const pan = SoundDir(grid_no);
@@ -639,7 +620,7 @@ INT8 SoundVolume( INT8 bInitialVolume, INT16 sGridNo )
 struct POSITIONSND
 {
 	INT16         sGridNo;
-	INT32         iSoundSampleID;
+	UINT32        uiSoundSampleID;
 	SoundID       iSoundToPlay;
 	const SOLDIERTYPE* SoundSource;
 	BOOLEAN       fAllocated;
@@ -688,13 +669,13 @@ INT32 NewPositionSnd(INT16 const sGridNo, SOLDIERTYPE const* const SoundSource, 
 	if (idx == -1) return -1;
 
 	POSITIONSND& p = gPositionSndData[idx];
-	memset(&p, 0, sizeof(p));
+	p = POSITIONSND{};
 	p.fInActive      = !gfPositionSoundsActive;
 	p.sGridNo        = sGridNo;
 	p.SoundSource    = SoundSource;
 	p.fAllocated     = TRUE;
 	p.iSoundToPlay   = iSoundToPlay;
-	p.iSoundSampleID = NO_SAMPLE;
+	p.uiSoundSampleID = NO_SAMPLE;
 
 	return idx;
 }
@@ -711,9 +692,9 @@ void DeletePositionSnd( INT32 iPositionSndIndex )
 		pPositionSnd->fInActive = TRUE;
 
 		// End sound...
-		if ( pPositionSnd->iSoundSampleID != NO_SAMPLE )
+		if ( pPositionSnd->uiSoundSampleID != NO_SAMPLE )
 		{
-			SoundStop( pPositionSnd->iSoundSampleID );
+			SoundStop( pPositionSnd->uiSoundSampleID );
 		}
 
 		pPositionSnd->fAllocated = FALSE;
@@ -748,7 +729,7 @@ void SetPositionSndsActive(void)
 
 		p.fInActive      = FALSE;
 		// Begin sound effect, Volume 0
-		p.iSoundSampleID = PlayJA2Sample(p.iSoundToPlay, 0, 0, MIDDLEPAN);
+		p.uiSoundSampleID = PlayJA2Sample(p.iSoundToPlay, 0, 0, MIDDLEPAN);
 	}
 }
 
@@ -763,11 +744,11 @@ void SetPositionSndsInActive(void)
 
 		p.fInActive = TRUE;
 
-		if (p.iSoundSampleID == NO_SAMPLE) continue;
+		if (p.uiSoundSampleID == NO_SAMPLE) continue;
 
 		// End sound
-		SoundStop(p.iSoundSampleID);
-		p.iSoundSampleID = NO_SAMPLE;
+		SoundStop(p.uiSoundSampleID);
+		p.uiSoundSampleID = NO_SAMPLE;
 	}
 }
 
@@ -865,16 +846,16 @@ void SetPositionSndsVolumeAndPanning(void)
 		POSITIONSND const& p = gPositionSndData[i];
 		if (!p.fAllocated)                 continue;
 		if (p.fInActive)                   continue;
-		if (p.iSoundSampleID == NO_SAMPLE) continue;
+		if (p.uiSoundSampleID == NO_SAMPLE) continue;
 
 		INT8 volume = PositionSoundVolume(15, p.sGridNo);
 		if (p.SoundSource && p.SoundSource->bVisible == -1)
 		{ // Limit volume
 			if (volume > 10) volume = 10;
 		}
-		SoundSetVolume(p.iSoundSampleID, volume);
+		SoundSetVolume(p.uiSoundSampleID, volume);
 
 		INT8 const pan = PositionSoundDir(p.sGridNo);
-		SoundSetPan(p.iSoundSampleID, pan);
+		SoundSetPan(p.uiSoundSampleID, pan);
 	}
 }

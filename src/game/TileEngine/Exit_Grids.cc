@@ -191,7 +191,7 @@ void AttemptToChangeFloorLevel(INT8 const relative_z_level)
 		MoveAllGroupsInCurrentSectorToSector(gWorldSectorX, gWorldSectorY, look_for_level);
 		if (look_for_level)
 		{
-			ScreenMsg(FONT_YELLOW, MSG_INTERFACE, pMessageStrings[MSG_ENTERING_LEVEL], look_for_level);
+			ScreenMsg(FONT_YELLOW, MSG_INTERFACE, st_format_printf(pMessageStrings[MSG_ENTERING_LEVEL], look_for_level));
 		}
 		else
 		{
@@ -229,7 +229,7 @@ UINT16 FindGridNoFromSweetSpotCloseToExitGrid(const SOLDIERTYPE* const pSoldier,
 
 	//create dummy soldier, and use the pathing to determine which nearby slots are
 	//reachable.
-	memset( &soldier, 0, sizeof( SOLDIERTYPE ) );
+	soldier = SOLDIERTYPE{};
 	soldier.bLevel = 0;
 	soldier.bTeam = 1;
 	soldier.sGridNo = pSoldier->sGridNo;
@@ -366,7 +366,7 @@ UINT16 FindClosestExitGrid( SOLDIERTYPE *pSoldier, INT16 sSrcGridNo, INT8 ubRadi
 
 TEST(ExitGrids, asserts)
 {
-	EXPECT_EQ(sizeof(EXITGRID), 6);
+	EXPECT_EQ(sizeof(EXITGRID), 6u);
 }
 
 #endif

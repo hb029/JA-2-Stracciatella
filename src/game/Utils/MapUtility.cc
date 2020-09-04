@@ -29,6 +29,9 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 
+#include <string_theory/format>
+
+
 #define MINIMAP_X_SIZE		88
 #define MINIMAP_Y_SIZE		44
 
@@ -80,8 +83,8 @@ ScreenID MapUtilScreenHandle()
 		// USING BRET's STUFF FOR LOOPING FILES/CREATING LIST, hence AddToFDlgList.....
 		try
 		{
-			std::vector<std::string> files = GCM->getAllMaps();
-			for (const std::string &file : files)
+			std::vector<ST::string> files = GCM->getAllMaps();
+			for (const ST::string &file : files)
 			{
 				FileList = AddToFDlgList(FileList, file.c_str());
 				++sFiles;
@@ -92,7 +95,7 @@ ScreenID MapUtilScreenHandle()
 		FListNode = FileList;
 
 		//Allocate 24 bit Surface
-		p24BitValues = MALLOCN(SGPPaletteEntry, MINIMAP_X_SIZE * MINIMAP_Y_SIZE);
+		p24BitValues = new SGPPaletteEntry[MINIMAP_X_SIZE * MINIMAP_Y_SIZE]{};
 
 		//Allocate 8-bit surface
 		gi8BitMiniMap = AddVideoSurface(88, 44, 8);
@@ -257,13 +260,13 @@ ScreenID MapUtilScreenHandle()
 			}
 		}
 
-		std::string zFilename2(GCM->getRadarMapResourceName(FileMan::replaceExtension(zFilename, ".sti")));
+		ST::string zFilename2(GCM->getRadarMapResourceName(FileMan::replaceExtension(zFilename, "sti")));
 		WriteSTIFile( pDataPtr, pPalette, MINIMAP_X_SIZE, MINIMAP_Y_SIZE, zFilename2.c_str(), CONVERT_ETRLE_COMPRESS, 0 );
 	}
 
 	SetFontAttributes(TINYFONT1, FONT_MCOLOR_DKGRAY);
-	mprintf(10, 340, L"Writing radar image %hs", zFilename2);
-	mprintf(10, 350, L"Using tileset %ls", gTilesets[giCurrentTilesetID].zName);
+	MPrint(10, 340, ST::format("Writing radar image {}", zFilename2));
+	MPrint(10, 350, ST::format("Using tileset {}", gTilesets[giCurrentTilesetID].zName));
 
 	InvalidateScreen( );
 

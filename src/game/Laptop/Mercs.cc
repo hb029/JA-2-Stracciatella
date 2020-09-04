@@ -30,6 +30,9 @@
 #include "Debug.h"
 #include "Font_Control.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
 
 #define MERC_TEXT_FONT			FONT12ARIAL
 #define MERC_TEXT_COLOR			FONT_MCOLOR_WHITE
@@ -166,7 +169,7 @@ UINT8			gubCurMercIndex;
 
 static MercPopUpBox* g_merc_popup_box;
 
-static wchar_t gsSpeckDialogueTextPopUp[900];
+static ST::string gsSpeckDialogueTextPopUp;
 static UINT16  gusSpeckDialogueX;
 static UINT16  gusSpeckDialogueActualWidth;
 
@@ -883,13 +886,14 @@ static void HandleTalkingSpeck(void)
 			if( DisplayMercVideoIntro( MERC_INTRO_TIME ) )
 			{
 				//NULL out the string
-				gsSpeckDialogueTextPopUp[0] = '\0';
+				gsSpeckDialogueTextPopUp = ST::null;
 
 				//Start speck talking
-				if( gusMercVideoSpeckSpeech != MERC_VIDEO_SPECK_SPEECH_NOT_TALKING || 	gusMercVideoSpeckSpeech != MERC_VIDEO_SPECK_HAS_TO_TALK_BUT_QUOTE_NOT_CHOSEN_YET )
-					StartSpeckTalking( gusMercVideoSpeckSpeech );
+				if( !StartSpeckTalking( gusMercVideoSpeckSpeech ) )
+				{
+					gusMercVideoSpeckSpeech = MERC_VIDEO_SPECK_SPEECH_NOT_TALKING;
+				}
 
-				gusMercVideoSpeckSpeech = MERC_VIDEO_SPECK_SPEECH_NOT_TALKING;
 				gubCurrentMercVideoMode = MERC_VIDEO_VIDEO_MODE;
 			}
 			break;
@@ -933,7 +937,7 @@ static void HandleTalkingSpeck(void)
 				}
 
 
-				if( gsSpeckDialogueTextPopUp[0] != L'\0' )
+				if (!gsSpeckDialogueTextPopUp.empty())
 				{
 					//guiAccountBoxButton->Draw();
 					//guiAccountBoxButton->uiFlags |= BUTTON_FORCE_UNDIRTY;
@@ -983,7 +987,7 @@ static void HandleTalkingSpeck(void)
 static void MercSiteSubTitleRegionCallBack(MOUSE_REGION* pRegion, INT32 iReason);
 
 
-void DisplayTextForSpeckVideoPopUp(const wchar_t* const pString)
+void DisplayTextForSpeckVideoPopUp(const ST::string& str)
 {
 	UINT16	usActualHeight;
 
@@ -992,7 +996,7 @@ void DisplayTextForSpeckVideoPopUp(const wchar_t* const pString)
 		return;
 
 	//add the "" around the speech.
-	swprintf( gsSpeckDialogueTextPopUp, lengthof(gsSpeckDialogueTextPopUp), L"\"%ls\"", pString );
+	gsSpeckDialogueTextPopUp = ST::format("\"{}\"", str);
 
 	gfDisplaySpeckTextBox = TRUE;
 
@@ -1222,7 +1226,7 @@ static BOOLEAN GetSpeckConditionalOpening(BOOLEAN fJustEnteredScreen)
 		}
 
 		//loop through all the mercs and see if any are dead and the quote is not said
-		for(ubCnt=MERC_FIRST_MERC ; ubCnt<MERC_LAST_MERC; ubCnt++ )
+		for(ubCnt=MERC_FIRST_MERC ; ubCnt<=MERC_LAST_MERC; ubCnt++ )
 		{
 			MERCPROFILESTRUCT& p = GetProfile(ubCnt);
 			if (!IsMercDead(p)) continue;
@@ -1611,9 +1615,9 @@ static INT16 GetRandomQuoteThatHasBeenSaidTheLeast(void)
 		//if the quote can be said ( the merc has not been hired )
 		if( CanMercQuoteBeSaid( gNumberOfTimesQuoteSaid[cnt].ubQuoteID ) )
 		{
-			//if this quote has been said less times then the last one
-			if( gNumberOfTimesQuoteSaid[cnt].uiNumberOfTimesQuoteSaid < gNumberOfTimesQuoteSaid[ sSmallestNumber ].uiNumberOfTimesQuoteSaid )
-			{
+			if (sSmallestNumber == 255 ||
+				gNumberOfTimesQuoteSaid[cnt].uiNumberOfTimesQuoteSaid < gNumberOfTimesQuoteSaid[sSmallestNumber].uiNumberOfTimesQuoteSaid)
+			{	// if this quote has been said less times then the last one, or this is the first one we check
 				sSmallestNumber = cnt;
 			}
 		}
