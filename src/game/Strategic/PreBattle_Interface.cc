@@ -887,6 +887,7 @@ void RenderPreBattleInterface()
 		if (gubEnemyEncounterCode == CREATURE_ATTACK_CODE        ||
 			gubEnemyEncounterCode == BLOODCAT_AMBUSH_CODE        ||
 			gubEnemyEncounterCode == ENTERING_BLOODCAT_LAIR_CODE ||
+			gubEnemyEncounterCode == ENEMY_AIR_RAID_CODE ||
 			WhatPlayerKnowsAboutEnemiesInSector(sec_x, sec_y) != KNOWS_HOW_MANY)
 		{ // Don't know how many
 			enemies = "?";
@@ -894,7 +895,6 @@ void RenderPreBattleInterface()
 		else
 		{ // Know exactly how many
 			INT32 n = NumEnemiesInSector(sec_x, sec_y);
-			if (InAirRaid()) n += 1;
 			str = ST::format("{}", n);
 			enemies = str;
 		}

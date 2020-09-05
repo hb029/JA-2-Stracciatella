@@ -40,6 +40,7 @@
 #include "Directories.h"
 #include "Meanwhile.h"
 #include "SamSiteModel.h"
+#include "Creature_Spreading.h"
 
 #include "CalibreModel.h"
 #include "ContentManager.h"
@@ -362,11 +363,16 @@ static INT16 PickLocationNearAnyMercInSector(void)
 {
 	// Loop through all our guys and randomly say one from someone in our sector
 	INT32 num_mercs = 0;
-	const SOLDIERTYPE* mercs_in_sector[20];
+	const SOLDIERTYPE* mercs_in_sector[40];
 	CFOR_EACH_IN_TEAM(s, OUR_TEAM)
 	{
 		// Add guy if he's a candidate...
 		if (OkControllableMerc(s)) mercs_in_sector[num_mercs++] = s;
+	}
+	CFOR_EACH_IN_TEAM(s, MILITIA_TEAM)
+	{
+		// Add guy if he's a candidate...
+		if (s->bLife > 0) mercs_in_sector[num_mercs++] = s;
 	}
 
 	return num_mercs > 0 ? mercs_in_sector[Random(num_mercs)]->sGridNo : NOWHERE;
@@ -468,6 +474,7 @@ static void AirRaidStart(void)
 	// If we are not in combat, change music mode...
 	if ( !( gTacticalStatus.uiFlags & INCOMBAT ) )
 	{
+		gfUseCreatureMusic = false;
 		SetMusicMode( MUSIC_TACTICAL_BATTLE );
 	}
 }
@@ -587,7 +594,7 @@ static void AirRaidLookForDive(void)
 	}
 
 	// End if we have made desired # of dives...
-	if ( gbNumDives == gbMaxDives )
+	if ( gbNumDives >= 4*gbMaxDives || NumEnemyInSector() > 0)
 	{
 		// Air raid is over....
 		gubAirRaidMode = AIR_RAID_START_END;
@@ -1253,7 +1260,7 @@ void HandleAirRaid( )
 
 BOOLEAN InAirRaid( )
 {
-	return( gfInAirRaid );
+	return( gfInAirRaid || gubAirRaidMode == AIR_RAID_PENDING);
 }
 
 
@@ -1433,7 +1440,11 @@ static void SetTeamStatusGreen(INT8 team)
 {
 	FOR_EACH_IN_TEAM(s, team)
 	{
-		if (s->bInSector) s->bAlertStatus = STATUS_GREEN;
+		if (s->bInSector)
+		{
+			s->bAlertStatus = STATUS_GREEN;
+			s->bUnderFire = 0;
+		}
 	}
 	gTacticalStatus.Team[team].bAwareOfOpposition = FALSE;
 }
@@ -1443,7 +1454,11 @@ static void SetTeamStatusRed(INT8 team)
 {
 	FOR_EACH_IN_TEAM(s, team)
 	{
-		if (s->bInSector) s->bAlertStatus = STATUS_RED;
+		if (s->bInSector)
+		{
+			s->bAlertStatus = STATUS_RED;
+			s->bUnderFire = gAirRaidDef.bIntensity;
+		}
 	}
 	gTacticalStatus.Team[team].bAwareOfOpposition = TRUE;
 }
