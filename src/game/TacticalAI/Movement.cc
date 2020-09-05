@@ -351,7 +351,7 @@ INT16 InternalGoAsFarAsPossibleTowards(SOLDIERTYPE *pSoldier, INT16 sDesGrid, IN
 	// would be too easy to throw rocks in water, etc. & distract the AI
 	if (Water(sDesGrid))
 	{
-		return(NOWHERE);
+		//return(NOWHERE);
 	}
 
 	fPathFlags = 0;
@@ -380,7 +380,7 @@ INT16 InternalGoAsFarAsPossibleTowards(SOLDIERTYPE *pSoldier, INT16 sDesGrid, IN
 	}
 
 	// first step: try to find an OK destination at or near the desired gridno
-	if (!LegalNPCDestination(pSoldier,sDesGrid,ENSURE_PATH,NOWATER,fPathFlags))
+	if (!LegalNPCDestination(pSoldier,sDesGrid,ENSURE_PATH, WATEROK/*NOWATER*/,fPathFlags))
 	{
 		SLOGD("destination Grid # itself not valid, looking around it");
 		if ( CREATURE_OR_BLOODCAT( pSoldier ) )
@@ -422,7 +422,7 @@ INT16 InternalGoAsFarAsPossibleTowards(SOLDIERTYPE *pSoldier, INT16 sDesGrid, IN
 				if (sTempDest == sDesGrid)
 					continue;
 
-				if (LegalNPCDestination(pSoldier,sTempDest,ENSURE_PATH,NOWATER,0))
+				if (LegalNPCDestination(pSoldier,sTempDest,ENSURE_PATH,WATEROK/*NOWATER*/,0))
 				{
 					fFound = TRUE;            // found a spot
 					break;                   // stop checking in other directions

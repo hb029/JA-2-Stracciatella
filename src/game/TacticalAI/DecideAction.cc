@@ -1954,10 +1954,10 @@ INT8 DecideActionRed(SOLDIERTYPE *pSoldier, UINT8 ubUnconsciousOK)
 			}
 
 			// while one of the three main RED REACTIONS remains viable
-			while ((bSeekPts > -90) || (bHelpPts > -90) || (bHidePts > -90))
+			while ((bSeekPts > -99) || (bHelpPts > -99) || (bHidePts > -99))
 			{
 				// if SEEKING is possible and at least as desirable as helping or hiding
-				if ( (bSeekPts > -90) && (bSeekPts >= bHelpPts) && (bSeekPts >= bHidePts) && (bSeekPts >= bWatchPts ) )
+				if ( (bSeekPts > -99) && (bSeekPts >= bHelpPts) && (bSeekPts >= bHidePts) && (bSeekPts >= bWatchPts ) )
 				{
 					#ifdef AI_TIMING_TESTS
 					uiStartTime = GetJA2Clock();
@@ -3649,9 +3649,27 @@ static INT8 DecideActionBlack(SOLDIERTYPE* pSoldier)
 	// NOT IMPLEMENTED
 
 	////////////////////////////////////////////////////////////////////////////
+	// FALL BACK TO BEHAVE LIKE A BOXER WHEN FACING THE ENEMY WITH NO CLUE
+	////////////////////////////////////////////////////////////////////////////
+	if (pSoldier->bActionPoints == pSoldier->bInitialActionPoints)
+	{
+		sClosestOpponent = ClosestSeenOpponent(pSoldier, NULL, NULL);
+		if (sClosestOpponent != NOWHERE)
+		{
+			pSoldier->bOrders = SEEKENEMY;
+			pSoldier->usActionData = AdvanceToFiringRange(pSoldier, sClosestOpponent);
+			if (pSoldier->usActionData != NOWHERE)
+			{
+				return(AI_ACTION_SEEK_OPPONENT);
+			}
+		}
+	}
+
+	////////////////////////////////////////////////////////////////////////////
 	// DO NOTHING: Not enough points left to move, so save them for next turn
 	////////////////////////////////////////////////////////////////////////////
 	// by default, if everything else fails, just stand in place and wait
+
 	pSoldier->usActionData = NOWHERE;
 	return(AI_ACTION_NONE);
 }
