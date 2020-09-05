@@ -1505,7 +1505,7 @@ void EndAirRaid( )
 
 BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY)
 {
-	UINT8 ubSamNumber = 0;
+	INT8 bSamNumber = -1;
 	INT8 bSAMCondition;
 	UINT8 ubChance;
 
@@ -1536,20 +1536,20 @@ BOOLEAN WillAirRaidBeStopped(INT16 sSectorX, INT16 sSectorY)
 	}
 
 	// which SAM controls this sector?
-	ubSamNumber = GCM->getControllingSamSite(SECTOR(sSectorX, sSectorY));
+	bSamNumber = GCM->getControllingSamSite(SECTOR(sSectorX, sSectorY));
 
-	SLOGD("WillAirRaidBeStopped: SAM number = %d", ubSamNumber);
+	SLOGD("WillAirRaidBeStopped: SAM number = %d", bSamNumber);
 
 	// if none of them
-	if (ubSamNumber == 0)
+	if (bSamNumber < 0)
 	{
 		return(FALSE);
 	}
 
 	// get the condition of that SAM site (NOTE: SAM #s are 1-4, but indexes are 0-3!!!)
 	auto samList = GCM->getSamSites();
-	Assert(ubSamNumber <= NUMBER_OF_SAMS);
-	bSAMCondition = StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(samList[ubSamNumber - 1]->sectorId)].bSAMCondition;
+	Assert(bSamNumber < NUMBER_OF_SAMS);
+	bSAMCondition = StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(samList[bSamNumber]->sectorId)].bSAMCondition;
 
 	// if it's too busted to work, then it can't stop an air raid
 	SLOGD("WillAirRaidBeStopped: SAM condition = %d", bSAMCondition);

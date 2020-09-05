@@ -514,6 +514,12 @@ void DrawMap(void)
 				INT8 bControllingSAM = GCM->getControllingSamSite(SECTOR(cnt, cnt2));
 				auto samList = GCM->getSamSites();
 
+				// No controlling SAM
+				if (bControllingSAM < 0)
+				{
+					continue;
+				}
+
 				// get the condition of that SAM site (NOTE: SAM #s are 1-4, but indexes are 0-3!!!)
 				Assert(bControllingSAM >= 0 && (UINT8)bControllingSAM < samList.size());
 
@@ -3776,6 +3782,17 @@ static BOOLEAN CanMercsScoutThisSector(INT16 sSectorX, INT16 sSectorY, INT8 bSec
 		if( ( pSoldier->sSectorX == sSectorX ) && ( pSoldier->sSectorY == sSectorY ) && ( pSoldier->bSectorZ == bSectorZ ) )
 		{
 			return( TRUE );
+		}
+
+		// is it in the open to see?
+		INT16 const scout_range = 25;
+		if (
+			((sSectorX - pSoldier->sSectorX) * (sSectorX - pSoldier->sSectorX) +
+				(sSectorY - pSoldier->sSectorY) * (sSectorY - pSoldier->sSectorY)) * 100
+			<= scout_range * scout_range &&
+			bSectorZ == 0)
+		{
+			return(TRUE);
 		}
 	}
 
