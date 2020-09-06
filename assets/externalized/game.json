@@ -35,12 +35,12 @@
     //  25 ms gives approx. 40 cycles per second (and 40 frames per second, since the screen is updated on every cycle).
     //  Decreasing this value will increase the speed of the game (enemy movement, bullets speed, etc).
     //  Stracciatella standard value: 25
-    "ms_per_game_cycle": 25,
+    "ms_per_game_cycle": 20,
 
     //  Number of milliseconds for one game time slice.
     //  Decreasing this value will speed up UI transitions and soldier animations.
     //  Stracciatella standard value: 10
-    "ms_per_time_slice": 10,
+    "ms_per_time_slice": 8,
 
     //  --------------------------------------------------
     //  Gameplay settings
