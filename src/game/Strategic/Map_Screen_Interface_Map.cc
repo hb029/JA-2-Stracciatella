@@ -515,7 +515,7 @@ void DrawMap(void)
 				auto samList = GCM->getSamSites();
 
 				// get the condition of that SAM site (NOTE: SAM #s are 1-4, but indexes are 0-3!!!)
-				Assert(bControllingSAM >= -1 && (UINT8)bControllingSAM < samList.size());
+				Assert(bControllingSAM >= -1 && bControllingSAM <= (INT8)samList.size());
 
 				if ((!CanNearbyMilitiaScoutThisSector(cnt, cnt2) && !CanMercsScoutThisSector(cnt, cnt2, iCurrentMapSectorZ) && fShowTeamFlag)
 					||(!GetSectorFlagStatus(cnt, cnt2, iCurrentMapSectorZ, SF_ALREADY_VISITED) && fShowItemsFlag))
