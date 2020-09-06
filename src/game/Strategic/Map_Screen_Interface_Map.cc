@@ -514,14 +514,8 @@ void DrawMap(void)
 				INT8 bControllingSAM = GCM->getControllingSamSite(SECTOR(cnt, cnt2));
 				auto samList = GCM->getSamSites();
 
-				// No controlling SAM
-				if (bControllingSAM < 0)
-				{
-					continue;
-				}
-
 				// get the condition of that SAM site (NOTE: SAM #s are 1-4, but indexes are 0-3!!!)
-				Assert(bControllingSAM >= 0 && (UINT8)bControllingSAM < samList.size());
+				Assert(bControllingSAM >= -1 && (UINT8)bControllingSAM < samList.size());
 
 				if ((!CanNearbyMilitiaScoutThisSector(cnt, cnt2) && !CanMercsScoutThisSector(cnt, cnt2, iCurrentMapSectorZ) && fShowTeamFlag)
 					||(!GetSectorFlagStatus(cnt, cnt2, iCurrentMapSectorZ, SF_ALREADY_VISITED) && fShowItemsFlag))
@@ -531,7 +525,7 @@ void DrawMap(void)
 					{
 						if (!StrategicMap[cnt + cnt2 * WORLD_MAP_X].fEnemyAirControlled)
 						{
-							if (StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(samList[bControllingSAM]->sectorId)].bSAMCondition >= MIN_CONDITION_FOR_SAM_SITE_TO_WORK)
+							if ((bControllingSAM >= 0) && StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(samList[bControllingSAM]->sectorId)].bSAMCondition >= MIN_CONDITION_FOR_SAM_SITE_TO_WORK)
 							{
 								// sector not visited and air controlled
 								color = MAP_SHADE_DK_GREEN;
@@ -539,7 +533,7 @@ void DrawMap(void)
 						}
 						else
 						{
-							if (StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(samList[bControllingSAM]->sectorId)].bSAMCondition >= MIN_CONDITION_FOR_SAM_SITE_TO_WORK)
+							if ((bControllingSAM >= 0) && StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(samList[bControllingSAM]->sectorId)].bSAMCondition >= MIN_CONDITION_FOR_SAM_SITE_TO_WORK)
 							{
 								// sector not visited and air controlled
 								color = MAP_SHADE_DK_RED;
@@ -554,7 +548,7 @@ void DrawMap(void)
 					{
 						if (!StrategicMap[cnt + cnt2 * WORLD_MAP_X].fEnemyAirControlled)
 						{
-							if (StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(samList[bControllingSAM]->sectorId)].bSAMCondition >= MIN_CONDITION_FOR_SAM_SITE_TO_WORK)
+							if ((bControllingSAM >= 0) && StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(samList[bControllingSAM]->sectorId)].bSAMCondition >= MIN_CONDITION_FOR_SAM_SITE_TO_WORK)
 							{
 								// sector not visited and air controlled
 								ShadeMapElem(cnt, cnt2, MAP_SHADE_LT_GREEN);
@@ -562,7 +556,7 @@ void DrawMap(void)
 						}
 						else
 						{
-							if (StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(samList[bControllingSAM]->sectorId)].bSAMCondition >= MIN_CONDITION_FOR_SAM_SITE_TO_WORK)
+							if ((bControllingSAM >= 0) && StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(samList[bControllingSAM]->sectorId)].bSAMCondition >= MIN_CONDITION_FOR_SAM_SITE_TO_WORK)
 							{
 								// sector not visited and air controlled
 								ShadeMapElem(cnt, cnt2, MAP_SHADE_LT_RED);
@@ -3724,7 +3718,7 @@ UINT32 WhatPlayerKnowsAboutEnemiesInSector( INT16 sSectorX, INT16 sSectorY )
 	if (GetSectorFlagStatus(sSectorX, sSectorY, 0, SF_ALREADY_VISITED))
 	{
 		// then he always knows about any enemy presence for the remainder of the game, but not exact numbers
-		return KNOWS_THEYRE_THERE;
+		//return KNOWS_THEYRE_THERE;
 	}
 
 	// if Skyrider noticed the enemis in the sector recently
