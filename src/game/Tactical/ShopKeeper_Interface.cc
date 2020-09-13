@@ -2736,7 +2736,17 @@ static INT8 AddItemToArmsDealerOfferArea(const INVENTORY_IN_SLOT* pInvSlot, INT8
 			//if the shift key is being pressed, add them all
 			if (_KeyDown(SHIFT))
 			{
-				a->ItemObject.ubNumberOfObjects = pInvSlot->ItemObject.ubNumberOfObjects;
+				UINT8 ubPerPocket = GCM->getItem(a->ItemObject.usItem)->getPerPocket();
+				if (ubPerPocket == 0) ubPerPocket = 1;
+
+				if (a->ItemObject.ubNumberOfObjects > ubPerPocket)
+				{
+					a->ItemObject.ubNumberOfObjects = ubPerPocket;
+				}
+				else
+				{
+					a->ItemObject.ubNumberOfObjects = pInvSlot->ItemObject.ubNumberOfObjects;
+				}
 			}
 			else if( pInvSlot->ItemObject.ubNumberOfObjects > 1 )
 			{
