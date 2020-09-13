@@ -717,8 +717,10 @@ static INT8 CreatureDecideActionRed(SOLDIERTYPE* pSoldier, UINT8 ubUnconsciousOK
 			//////////////////////////////////////////////////////////////////////
 
 			// try to move towards him
+			INT8 bLastOrders = pSoldier->bOrders;
 			pSoldier->bOrders = SEEKENEMY;
 			pSoldier->usActionData = GoAsFarAsPossibleTowards(pSoldier,sClosestDisturbance,AI_ACTION_SEEK_OPPONENT);
+			pSoldier->bOrders = bLastOrders;
 
 			// if it's possible
 			if (pSoldier->usActionData != NOWHERE)
