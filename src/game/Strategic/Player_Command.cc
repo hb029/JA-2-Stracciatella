@@ -181,26 +181,6 @@ BOOLEAN SetThisSectorAsPlayerControlled( INT16 sMapX, INT16 sMapY, INT8 bMapZ, B
 				UpdateRefuelSiteAvailability( );
 			}
 
-			if (IsThisSectorASAMSector(sMapX, sMapY, bMapZ))
-			{
-				if (StrategicMap[usMapSector].bSAMCondition < MIN_CONDITION_TO_FIX_SAM)
-				{
-					UpdateSAMDoneRepair(sMapX, sMapY, 0);
-				}
-
-				StrategicMap[usMapSector].bSAMCondition = 100;
-				auto samList = GCM->getSamSites();
-				for (INT8 i = 0; i < samList.size(); ++i)
-				{
-					if (samList[i]->sectorId == sector)
-					{
-						SetUpSAMPanicBomb(i);
-					}
-				}
-				// SAM site may have been put back into working order
-				UpdateAirspaceControl();
-			}
-			
 			// SetSectorFlag( sMapX, sMapY, bMapZ, SF_SECTOR_HAS_BEEN_LIBERATED_ONCE );
 			if ( bMapZ == 0 && ( ( sMapY == MAP_ROW_M && (sMapX >= 2 && sMapX <= 6) ) || (sMapY == MAP_ROW_N && sMapX == 6)) )
 			{
@@ -307,6 +287,29 @@ BOOLEAN SetThisSectorAsEnemyControlled(INT16 const sMapX, INT16 const sMapY, INT
 			if (IsRefuelSiteInSector(usMapSector))
 			{
 				UpdateRefuelSiteAvailability( );
+			}
+
+			// Restore the SAM site with new hardware
+			if (IsThisSectorASAMSector(sMapX, sMapY, bMapZ))
+			{
+				// Visual restoration on demand
+				if (StrategicMap[usMapSector].bSAMCondition < MIN_CONDITION_TO_FIX_SAM)
+				{
+					UpdateSAMDoneRepair(sMapX, sMapY, 0);
+				}
+
+				// Functional restoration and reset of the panic bomb game
+				StrategicMap[usMapSector].bSAMCondition = 100;
+				auto samList = GCM->getSamSites();
+				for (INT8 i = 0; i < samList.size(); ++i)
+				{
+					if (samList[i]->sectorId == sector)
+					{
+						SetUpSAMPanicBomb(i);
+					}
+				}
+				// SAM site may have been put back into working order
+				UpdateAirspaceControl();
 			}
 
 			// ARM: this must be AFTER all resulting loyalty effects are resolved, or reduced mine income shown won't be accurate

@@ -1490,7 +1490,7 @@ INT8 DecideActionRed(SOLDIERTYPE *pSoldier, UINT8 ubUnconsciousOK)
 		) &&
 		gTacticalStatus.fPanicFlags & (PANIC_BOMBS_HERE | PANIC_TRIGGERS_HERE))
 	{
-		if (pSoldier->ubProfile == WARDEN && gTacticalStatus.the_chosen_one == NULL)
+		if (pSoldier->ubProfile == WARDEN || gTacticalStatus.the_chosen_one == NULL)
 		{
 			PossiblyMakeThisEnemyChosenOne( pSoldier );
 		}
@@ -2495,7 +2495,7 @@ static INT8 DecideActionBlack(SOLDIERTYPE* pSoldier)
 	ubCanMove = (pSoldier->bActionPoints >= MinPtsToMove(pSoldier));
 
 	if ((pSoldier->bTeam == ENEMY_TEAM || pSoldier->ubProfile == WARDEN) &&
-		gTacticalStatus.fPanicFlags    &  PANIC_TRIGGERS_HERE            &&
+		gTacticalStatus.fPanicFlags & (PANIC_BOMBS_HERE | PANIC_TRIGGERS_HERE) &&
 		gTacticalStatus.the_chosen_one == NULL)
 	{
 		INT8 bPanicTrigger;
