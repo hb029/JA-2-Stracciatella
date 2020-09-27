@@ -3853,16 +3853,47 @@ static void ShowSAMSitesOnStrategicMap()
 
 			ST::string sam_site = pLandTypeStrings[SAM_SITE];
 
+			SetFontDestBuffer(guiSAVEBUFFER, MapScreenRect.iLeft + 2, MapScreenRect.iTop, MapScreenRect.iRight, MapScreenRect.iBottom);
+
+			// don't show condition string until the sector is cleared
+			if (0 == NumEnemiesInSector(sec_x, sec_y))
+			{
+				INT8 const bCondition = StrategicMap[SECTOR_INFO_TO_STRATEGIC_INDEX(s->sectorId)].bSAMCondition;
+
+				// if condition is too low to repair the sam-site, mark the number with red
+				UINT8 const colour =
+					bCondition >= MIN_CONDITION_TO_FIX_SAM ? FONT_MCOLOR_LTYELLOW :
+					FONT_MCOLOR_RED;
+				SetFontAttributes(MAP_FONT, colour);
+
+				ST::string condition_str = st_format_printf("%d%% %s", bCondition, pMapScreenStatusStrings[3]);
+
+				INT16 condition_x = x - StringPixLength(condition_str, MAP_FONT) / 2;
+
+				// Bump from the right side
+				INT16 const max_x = MAP_VIEW_START_X + MAP_VIEW_WIDTH + 21;
+				if (condition_x + StringPixLength(condition_str, MAP_FONT) > max_x)
+					condition_x -= condition_x + StringPixLength(condition_str, MAP_FONT) - max_x;
+
+				// make sure we don't go past left edge (Grumm)
+				INT16 const min_x = MAP_VIEW_START_X + 23;
+				if (condition_x < min_x) condition_x = min_x;
+
+				GDirtyPrint(condition_x, y + GetFontHeight(MAP_FONT), condition_str);
+			}
+			else
+			{
+				SetFontForeground(FONT_MCOLOR_LTGREEN);
+			}
+
+			ClipBlitsToMapViewRegion();
+
 			// Center the first string around x.
 			x -= StringPixLength(sam_site, MAP_FONT) / 2;
 
-			if (x < MAP_VIEW_START_X || MAP_VIEW_START_X + MAP_VIEW_WIDTH  < x) continue;
+			if (x < MAP_VIEW_START_X || MAP_VIEW_START_X + MAP_VIEW_WIDTH < x) continue;
 			if (y < MAP_VIEW_START_Y || MAP_VIEW_START_Y + MAP_VIEW_HEIGHT < y) continue;
 			// Within view, render.
-
-			SetFontDestBuffer(guiSAVEBUFFER, MapScreenRect.iLeft + 2, MapScreenRect.iTop, MapScreenRect.iRight, MapScreenRect.iBottom);
-
-			ClipBlitsToMapViewRegion();
 
 			// Green on green does not contrast well, use yellow.
 			SetFontAttributes(MAP_FONT, FONT_MCOLOR_LTYELLOW);
